@@ -2,5 +2,26 @@
 .idea/
 *.iml
 
+# Gradle
+.gradle/
+build/
+
+# Environment
+backend/.env
+backend/.env.*
+
+!backend/.env.example
+
+# Spring Local Config
+backend/src/main/resources/application-local.yml
+backend/src/main/resources/application-local.yaml
+
+# Docker Override
+docker-compose.override.yml
+compose.override.yml
+backend/docker-compose.override.yml
+backend/compose.override.yml
+
 # Local AI context files
 ai/
+AGENTS.md
