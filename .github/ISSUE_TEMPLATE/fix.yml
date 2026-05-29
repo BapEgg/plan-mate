@@ -1,0 +1,52 @@
+name: 버그 수정
+description: 일반적인 버그 수정 작업을 등록합니다.
+title: "fix: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 문제 설명
+      description: 발생한 문제를 설명해주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 재현 방법
+      description: 문제를 재현하는 절차를 작성해주세요.
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 기대 동작
+      description: 정상적으로 기대한 동작을 작성해주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 실제 동작
+      description: 실제로 발생한 동작을 작성해주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 로그
+      description: 에러 로그, 콘솔 로그, 스택 트레이스, 스크린샷 링크가 있다면 작성해주세요.
+      render: shell
+    validations:
+      required: false
+  - type: textarea
+    id: impact
+    attributes:
+      label: 영향 범위
+      description: 이 버그가 영향을 주는 기능, 화면, API, 사용자 범위를 작성해주세요.
+    validations:
+      required: true

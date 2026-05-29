@@ -1,0 +1,19 @@
+name: 문서 작업
+description: 문서 추가, 수정, 보완 작업을 등록합니다.
+title: "docs: "
+labels: ["docs"]
+body:
+  - type: textarea
+    id: location
+    attributes:
+      label: 문서 위치
+      description: 변경할 문서 위치를 작성해주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: content
+    attributes:
+      label: 작업 내용
+      description: 추가하거나 수정할 문서 내용을 작성해주세요.
+    validations:
+      required: true

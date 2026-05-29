@@ -1,0 +1,62 @@
+name: 기능 개발
+description: 새로운 기능 개발 작업을 등록합니다.
+title: "feat: "
+labels: ["feature"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: 작업 개요
+      description: 개발할 기능을 간단히 설명해주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: requirements
+    attributes:
+      label: 요구사항
+      description: 기능이 만족해야 할 조건을 작성해주세요.
+      placeholder: |
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: 완료 조건
+      description: 이 기능이 완료되었다고 판단할 수 있는 조건을 작성해주세요.
+      placeholder: |
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: 영향 범위
+      description: 이 기능이 영향을 줄 수 있는 도메인, 화면, API, 데이터, 사용자 흐름을 작성해주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: screens
+    attributes:
+      label: 관련 화면
+      description: 이 기능과 관련된 화면 또는 사용자 흐름을 작성해주세요.
+      placeholder: "예: 여행 생성 화면, 일정 상세 화면"
+    validations:
+      required: false
+  - type: textarea
+    id: api
+    attributes:
+      label: 관련 API
+      description: 이 기능과 관련된 API가 있다면 메서드와 경로를 작성해주세요.
+      placeholder: |
+        GET /api/trips
+        POST /api/trips
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: 참고 컨텍스트
+      description: 관련 도메인, 화면, API, 문서, 의사결정 내용을 작성해주세요.

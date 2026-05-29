@@ -1,0 +1,24 @@
+name: 리팩터링
+description: 기능 변경 없이 코드 구조를 개선하는 작업을 등록합니다.
+title: "refactor: "
+labels: ["refactor"]
+body:
+  - type: textarea
+    id: target
+    attributes:
+      label: 대상 영역
+      description: 리팩터링할 모듈, 패키지, 파일을 작성해주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: reason
+    attributes:
+      label: 개선 이유
+      description: 현재 구조의 문제와 개선 목적을 작성해주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: 동작 변경 여부
+      description: 기능 동작이 변경되지 않음을 확인할 방법을 작성해주세요.

@@ -1,0 +1,57 @@
+name: 긴급 수정
+description: 운영 또는 배포에 영향을 주는 긴급 수정 작업을 등록합니다.
+title: "hotfix: "
+labels: ["hotfix"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        긴급 수정은 이슈와 브랜치에서 `hotfix`를 사용하고, 커밋 메시지는 `fix:` 타입을 사용합니다.
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: 긴급도
+      description: 즉시 대응이 필요한 정도를 선택해주세요.
+      options:
+        - 높음
+        - 보통
+        - 낮음
+    validations:
+      required: true
+  - type: textarea
+    id: service-impact
+    attributes:
+      label: 서비스 영향도
+      description: 사용자, 데이터, 배포, 운영 환경에 미치는 영향을 작성해주세요.
+    validations:
+      required: true
+  - type: dropdown
+    id: rollback-available
+    attributes:
+      label: 롤백 가능 여부
+      description: 문제가 발생했을 때 롤백 가능한지 선택해주세요.
+      options:
+        - 가능
+        - 불가능
+        - 확인 필요
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: 영향 범위
+      description: 장애, 데이터, 배포, 사용자 영향 범위를 작성해주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: action
+    attributes:
+      label: 긴급 조치 내용
+      description: 즉시 필요한 수정 또는 우회 방안을 작성해주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: 검증 방법
+      description: 수정 후 확인해야 할 내용을 작성해주세요.

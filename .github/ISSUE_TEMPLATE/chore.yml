@@ -1,0 +1,20 @@
+name: 기타 작업
+description: 설정, 템플릿, 의존성, 저장소 관리 작업을 등록합니다.
+title: "chore: "
+labels: ["chore"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: 작업 개요
+      description: 수행할 관리 작업을 설명해주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: checklist
+    attributes:
+      label: 작업 항목
+      description: 완료해야 할 항목을 체크리스트로 작성해주세요.
+      placeholder: |
+        - [ ]
+        - [ ]
