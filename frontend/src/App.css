@@ -1,0 +1,82 @@
+.app-shell {
+  min-height: 100vh;
+  padding: 64px 24px;
+}
+
+.intro-panel {
+  max-width: 880px;
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  color: #0f766e;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  color: #111827;
+  font-size: 48px;
+  line-height: 1.08;
+  letter-spacing: 0;
+}
+
+.description {
+  max-width: 720px;
+  margin: 24px 0 0;
+  color: #4b5563;
+  font-size: 18px;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  max-width: 980px;
+  margin-top: 48px;
+}
+
+.status-grid article {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 24px;
+  background: #ffffff;
+}
+
+.status-grid span {
+  color: #0f766e;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.status-grid h2 {
+  margin: 12px 0 8px;
+  color: #111827;
+  font-size: 20px;
+}
+
+.status-grid p {
+  margin: 0;
+  color: #4b5563;
+}
+
+@media (max-width: 720px) {
+  .app-shell {
+    padding: 40px 20px;
+  }
+
+  h1 {
+    font-size: 34px;
+  }
+
+  .description {
+    font-size: 16px;
+  }
+
+  .status-grid {
+    grid-template-columns: 1fr;
+  }
+}
