@@ -1,11 +1,14 @@
 name: 긴급 수정
 description: 운영 또는 배포에 영향을 주는 긴급 수정 작업을 등록합니다.
-title: "hotfix: "
+title: "[hotfix] "
 labels: ["hotfix"]
 body:
   - type: markdown
     attributes:
       value: |
+        제목 예시: `[hotfix] 로그인 장애 긴급 수정`
+
+        Issue 번호는 제목에 작성하지 않습니다. PR 본문에 `Closes #이슈번호`로 연결합니다.
         긴급 수정은 이슈와 브랜치에서 `hotfix`를 사용하고, 커밋 메시지는 `fix:` 타입을 사용합니다.
   - type: dropdown
     id: urgency

@@ -1,8 +1,14 @@
 name: 문서 작업
 description: 문서 추가, 수정, 보완 작업을 등록합니다.
-title: "docs: "
+title: "[docs] "
 labels: ["docs"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        제목 예시: `[docs] AI 작업 문서 구조 정리`
+
+        Issue 번호는 제목에 작성하지 않습니다. PR 본문에 `Closes #이슈번호`로 연결합니다.
   - type: textarea
     id: location
     attributes:

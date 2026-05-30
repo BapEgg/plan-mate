@@ -1,8 +1,14 @@
 name: 리팩터링
 description: 기능 변경 없이 코드 구조를 개선하는 작업을 등록합니다.
-title: "refactor: "
+title: "[refactor] "
 labels: ["refactor"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        제목 예시: `[refactor] 여행 도메인 패키지 구조 개선`
+
+        Issue 번호는 제목에 작성하지 않습니다. PR 본문에 `Closes #이슈번호`로 연결합니다.
   - type: textarea
     id: target
     attributes:

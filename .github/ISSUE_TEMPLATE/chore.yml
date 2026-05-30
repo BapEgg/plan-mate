@@ -1,8 +1,14 @@
 name: 기타 작업
 description: 설정, 템플릿, 의존성, 저장소 관리 작업을 등록합니다.
-title: "chore: "
+title: "[chore] "
 labels: ["chore"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        제목 예시: `[chore] 저장소 기본 설정 정리`
+
+        Issue 번호는 제목에 작성하지 않습니다. PR 본문에 `Closes #이슈번호`로 연결합니다.
   - type: textarea
     id: summary
     attributes:

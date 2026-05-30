@@ -1,8 +1,14 @@
 name: 인프라 작업
 description: 인프라, 배포, CI/CD, 환경 설정 작업을 등록합니다.
-title: "infra: "
+title: "[infra] "
 labels: ["infra"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        제목 예시: `[infra] GitHub Actions CI 구성`
+
+        Issue 번호는 제목에 작성하지 않습니다. PR 본문에 `Closes #이슈번호`로 연결합니다.
   - type: textarea
     id: environment
     attributes:
