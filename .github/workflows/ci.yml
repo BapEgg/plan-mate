@@ -106,7 +106,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Validate compose config
-        run: docker compose --env-file backend/.env.example -f backend/compose.yaml config --quiet
+        run: docker compose --env-file backend/.env.example -f infra/compose.local.yaml config --quiet
 
       - name: Validate Nginx config
         run: |
