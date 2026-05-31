@@ -2,6 +2,7 @@ services:
   postgres:
     image: postgres:17
     container_name: planmate-postgres
+    restart: unless-stopped
 
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -9,21 +10,62 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
 
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - planmate-local
+
   redis:
     image: redis:8
     container_name: planmate-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
 
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
 
     volumes:
       - redis-data:/data
 
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - planmate-local
+
+  nginx:
+    image: nginx:stable-alpine
+    container_name: planmate-nginx
+    restart: unless-stopped
+
+    ports:
+      - "${NGINX_PORT:-8088}:80"
+
+    volumes:
+      - ../infra/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    networks:
+      - planmate-local
+
 volumes:
   postgres-data:
   redis-data:
+
+networks:
+  planmate-local:
+    name: planmate-local
