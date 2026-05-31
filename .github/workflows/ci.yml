@@ -1,0 +1,117 @@
+name: PlanMate CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend Build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: planmate_test
+          POSTGRES_USER: planmate
+          POSTGRES_PASSWORD: planmate
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U planmate -d planmate_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:8
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+        working-directory: backend
+
+      - name: Build backend
+        run: ./gradlew build --no-daemon
+        working-directory: backend
+        env:
+          DB_URL: jdbc:postgresql://localhost:5432/planmate_test
+          DB_USERNAME: planmate
+          DB_PASSWORD: planmate
+          REDIS_HOST: localhost
+          REDIS_PORT: "6379"
+          POSTGRES_DB: planmate_test
+          POSTGRES_USER: planmate
+          POSTGRES_PASSWORD: planmate
+
+  frontend:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Lint frontend
+        run: npm run lint
+        working-directory: frontend
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: frontend
+
+  compose:
+    name: Docker Compose Config
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Validate compose config
+        run: docker compose --env-file backend/.env.example -f backend/compose.yaml config --quiet
+
+      - name: Validate Nginx config
+        run: |
+          docker run --rm \
+            --add-host=host.docker.internal:host-gateway \
+            -v "$PWD/infra/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro" \
+            nginx:stable-alpine \
+            nginx -t
