@@ -33,7 +33,7 @@ class SecurityConfigTest {
     @Test
     void unknownApiRequiresAuthenticationBeforeHandlerMapping() throws Exception {
         mockMvc.perform(get("/api/trips"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
 }

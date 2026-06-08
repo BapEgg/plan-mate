@@ -11,6 +11,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
 
 @Entity
 @Table(name = "users")
@@ -23,8 +24,8 @@ public class UserEntity {
     @Column(nullable = false, unique = true, length = 255)
     private String email;
 
-    @Column(nullable = false, length = 255)
-    private String passwordHash;
+    @Column(nullable = false, unique = true, length = 255)
+    private String emailCanonical;
 
     @Column(nullable = false, length = 30)
     private String nickname;
@@ -34,26 +35,35 @@ public class UserEntity {
     private UserRole role;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 40)
     private UserStatus status;
+
+    private Instant emailVerifiedAt;
 
     protected UserEntity() {
     }
 
-    private UserEntity(String email, String passwordHash, String nickname, UserRole role, UserStatus status) {
+    private UserEntity(String email, String emailCanonical, String nickname, UserRole role, UserStatus status) {
         this.email = email;
-        this.passwordHash = passwordHash;
+        this.emailCanonical = emailCanonical;
         this.nickname = nickname;
         this.role = role;
         this.status = status;
     }
 
-    public static UserEntity create(String email, String passwordHash, String nickname) {
-        return new UserEntity(email, passwordHash, nickname, UserRole.USER, UserStatus.ACTIVE);
+    public static UserEntity createPendingLocalUser(String email, String emailCanonical, String nickname) {
+        return new UserEntity(email, emailCanonical, nickname, UserRole.USER, UserStatus.PENDING_EMAIL_VERIFICATION);
+    }
+
+    public void verifyEmail(Instant verifiedAt) {
+        this.emailVerifiedAt = verifiedAt;
+        if (status == UserStatus.PENDING_EMAIL_VERIFICATION) {
+            this.status = UserStatus.ACTIVE;
+        }
     }
 
     public UserAccount toAccount() {
-        return new UserAccount(id, email, nickname, role, status);
+        return new UserAccount(id, email, nickname, role, status, emailVerifiedAt != null);
     }
 
     public Long getId() {
@@ -64,8 +74,8 @@ public class UserEntity {
         return email;
     }
 
-    public String getPasswordHash() {
-        return passwordHash;
+    public String getEmailCanonical() {
+        return emailCanonical;
     }
 
     public String getNickname() {
@@ -78,6 +88,10 @@ public class UserEntity {
 
     public UserStatus getStatus() {
         return status;
+    }
+
+    public Instant getEmailVerifiedAt() {
+        return emailVerifiedAt;
     }
 
 }

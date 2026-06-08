@@ -30,3 +30,9 @@ management:
 app:
   cors:
     allowed-origins: http://localhost:5173,http://localhost:8088
+  frontend:
+    base-url: http://localhost:5173
+  jwt:
+    secret: ${JWT_SECRET:planmate-local-development-jwt-secret-key-must-be-at-least-32-bytes}
+    access-token-ttl: 15m
+    refresh-token-ttl: 14d

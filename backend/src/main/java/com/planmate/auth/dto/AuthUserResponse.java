@@ -4,7 +4,7 @@ import com.planmate.user.domain.UserAccount;
 import com.planmate.user.domain.UserRole;
 import com.planmate.user.domain.UserStatus;
 
-public record SignupResponse(
+public record AuthUserResponse(
         Long id,
         String loginId,
         String email,
@@ -14,8 +14,8 @@ public record SignupResponse(
         boolean emailVerified
 ) {
 
-    public static SignupResponse from(UserAccount userAccount, String loginId) {
-        return new SignupResponse(
+    public static AuthUserResponse from(UserAccount userAccount, String loginId) {
+        return new AuthUserResponse(
                 userAccount.id(),
                 loginId,
                 userAccount.email(),

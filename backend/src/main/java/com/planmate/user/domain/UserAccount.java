@@ -5,7 +5,8 @@ public record UserAccount(
         String email,
         String nickname,
         UserRole role,
-        UserStatus status
+        UserStatus status,
+        boolean emailVerified
 ) {
 
     public boolean isActive() {
