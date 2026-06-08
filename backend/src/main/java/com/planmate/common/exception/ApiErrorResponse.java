@@ -12,8 +12,16 @@ public record ApiErrorResponse(
         return new ApiErrorResponse(code, message, List.of());
     }
 
+    public static ApiErrorResponse of(ErrorCode errorCode) {
+        return of(errorCode.code(), errorCode.message());
+    }
+
     public static ApiErrorResponse validation(List<FieldErrorResponse> fieldErrors) {
-        return new ApiErrorResponse("VALIDATION_ERROR", "Invalid request.", fieldErrors);
+        return new ApiErrorResponse(
+                CommonErrorCode.VALIDATION_ERROR.code(),
+                CommonErrorCode.VALIDATION_ERROR.message(),
+                fieldErrors
+        );
     }
 
 }

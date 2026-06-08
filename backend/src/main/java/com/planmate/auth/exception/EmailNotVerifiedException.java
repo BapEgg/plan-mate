@@ -1,9 +1,11 @@
 package com.planmate.auth.exception;
 
-public class EmailNotVerifiedException extends RuntimeException {
+import com.planmate.common.exception.PlanMateException;
+
+public class EmailNotVerifiedException extends PlanMateException {
 
     public EmailNotVerifiedException() {
-        super("Email is not verified.");
+        super(AuthErrorCode.EMAIL_NOT_VERIFIED);
     }
 
 }

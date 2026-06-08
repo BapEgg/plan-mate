@@ -1,9 +1,11 @@
 package com.planmate.auth.exception;
 
-public class InvalidCredentialsException extends RuntimeException {
+import com.planmate.common.exception.PlanMateException;
+
+public class InvalidCredentialsException extends PlanMateException {
 
     public InvalidCredentialsException() {
-        super("Invalid login id or password.");
+        super(AuthErrorCode.INVALID_CREDENTIALS);
     }
 
 }

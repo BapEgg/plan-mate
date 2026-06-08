@@ -1,9 +1,11 @@
 package com.planmate.auth.exception;
 
-public class DuplicateLoginIdException extends RuntimeException {
+import com.planmate.common.exception.PlanMateException;
 
-    public DuplicateLoginIdException(String loginId) {
-        super("Login id already exists: " + loginId);
+public class DuplicateLoginIdException extends PlanMateException {
+
+    public DuplicateLoginIdException() {
+        super(AuthErrorCode.DUPLICATE_LOGIN_ID);
     }
 
 }

@@ -63,10 +63,10 @@ public class SignupService {
         String nickname = request.nickname().trim();
 
         if (localCredentialRepository.existsByLoginId(loginId)) {
-            throw new DuplicateLoginIdException(loginId);
+            throw new DuplicateLoginIdException();
         }
         if (userRepository.existsByEmailCanonical(email)) {
-            throw new DuplicateEmailException(email);
+            throw new DuplicateEmailException();
         }
 
         UserEntity user = userRepository.save(UserEntity.createPendingLocalUser(email, email, nickname));

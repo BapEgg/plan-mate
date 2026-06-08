@@ -1,9 +1,11 @@
 package com.planmate.auth.exception;
 
-public class DuplicateEmailException extends RuntimeException {
+import com.planmate.common.exception.PlanMateException;
 
-    public DuplicateEmailException(String email) {
-        super("Email already exists: " + email);
+public class DuplicateEmailException extends PlanMateException {
+
+    public DuplicateEmailException() {
+        super(AuthErrorCode.DUPLICATE_EMAIL);
     }
 
 }

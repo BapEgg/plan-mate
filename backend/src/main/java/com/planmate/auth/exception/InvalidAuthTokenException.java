@@ -1,9 +1,11 @@
 package com.planmate.auth.exception;
 
-public class InvalidAuthTokenException extends RuntimeException {
+import com.planmate.common.exception.PlanMateException;
+
+public class InvalidAuthTokenException extends PlanMateException {
 
     public InvalidAuthTokenException() {
-        super("Invalid token.");
+        super(AuthErrorCode.INVALID_TOKEN);
     }
 
 }

@@ -1,9 +1,11 @@
 package com.planmate.user.exception;
 
-public class UserNotFoundException extends RuntimeException {
+import com.planmate.common.exception.PlanMateException;
+
+public class UserNotFoundException extends PlanMateException {
 
     public UserNotFoundException() {
-        super("User not found.");
+        super(UserErrorCode.USER_NOT_FOUND);
     }
 
 }

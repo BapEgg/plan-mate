@@ -1,9 +1,11 @@
 package com.planmate.auth.exception;
 
-public class ExpiredAuthTokenException extends RuntimeException {
+import com.planmate.common.exception.PlanMateException;
+
+public class ExpiredAuthTokenException extends PlanMateException {
 
     public ExpiredAuthTokenException() {
-        super("Expired token.");
+        super(AuthErrorCode.EXPIRED_TOKEN);
     }
 
 }
