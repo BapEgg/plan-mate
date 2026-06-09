@@ -12,6 +12,7 @@ public enum AuthErrorCode implements ErrorCode {
     INVALID_TOKEN(HttpStatus.BAD_REQUEST, "INVALID_TOKEN", "Invalid token."),
     EXPIRED_TOKEN(HttpStatus.BAD_REQUEST, "EXPIRED_TOKEN", "Expired token."),
     TOKEN_ALREADY_USED(HttpStatus.BAD_REQUEST, "TOKEN_ALREADY_USED", "Token is already used."),
+    EMAIL_SEND_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "EMAIL_SEND_FAILED", "Email delivery service is unavailable."),
     REFRESH_TOKEN_STORE_UNAVAILABLE(
             HttpStatus.SERVICE_UNAVAILABLE,
             "REFRESH_TOKEN_STORE_UNAVAILABLE",

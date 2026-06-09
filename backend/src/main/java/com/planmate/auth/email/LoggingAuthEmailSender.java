@@ -3,10 +3,12 @@ package com.planmate.auth.email;
 import com.planmate.user.entity.UserEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(name = "app.mail.provider", havingValue = "logging", matchIfMissing = true)
 public class LoggingAuthEmailSender implements AuthEmailSender {
 
     private static final Logger log = LoggerFactory.getLogger(LoggingAuthEmailSender.class);
