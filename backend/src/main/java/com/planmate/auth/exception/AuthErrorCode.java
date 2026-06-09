@@ -11,7 +11,12 @@ public enum AuthErrorCode implements ErrorCode {
     EMAIL_NOT_VERIFIED(HttpStatus.FORBIDDEN, "EMAIL_NOT_VERIFIED", "Email is not verified."),
     INVALID_TOKEN(HttpStatus.BAD_REQUEST, "INVALID_TOKEN", "Invalid token."),
     EXPIRED_TOKEN(HttpStatus.BAD_REQUEST, "EXPIRED_TOKEN", "Expired token."),
-    TOKEN_ALREADY_USED(HttpStatus.BAD_REQUEST, "TOKEN_ALREADY_USED", "Token is already used.");
+    TOKEN_ALREADY_USED(HttpStatus.BAD_REQUEST, "TOKEN_ALREADY_USED", "Token is already used."),
+    REFRESH_TOKEN_STORE_UNAVAILABLE(
+            HttpStatus.SERVICE_UNAVAILABLE,
+            "REFRESH_TOKEN_STORE_UNAVAILABLE",
+            "Refresh token store is unavailable."
+    );
 
     private final HttpStatus status;
     private final String code;

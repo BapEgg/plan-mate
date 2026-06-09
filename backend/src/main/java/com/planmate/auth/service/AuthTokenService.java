@@ -1,13 +1,13 @@
 package com.planmate.auth.service;
 
-import com.planmate.auth.entity.RefreshTokenEntity;
 import com.planmate.auth.exception.InvalidAuthTokenException;
-import com.planmate.auth.repository.RefreshTokenRepository;
+import com.planmate.auth.repository.RefreshTokenStore;
 import com.planmate.auth.security.JwtToken;
 import com.planmate.auth.security.JwtTokenProvider;
 import com.planmate.auth.security.OpaqueTokenService;
 import com.planmate.user.domain.UserStatus;
 import com.planmate.user.entity.UserEntity;
+import com.planmate.user.repository.UserRepository;
 import java.time.Duration;
 import java.time.Instant;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,18 +17,21 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AuthTokenService {
 
-    private final RefreshTokenRepository refreshTokenRepository;
+    private final RefreshTokenStore refreshTokenStore;
+    private final UserRepository userRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final OpaqueTokenService opaqueTokenService;
     private final Duration refreshTokenTtl;
 
     public AuthTokenService(
-            RefreshTokenRepository refreshTokenRepository,
+            RefreshTokenStore refreshTokenStore,
+            UserRepository userRepository,
             JwtTokenProvider jwtTokenProvider,
             OpaqueTokenService opaqueTokenService,
             @Value("${app.jwt.refresh-token-ttl}") Duration refreshTokenTtl
     ) {
-        this.refreshTokenRepository = refreshTokenRepository;
+        this.refreshTokenStore = refreshTokenStore;
+        this.userRepository = userRepository;
         this.jwtTokenProvider = jwtTokenProvider;
         this.opaqueTokenService = opaqueTokenService;
         this.refreshTokenTtl = refreshTokenTtl;
@@ -41,30 +44,23 @@ public class AuthTokenService {
         String rawRefreshToken = opaqueTokenService.generateRawToken();
         Instant refreshExpiresAt = now.plus(refreshTokenTtl);
 
-        refreshTokenRepository.save(RefreshTokenEntity.create(
-                user,
-                opaqueTokenService.hash(rawRefreshToken),
-                refreshExpiresAt
-        ));
+        refreshTokenStore.save(opaqueTokenService.hash(rawRefreshToken), user.getId(), refreshTokenTtl);
 
         return new AuthTokenBundle(accessToken, rawRefreshToken, refreshTokenTtl, refreshExpiresAt);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public JwtToken refreshAccessToken(String rawRefreshToken) {
         if (rawRefreshToken == null || rawRefreshToken.isBlank()) {
             throw new InvalidAuthTokenException();
         }
 
         Instant now = Instant.now();
-        RefreshTokenEntity refreshToken = refreshTokenRepository.findByTokenHash(opaqueTokenService.hash(rawRefreshToken))
+        Long userId = refreshTokenStore.findUserIdByTokenHash(opaqueTokenService.hash(rawRefreshToken))
                 .orElseThrow(InvalidAuthTokenException::new);
 
-        if (!refreshToken.isUsable(now)) {
-            throw new InvalidAuthTokenException();
-        }
-
-        UserEntity user = refreshToken.getUser();
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(InvalidAuthTokenException::new);
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new InvalidAuthTokenException();
         }
@@ -78,14 +74,12 @@ public class AuthTokenService {
             return;
         }
 
-        refreshTokenRepository.findByTokenHash(opaqueTokenService.hash(rawRefreshToken))
-                .filter(token -> token.getRevokedAt() == null)
-                .ifPresent(token -> token.revoke(Instant.now()));
+        refreshTokenStore.delete(opaqueTokenService.hash(rawRefreshToken));
     }
 
     @Transactional
     public void revokeAllForUser(Long userId) {
-        refreshTokenRepository.revokeAllByUserId(userId, Instant.now());
+        refreshTokenStore.deleteAllByUserId(userId);
     }
 
 }
