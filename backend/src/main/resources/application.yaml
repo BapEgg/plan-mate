@@ -48,7 +48,7 @@ management:
 
 app:
   cors:
-    allowed-origins: http://localhost:5173,http://localhost:8088
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:[*],http://127.0.0.1:[*]}
   frontend:
     base-url: http://localhost:5173
   mail:
