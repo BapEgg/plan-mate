@@ -172,6 +172,10 @@ button:disabled {
   backdrop-filter: blur(20px);
 }
 
+.recovery-card {
+  align-self: start;
+}
+
 .brand-mark {
   display: inline-flex;
   width: 54px;
@@ -277,6 +281,45 @@ button:disabled {
 .form-guide {
   color: #6f6b5f;
   font-weight: 700;
+}
+
+.account-recovery-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #7a725f;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.text-action {
+  border: 0;
+  padding: 0;
+  color: #1b4e42;
+  font-weight: 900;
+  background: transparent;
+}
+
+.text-action:hover,
+.text-action:focus-visible {
+  color: #a75f2a;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.recovery-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(24, 33, 31, 0.12);
+  color: #6f6b5f;
+  font-size: 0.9rem;
+  font-weight: 800;
 }
 
 .primary-action,

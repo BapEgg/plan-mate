@@ -12,7 +12,7 @@ import {
 } from './api/auth'
 import type { AuthUser } from './api/auth'
 
-type Page = 'auth' | 'emailVerification' | 'main'
+type Page = 'auth' | 'emailVerification' | 'findLoginId' | 'resetPassword' | 'main'
 type AuthMode = 'login' | 'signup'
 type NoticeTone = 'info' | 'success' | 'error'
 
@@ -29,6 +29,12 @@ function resolvePage(): Page {
   }
   if (window.location.pathname === '/auth/email-verification') {
     return 'emailVerification'
+  }
+  if (window.location.pathname === '/auth/find-login-id') {
+    return 'findLoginId'
+  }
+  if (window.location.pathname === '/auth/reset-password') {
+    return 'resetPassword'
   }
   return 'auth'
 }
@@ -178,6 +184,28 @@ function App() {
     }
   }
 
+  function handleFindLoginId(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    const email = String(form.get('email') ?? '').trim()
+
+    setNotice({
+      tone: 'info',
+      message: `${email}로 아이디 찾기 인증 메일을 보내는 API를 구현한 뒤 연결할 예정입니다.`,
+    })
+  }
+
+  function handleResetPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    const email = String(form.get('email') ?? '').trim()
+
+    setNotice({
+      tone: 'info',
+      message: `${email}로 비밀번호 재설정 인증 메일을 보내는 API를 구현한 뒤 연결할 예정입니다.`,
+    })
+  }
+
   async function handleLogout() {
     try {
       await logout()
@@ -206,6 +234,30 @@ function App() {
 
   if (page === 'main') {
     return <MainPage user={currentUser} onLogout={handleLogout} />
+  }
+
+  if (page === 'findLoginId') {
+    return (
+      <AuthShell notice={notice}>
+        <FindLoginIdCard
+          onSubmit={handleFindLoginId}
+          onBackToLogin={() => navigate('/')}
+          onResetPassword={() => navigate('/auth/reset-password')}
+        />
+      </AuthShell>
+    )
+  }
+
+  if (page === 'resetPassword') {
+    return (
+      <AuthShell notice={notice}>
+        <ResetPasswordCard
+          onSubmit={handleResetPassword}
+          onBackToLogin={() => navigate('/')}
+          onFindLoginId={() => navigate('/auth/find-login-id')}
+        />
+      </AuthShell>
+    )
   }
 
   return (
@@ -245,7 +297,15 @@ function App() {
           </button>
         </div>
 
-        {authMode === 'login' ? <LoginForm onSubmit={handleLogin} /> : <SignupForm onSubmit={handleSignup} />}
+        {authMode === 'login' ? (
+          <LoginForm
+            onSubmit={handleLogin}
+            onFindLoginId={() => navigate('/auth/find-login-id')}
+            onResetPassword={() => navigate('/auth/reset-password')}
+          />
+        ) : (
+          <SignupForm onSubmit={handleSignup} />
+        )}
 
         <div className="divider"><span />또는<span /></div>
         <div className="social-actions" aria-label="소셜 로그인">
@@ -258,7 +318,91 @@ function App() {
   )
 }
 
-function LoginForm({ onSubmit }: { onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
+function FindLoginIdCard({
+  onSubmit,
+  onBackToLogin,
+  onResetPassword,
+}: {
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void
+  onBackToLogin: () => void
+  onResetPassword: () => void
+}) {
+  return (
+    <section className="auth-card recovery-card" aria-label="아이디 찾기">
+      <div className="brand-mark" aria-hidden="true">PM</div>
+      <div className="card-heading">
+        <p className="card-kicker">Find login ID</p>
+        <h1>아이디 찾기</h1>
+        <p>가입한 이메일로 인증 링크를 보내고, 인증이 완료되면 해당 이메일에 연결된 아이디를 안내합니다.</p>
+      </div>
+
+      <form className="auth-form" onSubmit={onSubmit}>
+        <label>
+          <span>가입한 이메일</span>
+          <input name="email" type="email" placeholder="가입할 때 사용한 이메일" autoComplete="email" required />
+        </label>
+        <p className="form-guide">보안을 위해 아이디는 이메일 인증 완료 후 안내하는 흐름으로 연결합니다.</p>
+        <button className="primary-action" type="submit">인증 메일 받기</button>
+        <button className="secondary-action" type="button" onClick={onBackToLogin}>로그인으로 돌아가기</button>
+      </form>
+
+      <div className="recovery-switch">
+        <span>아이디는 알고 있나요?</span>
+        <button className="text-action" type="button" onClick={onResetPassword}>비밀번호 재설정</button>
+      </div>
+    </section>
+  )
+}
+
+function ResetPasswordCard({
+  onSubmit,
+  onBackToLogin,
+  onFindLoginId,
+}: {
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void
+  onBackToLogin: () => void
+  onFindLoginId: () => void
+}) {
+  return (
+    <section className="auth-card recovery-card" aria-label="비밀번호 재설정">
+      <div className="brand-mark" aria-hidden="true">PM</div>
+      <div className="card-heading">
+        <p className="card-kicker">Reset password</p>
+        <h1>비밀번호 재설정</h1>
+        <p>아이디와 가입 이메일이 일치하면 이메일 인증 링크를 보내고, 인증 후 새 비밀번호를 설정합니다.</p>
+      </div>
+
+      <form className="auth-form" onSubmit={onSubmit}>
+        <label>
+          <span>아이디</span>
+          <input name="loginId" type="text" placeholder="아이디를 입력하세요" autoComplete="username" required />
+        </label>
+        <label>
+          <span>가입한 이메일</span>
+          <input name="email" type="email" placeholder="가입할 때 사용한 이메일" autoComplete="email" required />
+        </label>
+        <p className="form-guide">비밀번호 원문은 저장하지 않으므로 기존 비밀번호를 알려줄 수 없고, 새 비밀번호 설정 링크만 발송합니다.</p>
+        <button className="primary-action" type="submit">재설정 메일 받기</button>
+        <button className="secondary-action" type="button" onClick={onBackToLogin}>로그인으로 돌아가기</button>
+      </form>
+
+      <div className="recovery-switch">
+        <span>아이디가 기억나지 않나요?</span>
+        <button className="text-action" type="button" onClick={onFindLoginId}>아이디 찾기</button>
+      </div>
+    </section>
+  )
+}
+
+function LoginForm({
+  onSubmit,
+  onFindLoginId,
+  onResetPassword,
+}: {
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void
+  onFindLoginId: () => void
+  onResetPassword: () => void
+}) {
   return (
     <form className="auth-form" onSubmit={onSubmit}>
       <label>
@@ -269,6 +413,15 @@ function LoginForm({ onSubmit }: { onSubmit: (event: FormEvent<HTMLFormElement>)
         <span>비밀번호</span>
         <input name="password" type="password" placeholder="비밀번호를 입력하세요" autoComplete="current-password" required />
       </label>
+      <div className="account-recovery-actions" aria-label="계정 복구">
+        <button className="text-action" type="button" onClick={onFindLoginId}>
+          아이디 찾기
+        </button>
+        <span aria-hidden="true">|</span>
+        <button className="text-action" type="button" onClick={onResetPassword}>
+          비밀번호 재설정
+        </button>
+      </div>
       <button className="primary-action" type="submit">로그인</button>
     </form>
   )
