@@ -5,13 +5,20 @@ import com.planmate.auth.dto.EmailRequest;
 import com.planmate.auth.dto.EmailVerificationConfirmRequest;
 import com.planmate.auth.dto.EmailVerificationResponse;
 import com.planmate.auth.dto.GuidanceResponse;
+import com.planmate.auth.dto.LoginIdRecoveryConfirmRequest;
+import com.planmate.auth.dto.LoginIdRecoveryRequest;
+import com.planmate.auth.dto.LoginIdRecoveryResponse;
 import com.planmate.auth.dto.LoginRequest;
 import com.planmate.auth.dto.LoginResponse;
+import com.planmate.auth.dto.PasswordResetConfirmRequest;
+import com.planmate.auth.dto.PasswordResetRequest;
+import com.planmate.auth.dto.PasswordResetResponse;
 import com.planmate.auth.dto.SignupRequest;
 import com.planmate.auth.dto.SignupResponse;
 import com.planmate.auth.dto.TokenRefreshResponse;
 import com.planmate.auth.security.AuthenticatedUser;
 import com.planmate.auth.security.JwtToken;
+import com.planmate.auth.service.AccountRecoveryService;
 import com.planmate.auth.service.AuthTokenService;
 import com.planmate.auth.service.EmailVerificationService;
 import com.planmate.auth.service.LoginResult;
@@ -44,19 +51,22 @@ public class AuthController {
     private final LoginService loginService;
     private final AuthTokenService authTokenService;
     private final UserQueryService userQueryService;
+    private final AccountRecoveryService accountRecoveryService;
 
     public AuthController(
             SignupService signupService,
             EmailVerificationService emailVerificationService,
             LoginService loginService,
             AuthTokenService authTokenService,
-            UserQueryService userQueryService
+            UserQueryService userQueryService,
+            AccountRecoveryService accountRecoveryService
     ) {
         this.signupService = signupService;
         this.emailVerificationService = emailVerificationService;
         this.loginService = loginService;
         this.authTokenService = authTokenService;
         this.userQueryService = userQueryService;
+        this.accountRecoveryService = accountRecoveryService;
     }
 
     @GetMapping("/status")
@@ -91,6 +101,30 @@ public class AuthController {
     public GuidanceResponse resendEmailVerification(@Valid @RequestBody EmailRequest request) {
         emailVerificationService.resend(request.email());
         return GuidanceResponse.verificationSentIfPossible();
+    }
+
+    @PostMapping("/login-id-recoveries")
+    public GuidanceResponse requestLoginIdRecovery(@Valid @RequestBody LoginIdRecoveryRequest request) {
+        accountRecoveryService.requestLoginIdRecovery(request.email());
+        return GuidanceResponse.recoverySentIfPossible();
+    }
+
+    @PostMapping("/login-id-recoveries/confirm")
+    public LoginIdRecoveryResponse confirmLoginIdRecovery(
+            @Valid @RequestBody LoginIdRecoveryConfirmRequest request
+    ) {
+        return accountRecoveryService.confirmLoginIdRecovery(request.token());
+    }
+
+    @PostMapping("/password-reset-requests")
+    public GuidanceResponse requestPasswordReset(@Valid @RequestBody PasswordResetRequest request) {
+        accountRecoveryService.requestPasswordReset(request.loginId(), request.email());
+        return GuidanceResponse.recoverySentIfPossible();
+    }
+
+    @PostMapping("/password-resets/confirm")
+    public PasswordResetResponse confirmPasswordReset(@Valid @RequestBody PasswordResetConfirmRequest request) {
+        return accountRecoveryService.confirmPasswordReset(request.token(), request.newPassword());
     }
 
     @PostMapping("/login")

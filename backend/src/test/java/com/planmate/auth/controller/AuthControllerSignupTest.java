@@ -202,6 +202,133 @@ class AuthControllerSignupTest {
     }
 
     @Test
+    void loginIdRecoverySendsTokenAndConfirmReturnsLoginId() throws Exception {
+        signupAndVerify("findUser", "find@example.com");
+
+        mockMvc.perform(post("/api/auth/login-id-recoveries")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "FIND@example.com"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        assertThat(authEmailSender.loginIdRecoveryToken()).isNotBlank();
+
+        mockMvc.perform(post("/api/auth/login-id-recoveries/confirm")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "token": "%s"
+                                }
+                                """.formatted(authEmailSender.loginIdRecoveryToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.loginId").value("findUser"));
+    }
+
+    @Test
+    void loginIdRecoveryDoesNotRevealUnknownEmail() throws Exception {
+        mockMvc.perform(post("/api/auth/login-id-recoveries")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "unknown@example.com"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        assertThat(authEmailSender.loginIdRecoveryToken()).isNull();
+    }
+
+    @Test
+    void passwordResetChangesPasswordAndRevokesRefreshToken() throws Exception {
+        signupAndVerify("resetUser", "reset@example.com");
+        MvcResult loginResult = login("resetUser");
+        Cookie refreshCookie = refreshCookie(loginResult);
+
+        mockMvc.perform(post("/api/auth/password-reset-requests")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "loginId": "resetUser",
+                                  "email": "RESET@example.com"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        assertThat(authEmailSender.passwordResetToken()).isNotBlank();
+
+        mockMvc.perform(post("/api/auth/password-resets/confirm")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "token": "%s",
+                                  "newPassword": "newPassword123"
+                                }
+                                """.formatted(authEmailSender.passwordResetToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reset").value(true));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "loginId": "resetUser",
+                                  "password": "password123"
+                                }
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "loginId": "resetUser",
+                                  "password": "newPassword123"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken", not(blankOrNullString())));
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .cookie(refreshCookie))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_TOKEN"));
+    }
+
+    @Test
+    void passwordResetRequestDoesNotRevealMismatchedAccountInformation() throws Exception {
+        signupAndVerify("safeUser", "safe@example.com");
+
+        mockMvc.perform(post("/api/auth/password-reset-requests")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "loginId": "safeUser",
+                                  "email": "other@example.com"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        assertThat(authEmailSender.passwordResetToken()).isNull();
+    }
+
+    @Test
+    void accountRecoveryRejectsInvalidToken() throws Exception {
+        mockMvc.perform(post("/api/auth/login-id-recoveries/confirm")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "token": "invalid-token"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_TOKEN"));
+    }
+
+    @Test
     void bearerTokenCanAccessMeAndRefreshCanReissueAccessToken() throws Exception {
         signupAndVerify("meUser", "me@example.com");
         MvcResult loginResult = login("meUser");
@@ -305,18 +432,40 @@ class AuthControllerSignupTest {
     static class CapturingAuthEmailSender implements AuthEmailSender {
 
         private String signupVerificationToken;
+        private String loginIdRecoveryToken;
+        private String passwordResetToken;
 
         @Override
         public void sendSignupVerification(UserEntity user, String rawToken) {
             this.signupVerificationToken = rawToken;
         }
 
+        @Override
+        public void sendLoginIdRecovery(UserEntity user, String rawToken) {
+            this.loginIdRecoveryToken = rawToken;
+        }
+
+        @Override
+        public void sendPasswordReset(UserEntity user, String rawToken) {
+            this.passwordResetToken = rawToken;
+        }
+
         String signupVerificationToken() {
             return signupVerificationToken;
         }
 
+        String loginIdRecoveryToken() {
+            return loginIdRecoveryToken;
+        }
+
+        String passwordResetToken() {
+            return passwordResetToken;
+        }
+
         void clear() {
             signupVerificationToken = null;
+            loginIdRecoveryToken = null;
+            passwordResetToken = null;
         }
 
     }

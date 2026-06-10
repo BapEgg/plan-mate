@@ -59,6 +59,10 @@ public class SecurityConfig {
                                 "/api/auth/signup",
                                 "/api/auth/email-verifications/confirm",
                                 "/api/auth/email-verifications/resend",
+                                "/api/auth/login-id-recoveries",
+                                "/api/auth/login-id-recoveries/confirm",
+                                "/api/auth/password-reset-requests",
+                                "/api/auth/password-resets/confirm",
                                 "/api/auth/login",
                                 "/api/auth/refresh",
                                 "/api/auth/logout"

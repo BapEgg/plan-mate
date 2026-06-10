@@ -6,4 +6,8 @@ public interface AuthEmailSender {
 
     void sendSignupVerification(UserEntity user, String rawToken);
 
+    void sendLoginIdRecovery(UserEntity user, String rawToken);
+
+    void sendPasswordReset(UserEntity user, String rawToken);
+
 }

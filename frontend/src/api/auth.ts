@@ -55,6 +55,32 @@ export type EmailVerificationResponse = {
   verified: boolean
 }
 
+export type GuidanceResponse = {
+  message: string
+}
+
+export type LoginIdRecoveryRequest = {
+  email: string
+}
+
+export type LoginIdRecoveryResponse = {
+  loginId: string
+}
+
+export type PasswordResetRequest = {
+  loginId: string
+  email: string
+}
+
+export type PasswordResetConfirmRequest = {
+  token: string
+  newPassword: string
+}
+
+export type PasswordResetResponse = {
+  reset: boolean
+}
+
 export class ApiError extends Error {
   readonly status: number
   readonly code?: string
@@ -117,6 +143,34 @@ export function confirmEmail(token: string) {
   return request<EmailVerificationResponse>('/api/auth/email-verifications/confirm', {
     method: 'POST',
     body: JSON.stringify({ token }),
+  })
+}
+
+export function requestLoginIdRecovery(payload: LoginIdRecoveryRequest) {
+  return request<GuidanceResponse>('/api/auth/login-id-recoveries', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function confirmLoginIdRecovery(token: string) {
+  return request<LoginIdRecoveryResponse>('/api/auth/login-id-recoveries/confirm', {
+    method: 'POST',
+    body: JSON.stringify({ token }),
+  })
+}
+
+export function requestPasswordReset(payload: PasswordResetRequest) {
+  return request<GuidanceResponse>('/api/auth/password-reset-requests', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function confirmPasswordReset(payload: PasswordResetConfirmRequest) {
+  return request<PasswordResetResponse>('/api/auth/password-resets/confirm', {
+    method: 'POST',
+    body: JSON.stringify(payload),
   })
 }
 

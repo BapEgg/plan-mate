@@ -322,6 +322,28 @@ button:disabled {
   font-weight: 800;
 }
 
+.result-panel {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid rgba(27, 78, 66, 0.18);
+  border-radius: 18px;
+  color: #1b4e42;
+  background: #e5f3ec;
+}
+
+.result-panel span {
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.result-panel strong {
+  font-size: 1.5rem;
+  letter-spacing: -0.04em;
+}
+
 .primary-action,
 .secondary-action,
 .ghost-button {
