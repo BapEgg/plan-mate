@@ -65,7 +65,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,
                                 "/api/auth/status",
                                 "/oauth2/authorization/**",
-                                "/login/oauth2/code/**"
+                                "/login/oauth2/code/**",
+                                "/uploads/profile-images/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/auth/signup",

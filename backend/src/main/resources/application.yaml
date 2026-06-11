@@ -2,6 +2,11 @@ spring:
   application:
     name: planmate-backend
 
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 2MB
+
   mail:
     host: smtp.gmail.com
     port: 587
@@ -99,6 +104,10 @@ app:
   oauth2:
     success-redirect-path: /main
     failure-redirect-path: /?oauth2Error=true
+  profile-image:
+    upload-dir: ${PROFILE_IMAGE_UPLOAD_DIR:uploads/profile-images}
+    public-path: /uploads/profile-images
+    max-size: 2097152
   jwt:
     secret: ${JWT_SECRET:planmate-local-development-jwt-secret-key-must-be-at-least-32-bytes}
     access-token-ttl: 15m

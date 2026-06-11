@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import type { AuthUser } from '../../api/auth'
-import { ApiError } from '../../api/client'
+import { API_BASE_URL, ApiError } from '../../api/client'
 import { createTrip, listMyTrips } from '../../api/trips'
 import type { CreateTripRequest, TripStatus, TripSummary } from '../../api/trips'
-import { getMe, updateMyNickname } from '../../api/users'
+import { clearMyProfileImage, getMe, updateMyNickname, updateMyProfileImage } from '../../api/users'
 import type { MeProfile } from '../../api/users'
 import './MainPage.css'
 
@@ -39,8 +39,7 @@ type TripStats = {
 }
 
 const LOCAL_TRIPS_KEY_PREFIX = 'planmate.localTrips'
-const PROFILE_IMAGE_KEY_PREFIX = 'planmate.profileImage'
-const PROFILE_IMAGE_MAX_BYTES = 1_500_000
+const PROFILE_IMAGE_MAX_BYTES = 2_097_152
 
 export function MainPage({ accessToken, user, onLogout, onOpenTrip }: MainPageProps) {
   const [profile, setProfile] = useState<MeProfile | null>(null)
@@ -52,7 +51,6 @@ export function MainPage({ accessToken, user, onLogout, onOpenTrip }: MainPagePr
   const [createStatus, setCreateStatus] = useState<AsyncStatus>('idle')
   const [notice, setNotice] = useState<DashboardNotice | null>(null)
   const [createPanelOpen, setCreatePanelOpen] = useState(false)
-  const [profileImage, setProfileImage] = useState<string | null>(() => readProfileImage())
 
   const ownerId = profile?.id ?? user?.id
   const displayName = profile?.nickname ?? user?.nickname ?? '여행자'
@@ -63,14 +61,6 @@ export function MainPage({ accessToken, user, onLogout, onOpenTrip }: MainPagePr
     upcoming: trips.filter((trip) => trip.status === 'UPCOMING').length,
     completed: trips.filter((trip) => trip.status === 'COMPLETED').length,
   }), [trips])
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      setProfileImage(readProfileImage(ownerId))
-    }, 0)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [ownerId])
 
   useEffect(() => {
     if (!accessToken) {
@@ -178,21 +168,19 @@ export function MainPage({ accessToken, user, onLogout, onOpenTrip }: MainPagePr
     }
   }
 
-  function handleChangeProfileImage(imageDataUrl: string | null) {
-    try {
-      if (imageDataUrl) {
-        writeProfileImage(ownerId, imageDataUrl)
-        setProfileImage(imageDataUrl)
-        setNotice({ tone: 'success', message: '프로필 이미지를 변경했습니다.' })
-        return
-      }
+  async function handleChangeProfileImage(image: File | null) {
+    if (!accessToken || !profile) {
+      return
+    }
 
-      removeProfileImage(ownerId)
-      setProfileImage(null)
-      setNotice({ tone: 'success', message: '프로필 이미지를 삭제했습니다.' })
-    } catch {
-      setProfileImage(readProfileImage(ownerId))
-      setNotice({ tone: 'error', message: '프로필 이미지를 저장하지 못했습니다. 더 작은 이미지를 선택하세요.' })
+    try {
+      const updated = image
+        ? await updateMyProfileImage(accessToken, image)
+        : await clearMyProfileImage(accessToken)
+      setProfile(updated)
+      setNotice({ tone: 'success', message: image ? '프로필 이미지를 변경했습니다.' : '프로필 이미지를 삭제했습니다.' })
+    } catch (error: unknown) {
+      setNotice({ tone: 'error', message: toUserMessage(error) })
     }
   }
 
@@ -279,7 +267,7 @@ export function MainPage({ accessToken, user, onLogout, onOpenTrip }: MainPagePr
             fallbackUser={user}
             status={profileStatus}
             saveStatus={nicknameSaveStatus}
-            profileImage={profileImage}
+            profileImageUrl={profile?.profileImageUrl ?? null}
             onSaveNickname={handleSaveNickname}
             onChangeProfileImage={handleChangeProfileImage}
             onImageError={(message) => setNotice({ tone: 'error', message })}
@@ -422,7 +410,7 @@ function ProfileCard({
   fallbackUser,
   status,
   saveStatus,
-  profileImage,
+  profileImageUrl,
   onSaveNickname,
   onChangeProfileImage,
   onImageError,
@@ -431,9 +419,9 @@ function ProfileCard({
   fallbackUser: AuthUser | null
   status: AsyncStatus
   saveStatus: AsyncStatus
-  profileImage: string | null
+  profileImageUrl: string | null
   onSaveNickname: (nickname: string) => Promise<void>
-  onChangeProfileImage: (imageDataUrl: string | null) => void
+  onChangeProfileImage: (image: File | null) => Promise<void>
   onImageError: (message: string) => void
 }) {
   const [editing, setEditing] = useState(false)
@@ -462,7 +450,7 @@ function ProfileCard({
       ) : (
         <>
           <div className="profile-identity">
-            <ProfileAvatar profileImage={profileImage} nickname={nickname} />
+            <ProfileAvatar profileImageUrl={profileImageUrl} nickname={nickname} />
             <div>
               <strong>{nickname || '프로필을 불러오는 중입니다.'}</strong>
               <p>{profile?.email ?? '이메일 정보를 확인 중입니다.'}</p>
@@ -471,7 +459,7 @@ function ProfileCard({
 
           <ProfileImageControls
             disabled={!profile}
-            hasProfileImage={Boolean(profileImage)}
+            hasProfileImage={Boolean(profileImageUrl)}
             onChangeProfileImage={onChangeProfileImage}
             onImageError={onImageError}
           />
@@ -505,11 +493,11 @@ function ProfileCard({
   )
 }
 
-function ProfileAvatar({ profileImage, nickname }: { profileImage: string | null; nickname: string }) {
+function ProfileAvatar({ profileImageUrl, nickname }: { profileImageUrl: string | null; nickname: string }) {
   return (
     <div className="profile-avatar" aria-label="프로필 이미지">
-      {profileImage ? (
-        <img src={profileImage} alt="" />
+      {profileImageUrl ? (
+        <img src={resolveBackendAssetUrl(profileImageUrl)} alt="" />
       ) : (
         <span aria-hidden="true">{nickname.slice(0, 1) || 'P'}</span>
       )}
@@ -525,7 +513,7 @@ function ProfileImageControls({
 }: {
   disabled: boolean
   hasProfileImage: boolean
-  onChangeProfileImage: (imageDataUrl: string | null) => void
+  onChangeProfileImage: (image: File | null) => Promise<void>
   onImageError: (message: string) => void
 }) {
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -546,16 +534,7 @@ function ProfileImageControls({
       return
     }
 
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (typeof reader.result !== 'string') {
-        onImageError('프로필 이미지를 읽지 못했습니다.')
-        return
-      }
-      onChangeProfileImage(reader.result)
-    }
-    reader.onerror = () => onImageError('프로필 이미지를 읽지 못했습니다.')
-    reader.readAsDataURL(file)
+    void onChangeProfileImage(file)
   }
 
   return (
@@ -568,7 +547,7 @@ function ProfileImageControls({
         className="profile-image-remove"
         type="button"
         disabled={disabled || !hasProfileImage}
-        onClick={() => onChangeProfileImage(null)}
+        onClick={() => void onChangeProfileImage(null)}
       >
         기본 이미지
       </button>
@@ -893,6 +872,13 @@ function durationLabel(startDate: string, endDate: string) {
   return `${diff}일`
 }
 
+function resolveBackendAssetUrl(path: string) {
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path
+  }
+  return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`
+}
+
 function isEndpointPendingError(error: unknown) {
   return error instanceof ApiError && [404, 405, 501].includes(error.status)
 }
@@ -925,20 +911,4 @@ function writeLocalTrips(ownerId: number | undefined, trips: TripSummary[]) {
 
 function localTripsKey(ownerId?: number) {
   return `${LOCAL_TRIPS_KEY_PREFIX}.${ownerId ?? 'anonymous'}`
-}
-
-function readProfileImage(ownerId?: number) {
-  return localStorage.getItem(profileImageKey(ownerId))
-}
-
-function writeProfileImage(ownerId: number | undefined, imageDataUrl: string) {
-  localStorage.setItem(profileImageKey(ownerId), imageDataUrl)
-}
-
-function removeProfileImage(ownerId?: number) {
-  localStorage.removeItem(profileImageKey(ownerId))
-}
-
-function profileImageKey(ownerId?: number) {
-  return `${PROFILE_IMAGE_KEY_PREFIX}.${ownerId ?? 'anonymous'}`
 }

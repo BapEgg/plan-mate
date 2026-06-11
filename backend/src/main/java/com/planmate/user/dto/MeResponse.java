@@ -9,6 +9,7 @@ public record MeResponse(
         String loginId,
         String email,
         String nickname,
+        String profileImageUrl,
         UserRole role,
         UserStatus status,
         boolean emailVerified,

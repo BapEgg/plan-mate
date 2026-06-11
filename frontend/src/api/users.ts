@@ -5,6 +5,7 @@ export type MeProfile = {
   loginId: string | null
   email: string
   nickname: string
+  profileImageUrl: string | null
   role: string
   status: string
   emailVerified: boolean
@@ -27,5 +28,23 @@ export function updateMyNickname(accessToken: string, payload: NicknameUpdateReq
     method: 'PATCH',
     headers: bearerHeaders(accessToken),
     body: JSON.stringify(payload),
+  })
+}
+
+export function updateMyProfileImage(accessToken: string, image: File) {
+  const formData = new FormData()
+  formData.append('image', image)
+
+  return request<MeProfile>('/api/users/me/profile-image', {
+    method: 'POST',
+    headers: bearerHeaders(accessToken),
+    body: formData,
+  })
+}
+
+export function clearMyProfileImage(accessToken: string) {
+  return request<MeProfile>('/api/users/me/profile-image', {
+    method: 'DELETE',
+    headers: bearerHeaders(accessToken),
   })
 }

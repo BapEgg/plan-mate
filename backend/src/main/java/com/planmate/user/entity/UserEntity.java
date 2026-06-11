@@ -30,6 +30,9 @@ public class UserEntity {
     @Column(nullable = false, length = 30)
     private String nickname;
 
+    @Column(length = 2048)
+    private String profileImageUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private UserRole role;
@@ -76,6 +79,18 @@ public class UserEntity {
         }
     }
 
+    public void updateNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
+    public void updateProfileImageUrl(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
+    }
+
+    public void clearProfileImageUrl() {
+        this.profileImageUrl = null;
+    }
+
     public UserAccount toAccount() {
         return new UserAccount(id, email, nickname, role, status, emailVerifiedAt != null);
     }
@@ -94,6 +109,10 @@ public class UserEntity {
 
     public String getNickname() {
         return nickname;
+    }
+
+    public String getProfileImageUrl() {
+        return profileImageUrl;
     }
 
     public UserRole getRole() {
