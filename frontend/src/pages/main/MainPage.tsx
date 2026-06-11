@@ -1,0 +1,944 @@
+import { useEffect, useMemo, useState } from 'react'
+import type { ChangeEvent, FormEvent } from 'react'
+import type { AuthUser } from '../../api/auth'
+import { ApiError } from '../../api/client'
+import { createTrip, listMyTrips } from '../../api/trips'
+import type { CreateTripRequest, TripStatus, TripSummary } from '../../api/trips'
+import { getMe, updateMyNickname } from '../../api/users'
+import type { MeProfile } from '../../api/users'
+import './MainPage.css'
+
+type MainPageProps = {
+  accessToken: string
+  user: AuthUser | null
+  onLogout: () => void
+  onOpenTrip: (tripId: string) => void
+}
+
+type TripDetailPreparationPageProps = {
+  tripId: string
+  user: AuthUser | null
+  onBackToMain: () => void
+  onLogout: () => void
+}
+
+type AsyncStatus = 'idle' | 'loading' | 'success' | 'error'
+type NoticeTone = 'info' | 'success' | 'error'
+type TripsApiMode = 'connected' | 'pending'
+
+type DashboardNotice = {
+  tone: NoticeTone
+  message: string
+}
+
+type TripStats = {
+  total: number
+  planning: number
+  upcoming: number
+  completed: number
+}
+
+const LOCAL_TRIPS_KEY_PREFIX = 'planmate.localTrips'
+const PROFILE_IMAGE_KEY_PREFIX = 'planmate.profileImage'
+const PROFILE_IMAGE_MAX_BYTES = 1_500_000
+
+export function MainPage({ accessToken, user, onLogout, onOpenTrip }: MainPageProps) {
+  const [profile, setProfile] = useState<MeProfile | null>(null)
+  const [profileStatus, setProfileStatus] = useState<AsyncStatus>('idle')
+  const [nicknameSaveStatus, setNicknameSaveStatus] = useState<AsyncStatus>('idle')
+  const [trips, setTrips] = useState<TripSummary[]>([])
+  const [tripsStatus, setTripsStatus] = useState<AsyncStatus>('idle')
+  const [tripsApiMode, setTripsApiMode] = useState<TripsApiMode>('connected')
+  const [createStatus, setCreateStatus] = useState<AsyncStatus>('idle')
+  const [notice, setNotice] = useState<DashboardNotice | null>(null)
+  const [createPanelOpen, setCreatePanelOpen] = useState(false)
+  const [profileImage, setProfileImage] = useState<string | null>(() => readProfileImage())
+
+  const ownerId = profile?.id ?? user?.id
+  const displayName = profile?.nickname ?? user?.nickname ?? '여행자'
+
+  const tripStats = useMemo<TripStats>(() => ({
+    total: trips.length,
+    planning: trips.filter((trip) => trip.status === 'PLANNING').length,
+    upcoming: trips.filter((trip) => trip.status === 'UPCOMING').length,
+    completed: trips.filter((trip) => trip.status === 'COMPLETED').length,
+  }), [trips])
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setProfileImage(readProfileImage(ownerId))
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [ownerId])
+
+  useEffect(() => {
+    if (!accessToken) {
+      return
+    }
+
+    let ignore = false
+    const timeoutId = window.setTimeout(() => {
+      setProfileStatus('loading')
+
+      void getMe(accessToken)
+        .then((response) => {
+          if (ignore) {
+            return
+          }
+          setProfile(response)
+          setProfileStatus('success')
+        })
+        .catch((error: unknown) => {
+          if (ignore) {
+            return
+          }
+          setProfileStatus('error')
+          setNotice({ tone: 'error', message: toUserMessage(error) })
+        })
+    }, 0)
+
+    return () => {
+      ignore = true
+      window.clearTimeout(timeoutId)
+    }
+  }, [accessToken])
+
+  useEffect(() => {
+    if (!accessToken) {
+      return
+    }
+
+    let ignore = false
+    const timeoutId = window.setTimeout(() => {
+      setTripsStatus('loading')
+
+      void listMyTrips(accessToken)
+        .then((response) => {
+          if (ignore) {
+            return
+          }
+          setTrips(response.map((trip) => normalizeTrip(trip, 'api')))
+          setTripsApiMode('connected')
+          setTripsStatus('success')
+        })
+        .catch((error: unknown) => {
+          if (ignore) {
+            return
+          }
+
+          if (isEndpointPendingError(error)) {
+            setTrips(readLocalTrips(ownerId))
+            setTripsApiMode('pending')
+            setTripsStatus('success')
+            setNotice({
+              tone: 'info',
+              message: '여행 API가 아직 준비되지 않아 이 브라우저의 임시 여행 목록을 표시합니다.',
+            })
+            return
+          }
+
+          setTripsStatus('error')
+          setNotice({ tone: 'error', message: toUserMessage(error) })
+        })
+    }, 0)
+
+    return () => {
+      ignore = true
+      window.clearTimeout(timeoutId)
+    }
+  }, [accessToken, ownerId])
+
+  async function handleSaveNickname(nickname: string) {
+    if (!accessToken || !profile) {
+      return
+    }
+
+    setNicknameSaveStatus('loading')
+    setNotice(null)
+
+    try {
+      const updated = await updateMyNickname(accessToken, { nickname })
+      setProfile(updated)
+      setNicknameSaveStatus('success')
+      setNotice({ tone: 'success', message: '닉네임을 저장했습니다.' })
+    } catch (error: unknown) {
+      if (isEndpointPendingError(error)) {
+        setProfile({ ...profile, nickname })
+        setNicknameSaveStatus('success')
+        setNotice({
+          tone: 'info',
+          message: '닉네임 수정 API가 아직 준비되지 않아 화면에서만 임시 반영했습니다.',
+        })
+        return
+      }
+
+      setNicknameSaveStatus('error')
+      setNotice({ tone: 'error', message: toUserMessage(error) })
+    }
+  }
+
+  function handleChangeProfileImage(imageDataUrl: string | null) {
+    try {
+      if (imageDataUrl) {
+        writeProfileImage(ownerId, imageDataUrl)
+        setProfileImage(imageDataUrl)
+        setNotice({ tone: 'success', message: '프로필 이미지를 변경했습니다.' })
+        return
+      }
+
+      removeProfileImage(ownerId)
+      setProfileImage(null)
+      setNotice({ tone: 'success', message: '프로필 이미지를 삭제했습니다.' })
+    } catch {
+      setProfileImage(readProfileImage(ownerId))
+      setNotice({ tone: 'error', message: '프로필 이미지를 저장하지 못했습니다. 더 작은 이미지를 선택하세요.' })
+    }
+  }
+
+  async function handleCreateTrip(payload: CreateTripRequest) {
+    if (!accessToken) {
+      return
+    }
+
+    setCreateStatus('loading')
+    setNotice(null)
+
+    try {
+      const created = normalizeTrip(await createTrip(accessToken, payload), 'api')
+      setTrips((currentTrips) => [created, ...currentTrips])
+      setTripsApiMode('connected')
+      setCreateStatus('success')
+      setCreatePanelOpen(false)
+      setNotice({ tone: 'success', message: '새 여행을 생성했습니다.' })
+    } catch (error: unknown) {
+      if (isEndpointPendingError(error)) {
+        const localTrip = createLocalTrip(payload)
+        setTrips((currentTrips) => {
+          const nextTrips = [localTrip, ...currentTrips]
+          writeLocalTrips(ownerId, nextTrips.filter((trip) => trip.source === 'local'))
+          return nextTrips
+        })
+        setTripsApiMode('pending')
+        setCreateStatus('success')
+        setCreatePanelOpen(false)
+        setNotice({
+          tone: 'info',
+          message: '여행 API가 아직 준비되지 않아 임시 카드로 추가했습니다.',
+        })
+        return
+      }
+
+      setCreateStatus('error')
+      setNotice({ tone: 'error', message: toUserMessage(error) })
+    }
+  }
+
+  function handleReloadTrips() {
+    if (!accessToken) {
+      return
+    }
+    setTripsStatus('loading')
+    void listMyTrips(accessToken)
+      .then((response) => {
+        setTrips(response.map((trip) => normalizeTrip(trip, 'api')))
+        setTripsApiMode('connected')
+        setTripsStatus('success')
+        setNotice({ tone: 'success', message: '여행 목록을 다시 불러왔습니다.' })
+      })
+      .catch((error: unknown) => {
+        if (isEndpointPendingError(error)) {
+          setTrips(readLocalTrips(ownerId))
+          setTripsApiMode('pending')
+          setTripsStatus('success')
+          setNotice({ tone: 'info', message: '여행 API 연결 전이라 임시 목록을 다시 불러왔습니다.' })
+          return
+        }
+        setTripsStatus('error')
+        setNotice({ tone: 'error', message: toUserMessage(error) })
+      })
+  }
+
+  return (
+    <main className="dashboard-page">
+      <div className="dashboard-map-grid" aria-hidden="true" />
+      <MainHeader displayName={displayName} onLogout={onLogout} />
+
+      <section className="dashboard-shell" aria-label="메인 대시보드">
+        <DashboardHero
+          displayName={displayName}
+          tripStats={tripStats}
+          onCreateTrip={() => setCreatePanelOpen(true)}
+        />
+
+        {notice && <DashboardNoticeBanner notice={notice} onClose={() => setNotice(null)} />}
+
+        <div className="dashboard-content-grid">
+          <ProfileCard
+            profile={profile}
+            fallbackUser={user}
+            status={profileStatus}
+            saveStatus={nicknameSaveStatus}
+            profileImage={profileImage}
+            onSaveNickname={handleSaveNickname}
+            onChangeProfileImage={handleChangeProfileImage}
+            onImageError={(message) => setNotice({ tone: 'error', message })}
+          />
+          <TripDashboard
+            trips={trips}
+            status={tripsStatus}
+            apiMode={tripsApiMode}
+            onCreateTrip={() => setCreatePanelOpen(true)}
+            onOpenTrip={onOpenTrip}
+            onReloadTrips={handleReloadTrips}
+          />
+        </div>
+      </section>
+
+      {createPanelOpen && (
+        <CreateTripPanel
+          status={createStatus}
+          onClose={() => setCreatePanelOpen(false)}
+          onSubmit={handleCreateTrip}
+        />
+      )}
+    </main>
+  )
+}
+
+export function TripDetailPreparationPage({
+  tripId,
+  user,
+  onBackToMain,
+  onLogout,
+}: TripDetailPreparationPageProps) {
+  return (
+    <main className="dashboard-page trip-detail-ready-page">
+      <div className="dashboard-map-grid" aria-hidden="true" />
+      <MainHeader displayName={user?.nickname ?? '여행자'} onLogout={onLogout} />
+      <section className="trip-detail-ready-card" aria-label="여행 상세 준비 화면">
+        <p className="eyebrow">Trip detail</p>
+        <h1>여행 상세 진입 준비</h1>
+        <p>
+          선택한 여행 ID는 <strong>{tripId}</strong>입니다. 이후 백엔드의 여행 상세, 숙소, 선호도,
+          AI 일정 생성 API가 준비되면 이 경로에 상세 화면을 연결하면 됩니다.
+        </p>
+        <div className="detail-ready-steps">
+          <span>여행 기본 정보</span>
+          <span>숙소 등록</span>
+          <span>취향 입력</span>
+          <span>AI 일정 생성</span>
+        </div>
+        <button className="primary-action" type="button" onClick={onBackToMain}>
+          메인으로 돌아가기
+        </button>
+      </section>
+    </main>
+  )
+}
+
+function MainHeader({ displayName, onLogout }: { displayName: string; onLogout: () => void }) {
+  return (
+    <nav className="dashboard-nav" aria-label="메인 내비게이션">
+      <div className="dashboard-brand">
+        <span className="dashboard-brand-mark" aria-hidden="true">PM</span>
+        <strong>PlanMate</strong>
+      </div>
+      <div className="dashboard-user-menu">
+        <span>{displayName}</span>
+        <button className="ghost-button" type="button" onClick={onLogout}>
+          로그아웃
+        </button>
+      </div>
+    </nav>
+  )
+}
+
+function DashboardHero({
+  displayName,
+  tripStats,
+  onCreateTrip,
+}: {
+  displayName: string
+  tripStats: TripStats
+  onCreateTrip: () => void
+}) {
+  return (
+    <section className="dashboard-hero">
+      <div>
+        <p className="eyebrow">Travel command center</p>
+        <h1>{displayName}님, 실행 가능한 여행 계획을 시작하세요.</h1>
+        <p>
+          프로필을 확인하고, 내 여행 목록을 관리하고, 새 여행을 만든 뒤 상세 화면으로 넘어갈 수 있는
+          메인 대시보드입니다.
+        </p>
+        <div className="main-actions">
+          <button className="primary-action" type="button" onClick={onCreateTrip}>
+            새 여행 만들기
+          </button>
+          <a className="secondary-link-action" href="#my-trips">
+            내 여행 보기
+          </a>
+        </div>
+      </div>
+      <div className="trip-stat-board" aria-label="여행 요약">
+        <StatCard label="전체 여행" value={tripStats.total} />
+        <StatCard label="계획중" value={tripStats.planning} />
+        <StatCard label="예정" value={tripStats.upcoming} />
+        <StatCard label="완료" value={tripStats.completed} />
+      </div>
+    </section>
+  )
+}
+
+function StatCard({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="stat-card">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  )
+}
+
+function DashboardNoticeBanner({
+  notice,
+  onClose,
+}: {
+  notice: DashboardNotice
+  onClose: () => void
+}) {
+  return (
+    <div className={`dashboard-notice ${notice.tone}`} role="status">
+      <p>{notice.message}</p>
+      <button type="button" onClick={onClose} aria-label="알림 닫기">
+        닫기
+      </button>
+    </div>
+  )
+}
+
+function ProfileCard({
+  profile,
+  fallbackUser,
+  status,
+  saveStatus,
+  profileImage,
+  onSaveNickname,
+  onChangeProfileImage,
+  onImageError,
+}: {
+  profile: MeProfile | null
+  fallbackUser: AuthUser | null
+  status: AsyncStatus
+  saveStatus: AsyncStatus
+  profileImage: string | null
+  onSaveNickname: (nickname: string) => Promise<void>
+  onChangeProfileImage: (imageDataUrl: string | null) => void
+  onImageError: (message: string) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const nickname = profile?.nickname ?? fallbackUser?.nickname ?? ''
+
+  return (
+    <section className="dashboard-card profile-card" aria-labelledby="profile-title">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">My profile</p>
+          <h2 id="profile-title">내 프로필</h2>
+        </div>
+        <span className={`status-pill ${status}`}>{statusLabel(status)}</span>
+      </div>
+
+      {editing ? (
+        <NicknameEditForm
+          initialNickname={nickname}
+          status={saveStatus}
+          onCancel={() => setEditing(false)}
+          onSubmit={async (nextNickname) => {
+            await onSaveNickname(nextNickname)
+            setEditing(false)
+          }}
+        />
+      ) : (
+        <>
+          <div className="profile-identity">
+            <ProfileAvatar profileImage={profileImage} nickname={nickname} />
+            <div>
+              <strong>{nickname || '프로필을 불러오는 중입니다.'}</strong>
+              <p>{profile?.email ?? '이메일 정보를 확인 중입니다.'}</p>
+            </div>
+          </div>
+
+          <ProfileImageControls
+            disabled={!profile}
+            hasProfileImage={Boolean(profileImage)}
+            onChangeProfileImage={onChangeProfileImage}
+            onImageError={onImageError}
+          />
+
+          <dl className="profile-meta-list">
+            <div>
+              <dt>로그인 ID</dt>
+              <dd>{profile?.loginId ?? fallbackUser?.loginId ?? 'OAuth2 계정'}</dd>
+            </div>
+            <div>
+              <dt>이메일 인증</dt>
+              <dd>{profile?.emailVerified ? '완료' : '확인 중'}</dd>
+            </div>
+            <div>
+              <dt>연동 계정</dt>
+              <dd>{formatProviders(profile?.linkedProviders)}</dd>
+            </div>
+          </dl>
+
+          <button
+            className="secondary-action full-width-action"
+            type="button"
+            disabled={!profile}
+            onClick={() => setEditing(true)}
+          >
+            닉네임 수정
+          </button>
+        </>
+      )}
+    </section>
+  )
+}
+
+function ProfileAvatar({ profileImage, nickname }: { profileImage: string | null; nickname: string }) {
+  return (
+    <div className="profile-avatar" aria-label="프로필 이미지">
+      {profileImage ? (
+        <img src={profileImage} alt="" />
+      ) : (
+        <span aria-hidden="true">{nickname.slice(0, 1) || 'P'}</span>
+      )}
+    </div>
+  )
+}
+
+function ProfileImageControls({
+  disabled,
+  hasProfileImage,
+  onChangeProfileImage,
+  onImageError,
+}: {
+  disabled: boolean
+  hasProfileImage: boolean
+  onChangeProfileImage: (imageDataUrl: string | null) => void
+  onImageError: (message: string) => void
+}) {
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+
+    if (!file) {
+      return
+    }
+
+    if (!file.type.startsWith('image/')) {
+      onImageError('이미지 파일만 선택할 수 있습니다.')
+      return
+    }
+
+    if (file.size > PROFILE_IMAGE_MAX_BYTES) {
+      onImageError('프로필 이미지는 1.5MB 이하 파일만 사용할 수 있습니다.')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') {
+        onImageError('프로필 이미지를 읽지 못했습니다.')
+        return
+      }
+      onChangeProfileImage(reader.result)
+    }
+    reader.onerror = () => onImageError('프로필 이미지를 읽지 못했습니다.')
+    reader.readAsDataURL(file)
+  }
+
+  return (
+    <div className="profile-image-controls">
+      <label className={`profile-image-action ${disabled ? 'disabled' : ''}`}>
+        이미지 변경
+        <input type="file" accept="image/*" disabled={disabled} onChange={handleFileChange} />
+      </label>
+      <button
+        className="profile-image-remove"
+        type="button"
+        disabled={disabled || !hasProfileImage}
+        onClick={() => onChangeProfileImage(null)}
+      >
+        기본 이미지
+      </button>
+      <p>실시간 채팅, 지도 마커, 여행 멤버 표시에서 재사용할 프로필 이미지입니다.</p>
+    </div>
+  )
+}
+
+function NicknameEditForm({
+  initialNickname,
+  status,
+  onCancel,
+  onSubmit,
+}: {
+  initialNickname: string
+  status: AsyncStatus
+  onCancel: () => void
+  onSubmit: (nickname: string) => Promise<void>
+}) {
+  const [nickname, setNickname] = useState(initialNickname)
+  const trimmedNickname = nickname.trim()
+  const nicknameInvalid = trimmedNickname.length < 2 || trimmedNickname.length > 30
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (nicknameInvalid) {
+      return
+    }
+    await onSubmit(trimmedNickname)
+  }
+
+  return (
+    <form className="nickname-form" onSubmit={handleSubmit}>
+      <label>
+        <span>닉네임</span>
+        <input
+          name="nickname"
+          type="text"
+          minLength={2}
+          maxLength={30}
+          value={nickname}
+          onChange={(event) => setNickname(event.target.value)}
+          aria-invalid={nicknameInvalid}
+          required
+        />
+      </label>
+      <p className="form-guide">닉네임은 2자 이상 30자 이하로 입력하세요.</p>
+      <div className="form-button-row">
+        <button className="primary-action" type="submit" disabled={nicknameInvalid || status === 'loading'}>
+          저장
+        </button>
+        <button className="secondary-action" type="button" onClick={onCancel}>
+          취소
+        </button>
+      </div>
+    </form>
+  )
+}
+
+function TripDashboard({
+  trips,
+  status,
+  apiMode,
+  onCreateTrip,
+  onOpenTrip,
+  onReloadTrips,
+}: {
+  trips: TripSummary[]
+  status: AsyncStatus
+  apiMode: TripsApiMode
+  onCreateTrip: () => void
+  onOpenTrip: (tripId: string) => void
+  onReloadTrips: () => void
+}) {
+  return (
+    <section className="dashboard-card trip-dashboard" id="my-trips" aria-labelledby="trips-title">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">My trips</p>
+          <h2 id="trips-title">내 여행 목록</h2>
+        </div>
+        <button className="compact-action" type="button" onClick={onReloadTrips}>
+          새로고침
+        </button>
+      </div>
+
+      {apiMode === 'pending' && (
+        <p className="inline-api-note">
+          백엔드 여행 API 연결 전입니다. 생성한 카드는 이 브라우저에 임시 저장됩니다.
+        </p>
+      )}
+
+      {status === 'loading' && <TripSkeletonList />}
+      {status === 'error' && (
+        <div className="empty-trip-state">
+          <strong>여행 목록을 불러오지 못했습니다.</strong>
+          <p>잠시 후 다시 시도하거나 로그인 상태를 확인하세요.</p>
+          <button className="secondary-action" type="button" onClick={onReloadTrips}>
+            다시 불러오기
+          </button>
+        </div>
+      )}
+      {status !== 'loading' && status !== 'error' && trips.length === 0 && (
+        <EmptyTripState onCreateTrip={onCreateTrip} />
+      )}
+      {status !== 'loading' && status !== 'error' && trips.length > 0 && (
+        <div className="trip-card-grid">
+          {trips.map((trip) => (
+            <TripCard key={trip.id} trip={trip} onOpen={() => onOpenTrip(trip.id)} />
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function EmptyTripState({ onCreateTrip }: { onCreateTrip: () => void }) {
+  return (
+    <div className="empty-trip-state">
+      <span className="empty-trip-icon" aria-hidden="true">+</span>
+      <strong>아직 생성한 여행이 없습니다.</strong>
+      <p>첫 여행을 만들면 이 영역에 여행 카드가 표시되고 상세 화면으로 이동할 수 있습니다.</p>
+      <button className="primary-action" type="button" onClick={onCreateTrip}>
+        첫 여행 만들기
+      </button>
+    </div>
+  )
+}
+
+function TripCard({ trip, onOpen }: { trip: TripSummary; onOpen: () => void }) {
+  return (
+    <article className="trip-card">
+      <div className="trip-card-topline">
+        <span className={`trip-status ${trip.status.toLowerCase()}`}>{tripStatusLabel(trip.status)}</span>
+        {trip.source === 'local' && <span className="local-badge">임시</span>}
+      </div>
+      <h3>{trip.title}</h3>
+      <p>{trip.destination}</p>
+      <div className="trip-card-meta">
+        <span>{formatDate(trip.startDate)} - {formatDate(trip.endDate)}</span>
+        <span>{durationLabel(trip.startDate, trip.endDate)}</span>
+        <span>멤버 {trip.memberCount}명</span>
+      </div>
+      <button className="trip-open-button" type="button" onClick={onOpen}>
+        상세 진입 준비
+      </button>
+    </article>
+  )
+}
+
+function TripSkeletonList() {
+  return (
+    <div className="trip-card-grid" aria-label="여행 목록 로딩 중">
+      {[0, 1, 2].map((item) => (
+        <div className="trip-skeleton-card" key={item}>
+          <span />
+          <strong />
+          <p />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function CreateTripPanel({
+  status,
+  onClose,
+  onSubmit,
+}: {
+  status: AsyncStatus
+  onClose: () => void
+  onSubmit: (payload: CreateTripRequest) => Promise<void>
+}) {
+  const [formError, setFormError] = useState('')
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    const payload = {
+      title: String(form.get('title') ?? '').trim(),
+      destination: String(form.get('destination') ?? '').trim(),
+      startDate: String(form.get('startDate') ?? ''),
+      endDate: String(form.get('endDate') ?? ''),
+    }
+
+    if (!payload.title || !payload.destination || !payload.startDate || !payload.endDate) {
+      setFormError('모든 항목을 입력하세요.')
+      return
+    }
+
+    if (payload.startDate > payload.endDate) {
+      setFormError('종료일은 시작일 이후여야 합니다.')
+      return
+    }
+
+    setFormError('')
+    await onSubmit(payload)
+  }
+
+  return (
+    <div className="create-trip-backdrop" role="presentation">
+      <section className="create-trip-panel" role="dialog" aria-modal="true" aria-labelledby="create-trip-title">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">New trip</p>
+            <h2 id="create-trip-title">새 여행 만들기</h2>
+          </div>
+          <button className="compact-action" type="button" onClick={onClose}>
+            닫기
+          </button>
+        </div>
+
+        <form className="create-trip-form" onSubmit={handleSubmit}>
+          <label>
+            <span>여행 제목</span>
+            <input name="title" type="text" placeholder="예: 강릉 2박 3일" maxLength={60} required />
+          </label>
+          <label>
+            <span>대표 여행지</span>
+            <input name="destination" type="text" placeholder="예: 강릉" maxLength={60} required />
+          </label>
+          <div className="date-input-grid">
+            <label>
+              <span>시작일</span>
+              <input name="startDate" type="date" required />
+            </label>
+            <label>
+              <span>종료일</span>
+              <input name="endDate" type="date" required />
+            </label>
+          </div>
+          {formError && <p className="field-error">{formError}</p>}
+          <p className="form-guide">
+            숙소, 예산, 이동수단, 취향 입력은 다음 단계의 여행 상세 화면에서 확장합니다.
+          </p>
+          <button className="primary-action" type="submit" disabled={status === 'loading'}>
+            여행 카드 생성
+          </button>
+        </form>
+      </section>
+    </div>
+  )
+}
+
+function normalizeTrip(trip: TripSummary, source: 'api' | 'local'): TripSummary {
+  return {
+    ...trip,
+    id: String(trip.id),
+    source,
+  }
+}
+
+function createLocalTrip(payload: CreateTripRequest): TripSummary {
+  return {
+    id: `local-${Date.now()}`,
+    title: payload.title,
+    destination: payload.destination,
+    startDate: payload.startDate,
+    endDate: payload.endDate,
+    status: resolveTripStatus(payload.startDate, payload.endDate),
+    memberCount: 1,
+    createdAt: new Date().toISOString(),
+    source: 'local',
+  }
+}
+
+function resolveTripStatus(startDate: string, endDate: string): TripStatus {
+  const today = new Date()
+  const start = new Date(`${startDate}T00:00:00`)
+  const end = new Date(`${endDate}T23:59:59`)
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return 'PLANNING'
+  }
+  if (end < today) {
+    return 'COMPLETED'
+  }
+  if (start > today) {
+    return 'UPCOMING'
+  }
+  return 'PLANNING'
+}
+
+function tripStatusLabel(status: TripStatus) {
+  const labels: Record<TripStatus, string> = {
+    PLANNING: '계획중',
+    UPCOMING: '예정',
+    COMPLETED: '완료',
+  }
+  return labels[status]
+}
+
+function statusLabel(status: AsyncStatus) {
+  const labels: Record<AsyncStatus, string> = {
+    idle: '대기',
+    loading: '조회중',
+    success: '정상',
+    error: '오류',
+  }
+  return labels[status]
+}
+
+function formatProviders(providers?: string[]) {
+  if (!providers || providers.length === 0) {
+    return '없음'
+  }
+  return providers.join(', ')
+}
+
+function formatDate(value: string) {
+  return value.replaceAll('-', '.')
+}
+
+function durationLabel(startDate: string, endDate: string) {
+  const start = new Date(`${startDate}T00:00:00`)
+  const end = new Date(`${endDate}T00:00:00`)
+  const diff = Math.floor((end.getTime() - start.getTime()) / 86_400_000) + 1
+
+  if (Number.isNaN(diff) || diff <= 0) {
+    return '기간 확인 필요'
+  }
+  return `${diff}일`
+}
+
+function isEndpointPendingError(error: unknown) {
+  return error instanceof ApiError && [404, 405, 501].includes(error.status)
+}
+
+function toUserMessage(error: unknown) {
+  if (error instanceof ApiError) {
+    if (error.status === 401) {
+      return '로그인이 만료되었습니다. 다시 로그인하세요.'
+    }
+    return error.message
+  }
+  return '요청 처리 중 오류가 발생했습니다.'
+}
+
+function readLocalTrips(ownerId?: number) {
+  try {
+    const value = localStorage.getItem(localTripsKey(ownerId))
+    if (!value) {
+      return []
+    }
+    return (JSON.parse(value) as TripSummary[]).map((trip) => normalizeTrip(trip, 'local'))
+  } catch {
+    return []
+  }
+}
+
+function writeLocalTrips(ownerId: number | undefined, trips: TripSummary[]) {
+  localStorage.setItem(localTripsKey(ownerId), JSON.stringify(trips))
+}
+
+function localTripsKey(ownerId?: number) {
+  return `${LOCAL_TRIPS_KEY_PREFIX}.${ownerId ?? 'anonymous'}`
+}
+
+function readProfileImage(ownerId?: number) {
+  return localStorage.getItem(profileImageKey(ownerId))
+}
+
+function writeProfileImage(ownerId: number | undefined, imageDataUrl: string) {
+  localStorage.setItem(profileImageKey(ownerId), imageDataUrl)
+}
+
+function removeProfileImage(ownerId?: number) {
+  localStorage.removeItem(profileImageKey(ownerId))
+}
+
+function profileImageKey(ownerId?: number) {
+  return `${PROFILE_IMAGE_KEY_PREFIX}.${ownerId ?? 'anonymous'}`
+}

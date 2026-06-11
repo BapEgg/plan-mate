@@ -1,4 +1,8 @@
-﻿export type AuthUser = {
+import { API_BASE_URL, bearerHeaders, request } from './client'
+
+export { ApiError } from './client'
+
+export type AuthUser = {
   id: number
   loginId: string | null
   email?: string
@@ -83,50 +87,6 @@ export type PasswordResetResponse = {
 
 export type OAuth2Provider = 'google' | 'kakao' | 'naver'
 
-export class ApiError extends Error {
-  readonly status: number
-  readonly code?: string
-
-  constructor(status: number, message: string, code?: string) {
-    super(message)
-    this.name = 'ApiError'
-    this.status = status
-    this.code = code
-  }
-}
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
-
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    credentials: 'include',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  })
-
-  if (!response.ok) {
-    throw await toApiError(response)
-  }
-
-  if (response.status === 204) {
-    return undefined as T
-  }
-
-  return response.json() as Promise<T>
-}
-
-async function toApiError(response: Response): Promise<ApiError> {
-  try {
-    const body = await response.json()
-    return new ApiError(response.status, body.message ?? '요청 처리에 실패했습니다.', body.code)
-  } catch {
-    return new ApiError(response.status, '요청 처리에 실패했습니다.')
-  }
-}
-
 export function signup(payload: SignupRequest) {
   return request<SignupResponse>('/api/auth/signup', {
     method: 'POST',
@@ -185,9 +145,7 @@ export function refreshAccessToken() {
 export function getAuthStatus(accessToken: string) {
   return request<AuthStatusResponse>('/api/auth/status', {
     method: 'GET',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
+    headers: bearerHeaders(accessToken),
   })
 }
 

@@ -1,6 +1,7 @@
 ﻿import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
+import { MainPage, TripDetailPreparationPage } from './pages/main/MainPage'
 import {
   ApiError,
   confirmEmail,
@@ -17,7 +18,7 @@ import {
 } from './api/auth'
 import type { AuthUser, OAuth2Provider } from './api/auth'
 
-type Page = 'auth' | 'emailVerification' | 'findLoginId' | 'resetPassword' | 'main'
+type Page = 'auth' | 'emailVerification' | 'findLoginId' | 'resetPassword' | 'main' | 'tripDetail'
 type AuthMode = 'login' | 'signup'
 type NoticeTone = 'info' | 'success' | 'error'
 
@@ -33,6 +34,9 @@ const ACCESS_TOKEN_KEY = 'planmate.accessToken'
 function resolvePage(): Page {
   if (window.location.pathname === '/main') {
     return 'main'
+  }
+  if (window.location.pathname.startsWith('/trips/')) {
+    return 'tripDetail'
   }
   if (window.location.pathname === '/auth/email-verification') {
     return 'emailVerification'
@@ -175,7 +179,7 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (page === 'main') {
+    if (page === 'main' || page === 'tripDetail') {
       const timeoutId = window.setTimeout(() => {
         void restoreSession()
       }, 0)
@@ -343,7 +347,25 @@ function App() {
   }
 
   if (page === 'main') {
-    return <MainPage user={currentUser} onLogout={handleLogout} />
+    return (
+      <MainPage
+        accessToken={accessToken}
+        user={currentUser}
+        onLogout={handleLogout}
+        onOpenTrip={(tripId) => navigate('/trips/' + tripId)}
+      />
+    )
+  }
+
+  if (page === 'tripDetail') {
+    return (
+      <TripDetailPreparationPage
+        tripId={window.location.pathname.split('/').filter(Boolean)[1] ?? ''}
+        user={currentUser}
+        onBackToMain={() => navigate('/main')}
+        onLogout={handleLogout}
+      />
+    )
   }
 
   if (page === 'findLoginId') {
@@ -739,26 +761,6 @@ function AuthShell({ children, notice }: { children: React.ReactNode; notice: No
         <div className="auth-column">
           {notice && <p className={`notice ${notice.tone}`}>{notice.message}</p>}
           {children}
-        </div>
-      </section>
-    </main>
-  )
-}
-
-function MainPage({ user, onLogout }: { user: AuthUser | null; onLogout: () => void }) {
-  return (
-    <main className="main-page">
-      <nav className="main-nav">
-        <strong>PlanMate</strong>
-        <button className="ghost-button" type="button" onClick={onLogout}>로그아웃</button>
-      </nav>
-      <section className="hero-panel">
-        <p className="eyebrow">Welcome</p>
-        <h1>{user ? `${user.nickname}님, 다음 여행을 계획해볼까요?` : '여행 계획을 불러오는 중입니다.'}</h1>
-        <p>현재는 인증 연결 확인용 메인 페이지입니다. 다음 단계에서 여행 생성, 숙소 등록, AI 일정 생성 기능을 이 화면에 연결하면 됩니다.</p>
-        <div className="main-actions">
-          <button className="primary-action" type="button">새 여행 만들기</button>
-          <button className="secondary-action" type="button">내 여행 보기</button>
         </div>
       </section>
     </main>
