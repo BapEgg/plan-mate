@@ -14,6 +14,17 @@ export type TripSummary = {
   source?: 'api' | 'local'
 }
 
+export type TripMember = {
+  userId: number
+  nickname: string
+  profileImageUrl: string | null
+  role: 'OWNER' | 'MEMBER'
+}
+
+export type TripDetail = TripSummary & {
+  members: TripMember[]
+}
+
 export type CreateTripRequest = {
   title: string
   destination: string
@@ -33,5 +44,12 @@ export function createTrip(accessToken: string, payload: CreateTripRequest) {
     method: 'POST',
     headers: bearerHeaders(accessToken),
     body: JSON.stringify(payload),
+  })
+}
+
+export function getTripDetail(accessToken: string, tripId: string) {
+  return request<TripDetail>(`/api/trips/${tripId}`, {
+    method: 'GET',
+    headers: bearerHeaders(accessToken),
   })
 }
