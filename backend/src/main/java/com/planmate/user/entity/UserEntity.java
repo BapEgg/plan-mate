@@ -55,6 +55,20 @@ public class UserEntity {
         return new UserEntity(email, emailCanonical, nickname, UserRole.USER, UserStatus.PENDING_EMAIL_VERIFICATION);
     }
 
+    public static UserEntity createOauthUser(
+            String email,
+            String emailCanonical,
+            String nickname,
+            boolean emailVerified,
+            Instant now
+    ) {
+        UserEntity user = new UserEntity(email, emailCanonical, nickname, UserRole.USER, UserStatus.ACTIVE);
+        if (emailVerified) {
+            user.emailVerifiedAt = now;
+        }
+        return user;
+    }
+
     public void verifyEmail(Instant verifiedAt) {
         this.emailVerifiedAt = verifiedAt;
         if (status == UserStatus.PENDING_EMAIL_VERIFICATION) {

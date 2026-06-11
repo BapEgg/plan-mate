@@ -38,8 +38,48 @@ public class OauthAccountEntity {
     protected OauthAccountEntity() {
     }
 
+    private OauthAccountEntity(
+            UserEntity user,
+            String provider,
+            String providerUserId,
+            String providerEmail,
+            boolean providerEmailVerified
+    ) {
+        this.user = user;
+        this.provider = provider;
+        this.providerUserId = providerUserId;
+        this.providerEmail = providerEmail;
+        this.providerEmailVerified = providerEmailVerified;
+    }
+
+    public static OauthAccountEntity create(
+            UserEntity user,
+            String provider,
+            String providerUserId,
+            String providerEmail,
+            boolean providerEmailVerified
+    ) {
+        return new OauthAccountEntity(user, provider, providerUserId, providerEmail, providerEmailVerified);
+    }
+
+    public UserEntity getUser() {
+        return user;
+    }
+
     public String getProvider() {
         return provider;
+    }
+
+    public String getProviderUserId() {
+        return providerUserId;
+    }
+
+    public String getProviderEmail() {
+        return providerEmail;
+    }
+
+    public boolean isProviderEmailVerified() {
+        return providerEmailVerified;
     }
 
 }

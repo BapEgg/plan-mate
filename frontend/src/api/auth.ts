@@ -1,6 +1,6 @@
 ﻿export type AuthUser = {
   id: number
-  loginId: string
+  loginId: string | null
   email?: string
   nickname: string
   role: string
@@ -45,7 +45,7 @@ export type AuthStatusResponse = {
   authenticated: boolean
   user: {
     id: number
-    loginId: string
+    loginId: string | null
     nickname: string
     role: string
   } | null
@@ -80,6 +80,8 @@ export type PasswordResetConfirmRequest = {
 export type PasswordResetResponse = {
   reset: boolean
 }
+
+export type OAuth2Provider = 'google' | 'kakao' | 'naver'
 
 export class ApiError extends Error {
   readonly status: number
@@ -193,4 +195,8 @@ export function logout() {
   return request<void>('/api/auth/logout', {
     method: 'POST',
   })
+}
+
+export function oauth2AuthorizationUrl(provider: OAuth2Provider) {
+  return `${API_BASE_URL}/oauth2/authorization/${provider}`
 }

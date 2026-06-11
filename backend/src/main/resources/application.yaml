@@ -18,6 +18,49 @@ spring:
           timeout: 3000
           writetimeout: 5000
 
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:local-google-client-id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:local-google-client-secret}
+            scope:
+              - openid
+              - profile
+              - email
+          kakao:
+            client-id: ${KAKAO_CLIENT_ID:local-kakao-client-id}
+            client-secret: ${KAKAO_CLIENT_SECRET:local-kakao-client-secret}
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope:
+              - account_email
+              - profile_nickname
+            client-name: Kakao
+          naver:
+            client-id: ${NAVER_CLIENT_ID:local-naver-client-id}
+            client-secret: ${NAVER_CLIENT_SECRET:local-naver-client-secret}
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope:
+              - email
+              - nickname
+            client-name: Naver
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+          naver:
+            authorization-uri: https://nid.naver.com/oauth2.0/authorize
+            token-uri: https://nid.naver.com/oauth2.0/token
+            user-info-uri: https://openapi.naver.com/v1/nid/me
+            user-name-attribute: response
+
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -50,9 +93,12 @@ app:
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:[*],http://127.0.0.1:[*]}
   frontend:
-    base-url: http://localhost:5173
+    base-url: ${APP_FRONTEND_BASE_URL:http://localhost:5173}
   mail:
     from: ${MAIL_FROM:}
+  oauth2:
+    success-redirect-path: /main
+    failure-redirect-path: /?oauth2Error=true
   jwt:
     secret: ${JWT_SECRET:planmate-local-development-jwt-secret-key-must-be-at-least-32-bytes}
     access-token-ttl: 15m

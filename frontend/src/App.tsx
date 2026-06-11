@@ -9,12 +9,13 @@ import {
   getAuthStatus,
   login,
   logout,
+  oauth2AuthorizationUrl,
   refreshAccessToken,
   requestLoginIdRecovery,
   requestPasswordReset,
   signup,
 } from './api/auth'
-import type { AuthUser } from './api/auth'
+import type { AuthUser, OAuth2Provider } from './api/auth'
 
 type Page = 'auth' | 'emailVerification' | 'findLoginId' | 'resetPassword' | 'main'
 type AuthMode = 'login' | 'signup'
@@ -72,6 +73,30 @@ function App() {
     setAccessToken('')
     setCurrentUser(null)
   }, [])
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : ''
+      const hashParams = new URLSearchParams(hash)
+      const oauth2AccessToken = hashParams.get('accessToken')
+      if (oauth2AccessToken) {
+        persistAccessToken(oauth2AccessToken)
+        window.history.replaceState(null, '', '/main')
+        setPage('main')
+        setNotice({ tone: 'success', message: '소셜 로그인이 완료되었습니다.' })
+        return
+      }
+
+      const queryParams = new URLSearchParams(window.location.search)
+      if (queryParams.get('oauth2Error') === 'true') {
+        window.history.replaceState(null, '', '/')
+        setPage('auth')
+        setNotice({ tone: 'error', message: '소셜 로그인 처리에 실패했습니다. 다시 시도해 주세요.' })
+      }
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [persistAccessToken])
 
   const restoreSession = useCallback(async () => {
     try {
@@ -296,6 +321,10 @@ function App() {
     }
   }
 
+  function handleOAuth2Login(provider: OAuth2Provider) {
+    window.location.href = oauth2AuthorizationUrl(provider)
+  }
+
   if (page === 'emailVerification') {
     return (
       <AuthShell notice={notice}>
@@ -394,9 +423,15 @@ function App() {
 
         <div className="divider"><span />또는<span /></div>
         <div className="social-actions" aria-label="소셜 로그인">
-          <button className="social-button" type="button" disabled>Google 준비 중</button>
-          <button className="social-button" type="button" disabled>Naver 준비 중</button>
-          <button className="social-button" type="button" disabled>Kakao 준비 중</button>
+          <button className="social-button google" type="button" onClick={() => handleOAuth2Login('google')}>
+            Google로 계속하기
+          </button>
+          <button className="social-button naver" type="button" onClick={() => handleOAuth2Login('naver')}>
+            Naver로 계속하기
+          </button>
+          <button className="social-button kakao" type="button" onClick={() => handleOAuth2Login('kakao')}>
+            Kakao로 계속하기
+          </button>
         </div>
       </section>
     </AuthShell>

@@ -24,13 +24,12 @@ import com.planmate.auth.service.EmailVerificationService;
 import com.planmate.auth.service.LoginResult;
 import com.planmate.auth.service.LoginService;
 import com.planmate.auth.service.SignupService;
+import com.planmate.auth.web.RefreshTokenCookieFactory;
 import com.planmate.user.dto.MeResponse;
 import com.planmate.user.service.UserQueryService;
 import jakarta.validation.Valid;
 import java.net.URI;
-import java.time.Duration;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CookieValue;
@@ -44,14 +43,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    private static final String REFRESH_TOKEN_COOKIE = "refreshToken";
-
     private final SignupService signupService;
     private final EmailVerificationService emailVerificationService;
     private final LoginService loginService;
     private final AuthTokenService authTokenService;
     private final UserQueryService userQueryService;
     private final AccountRecoveryService accountRecoveryService;
+    private final RefreshTokenCookieFactory refreshTokenCookieFactory;
 
     public AuthController(
             SignupService signupService,
@@ -59,7 +57,8 @@ public class AuthController {
             LoginService loginService,
             AuthTokenService authTokenService,
             UserQueryService userQueryService,
-            AccountRecoveryService accountRecoveryService
+            AccountRecoveryService accountRecoveryService,
+            RefreshTokenCookieFactory refreshTokenCookieFactory
     ) {
         this.signupService = signupService;
         this.emailVerificationService = emailVerificationService;
@@ -67,6 +66,7 @@ public class AuthController {
         this.authTokenService = authTokenService;
         this.userQueryService = userQueryService;
         this.accountRecoveryService = accountRecoveryService;
+        this.refreshTokenCookieFactory = refreshTokenCookieFactory;
     }
 
     @GetMapping("/status")
@@ -131,13 +131,16 @@ public class AuthController {
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         LoginResult result = loginService.login(request);
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie(result.refreshToken(), result.refreshTokenTtl()).toString())
+                .header(HttpHeaders.SET_COOKIE, refreshTokenCookieFactory.create(
+                        result.refreshToken(),
+                        result.refreshTokenTtl()
+                ).toString())
                 .body(result.response());
     }
 
     @PostMapping("/refresh")
     public TokenRefreshResponse refresh(
-            @CookieValue(value = REFRESH_TOKEN_COOKIE, required = false) String refreshToken
+            @CookieValue(value = RefreshTokenCookieFactory.REFRESH_TOKEN_COOKIE, required = false) String refreshToken
     ) {
         JwtToken accessToken = authTokenService.refreshAccessToken(refreshToken);
         return TokenRefreshResponse.bearer(accessToken.value(), accessToken.expiresInSeconds());
@@ -145,31 +148,11 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(
-            @CookieValue(value = REFRESH_TOKEN_COOKIE, required = false) String refreshToken
+            @CookieValue(value = RefreshTokenCookieFactory.REFRESH_TOKEN_COOKIE, required = false) String refreshToken
     ) {
         authTokenService.logout(refreshToken);
         return ResponseEntity.noContent()
-                .header(HttpHeaders.SET_COOKIE, clearRefreshTokenCookie().toString())
-                .build();
-    }
-
-    private ResponseCookie refreshTokenCookie(String refreshToken, Duration maxAge) {
-        return ResponseCookie.from(REFRESH_TOKEN_COOKIE, refreshToken)
-                .httpOnly(true)
-                .secure(false)
-                .sameSite("Lax")
-                .path("/api/auth")
-                .maxAge(maxAge)
-                .build();
-    }
-
-    private ResponseCookie clearRefreshTokenCookie() {
-        return ResponseCookie.from(REFRESH_TOKEN_COOKIE, "")
-                .httpOnly(true)
-                .secure(false)
-                .sameSite("Lax")
-                .path("/api/auth")
-                .maxAge(0)
+                .header(HttpHeaders.SET_COOKIE, refreshTokenCookieFactory.clear().toString())
                 .build();
     }
 

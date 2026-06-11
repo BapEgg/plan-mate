@@ -14,6 +14,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -24,13 +26,19 @@ public class SecurityConfig {
 
     private final List<String> allowedOrigins;
     private final PlanMateJwtAuthenticationConverter jwtAuthenticationConverter;
+    private final AuthenticationSuccessHandler oauth2AuthenticationSuccessHandler;
+    private final AuthenticationFailureHandler oauth2AuthenticationFailureHandler;
 
     public SecurityConfig(
             @Value("${app.cors.allowed-origins}") List<String> allowedOrigins,
-            PlanMateJwtAuthenticationConverter jwtAuthenticationConverter
+            PlanMateJwtAuthenticationConverter jwtAuthenticationConverter,
+            AuthenticationSuccessHandler oauth2AuthenticationSuccessHandler,
+            AuthenticationFailureHandler oauth2AuthenticationFailureHandler
     ) {
         this.allowedOrigins = allowedOrigins;
         this.jwtAuthenticationConverter = jwtAuthenticationConverter;
+        this.oauth2AuthenticationSuccessHandler = oauth2AuthenticationSuccessHandler;
+        this.oauth2AuthenticationFailureHandler = oauth2AuthenticationFailureHandler;
     }
 
     @Bean
@@ -40,8 +48,12 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(oauth2AuthenticationSuccessHandler)
+                        .failureHandler(oauth2AuthenticationFailureHandler)
+                )
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(

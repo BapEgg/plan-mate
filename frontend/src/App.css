@@ -399,6 +399,20 @@ button:disabled {
   background: #fffaf0;
 }
 
+.social-button.google {
+  background: #fffaf0;
+}
+
+.social-button.naver {
+  color: #ffffff;
+  background: #03c75a;
+}
+
+.social-button.kakao {
+  color: #241f1f;
+  background: #fee500;
+}
+
 .notice {
   margin: 0;
   padding: 14px 16px;
