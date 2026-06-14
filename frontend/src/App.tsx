@@ -1,7 +1,8 @@
 ﻿import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
-import { MainPage, TripDetailPreparationPage } from './pages/main/MainPage'
+import { MainPage } from './pages/main/MainPage'
+import { TripDetailPage } from './pages/trip/TripDetailPage'
 import {
   ApiError,
   confirmEmail,
@@ -359,7 +360,8 @@ function App() {
 
   if (page === 'tripDetail') {
     return (
-      <TripDetailPreparationPage
+      <TripDetailPage
+        accessToken={accessToken}
         tripId={window.location.pathname.split('/').filter(Boolean)[1] ?? ''}
         user={currentUser}
         onBackToMain={() => navigate('/main')}

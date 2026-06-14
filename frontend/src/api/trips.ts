@@ -11,7 +11,6 @@ export type TripSummary = {
   status: TripStatus
   memberCount: number
   createdAt: string
-  source?: 'api' | 'local'
 }
 
 export type TripMember = {

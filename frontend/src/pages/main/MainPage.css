@@ -85,8 +85,7 @@
 }
 
 .dashboard-hero,
-.dashboard-card,
-.trip-detail-ready-card {
+.dashboard-card {
   border: 1px solid var(--dash-line);
   box-shadow: 0 24px 70px rgba(45, 43, 32, 0.14);
 }
@@ -104,8 +103,7 @@
   backdrop-filter: blur(18px);
 }
 
-.dashboard-hero h1,
-.trip-detail-ready-card h1 {
+.dashboard-hero h1 {
   max-width: 780px;
   margin: 0;
   font-size: clamp(2.25rem, 6vw, 5rem);
@@ -113,8 +111,7 @@
   letter-spacing: -0.075em;
 }
 
-.dashboard-hero p,
-.trip-detail-ready-card p {
+.dashboard-hero p {
   max-width: 700px;
   color: var(--dash-muted);
   line-height: 1.75;
@@ -229,8 +226,7 @@
 }
 
 .status-pill,
-.trip-status,
-.local-badge {
+.trip-status {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -494,11 +490,6 @@
   background: #dfe5e9;
 }
 
-.local-badge {
-  color: #9f321f;
-  background: #f8dfd7;
-}
-
 .trip-card h3 {
   margin: 0;
   font-size: 1.45rem;
@@ -631,43 +622,6 @@
   gap: 12px;
 }
 
-.trip-detail-ready-page {
-  display: grid;
-  align-content: start;
-  gap: 28px;
-}
-
-.trip-detail-ready-card {
-  position: relative;
-  width: min(980px, 100%);
-  margin: 0 auto;
-  padding: clamp(30px, 7vw, 72px);
-  border-radius: 40px;
-  background:
-    radial-gradient(circle at 80% 18%, rgba(27, 78, 66, 0.16), transparent 24%),
-    rgba(255, 252, 245, 0.94);
-  backdrop-filter: blur(18px);
-}
-
-.trip-detail-ready-card strong {
-  color: var(--dash-green);
-}
-
-.detail-ready-steps {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 28px 0;
-}
-
-.detail-ready-steps span {
-  border-radius: 999px;
-  padding: 10px 13px;
-  color: var(--dash-green);
-  font-weight: 900;
-  background: var(--dash-green-soft);
-}
-
 @keyframes dashboard-shimmer {
   0% {
     background-position: 0% 50%;
@@ -720,8 +674,7 @@
   }
 
   .dashboard-hero,
-  .dashboard-card,
-  .trip-detail-ready-card {
+  .dashboard-card {
     border-radius: 26px;
     padding: 22px;
   }

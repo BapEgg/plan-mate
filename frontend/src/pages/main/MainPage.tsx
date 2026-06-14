@@ -15,16 +15,8 @@ type MainPageProps = {
   onOpenTrip: (tripId: string) => void
 }
 
-type TripDetailPreparationPageProps = {
-  tripId: string
-  user: AuthUser | null
-  onBackToMain: () => void
-  onLogout: () => void
-}
-
 type AsyncStatus = 'idle' | 'loading' | 'success' | 'error'
 type NoticeTone = 'info' | 'success' | 'error'
-type TripsApiMode = 'connected' | 'pending'
 
 type DashboardNotice = {
   tone: NoticeTone
@@ -38,7 +30,6 @@ type TripStats = {
   completed: number
 }
 
-const LOCAL_TRIPS_KEY_PREFIX = 'planmate.localTrips'
 const PROFILE_IMAGE_MAX_BYTES = 2_097_152
 
 export function MainPage({ accessToken, user, onLogout, onOpenTrip }: MainPageProps) {
@@ -47,12 +38,10 @@ export function MainPage({ accessToken, user, onLogout, onOpenTrip }: MainPagePr
   const [nicknameSaveStatus, setNicknameSaveStatus] = useState<AsyncStatus>('idle')
   const [trips, setTrips] = useState<TripSummary[]>([])
   const [tripsStatus, setTripsStatus] = useState<AsyncStatus>('idle')
-  const [tripsApiMode, setTripsApiMode] = useState<TripsApiMode>('connected')
   const [createStatus, setCreateStatus] = useState<AsyncStatus>('idle')
   const [notice, setNotice] = useState<DashboardNotice | null>(null)
   const [createPanelOpen, setCreatePanelOpen] = useState(false)
 
-  const ownerId = profile?.id ?? user?.id
   const displayName = profile?.nickname ?? user?.nickname ?? '여행자'
 
   const tripStats = useMemo<TripStats>(() => ({
@@ -108,8 +97,7 @@ export function MainPage({ accessToken, user, onLogout, onOpenTrip }: MainPagePr
           if (ignore) {
             return
           }
-          setTrips(response.map((trip) => normalizeTrip(trip, 'api')))
-          setTripsApiMode('connected')
+          setTrips(response)
           setTripsStatus('success')
         })
         .catch((error: unknown) => {
@@ -117,16 +105,6 @@ export function MainPage({ accessToken, user, onLogout, onOpenTrip }: MainPagePr
             return
           }
 
-          if (isEndpointPendingError(error)) {
-            setTrips(readLocalTrips(ownerId))
-            setTripsApiMode('pending')
-            setTripsStatus('success')
-            setNotice({
-              tone: 'info',
-              message: '여행 API가 아직 준비되지 않아 이 브라우저의 임시 여행 목록을 표시합니다.',
-            })
-            return
-          }
 
           setTripsStatus('error')
           setNotice({ tone: 'error', message: toUserMessage(error) })
@@ -137,7 +115,7 @@ export function MainPage({ accessToken, user, onLogout, onOpenTrip }: MainPagePr
       ignore = true
       window.clearTimeout(timeoutId)
     }
-  }, [accessToken, ownerId])
+  }, [accessToken])
 
   async function handleSaveNickname(nickname: string) {
     if (!accessToken || !profile) {
@@ -153,15 +131,6 @@ export function MainPage({ accessToken, user, onLogout, onOpenTrip }: MainPagePr
       setNicknameSaveStatus('success')
       setNotice({ tone: 'success', message: '닉네임을 저장했습니다.' })
     } catch (error: unknown) {
-      if (isEndpointPendingError(error)) {
-        setProfile({ ...profile, nickname })
-        setNicknameSaveStatus('success')
-        setNotice({
-          tone: 'info',
-          message: '닉네임 수정 API가 아직 준비되지 않아 화면에서만 임시 반영했습니다.',
-        })
-        return
-      }
 
       setNicknameSaveStatus('error')
       setNotice({ tone: 'error', message: toUserMessage(error) })
@@ -193,29 +162,12 @@ export function MainPage({ accessToken, user, onLogout, onOpenTrip }: MainPagePr
     setNotice(null)
 
     try {
-      const created = normalizeTrip(await createTrip(accessToken, payload), 'api')
+      const created = await createTrip(accessToken, payload)
       setTrips((currentTrips) => [created, ...currentTrips])
-      setTripsApiMode('connected')
       setCreateStatus('success')
       setCreatePanelOpen(false)
       setNotice({ tone: 'success', message: '새 여행을 생성했습니다.' })
     } catch (error: unknown) {
-      if (isEndpointPendingError(error)) {
-        const localTrip = createLocalTrip(payload)
-        setTrips((currentTrips) => {
-          const nextTrips = [localTrip, ...currentTrips]
-          writeLocalTrips(ownerId, nextTrips.filter((trip) => trip.source === 'local'))
-          return nextTrips
-        })
-        setTripsApiMode('pending')
-        setCreateStatus('success')
-        setCreatePanelOpen(false)
-        setNotice({
-          tone: 'info',
-          message: '여행 API가 아직 준비되지 않아 임시 카드로 추가했습니다.',
-        })
-        return
-      }
 
       setCreateStatus('error')
       setNotice({ tone: 'error', message: toUserMessage(error) })
@@ -229,19 +181,11 @@ export function MainPage({ accessToken, user, onLogout, onOpenTrip }: MainPagePr
     setTripsStatus('loading')
     void listMyTrips(accessToken)
       .then((response) => {
-        setTrips(response.map((trip) => normalizeTrip(trip, 'api')))
-        setTripsApiMode('connected')
+        setTrips(response)
         setTripsStatus('success')
         setNotice({ tone: 'success', message: '여행 목록을 다시 불러왔습니다.' })
       })
       .catch((error: unknown) => {
-        if (isEndpointPendingError(error)) {
-          setTrips(readLocalTrips(ownerId))
-          setTripsApiMode('pending')
-          setTripsStatus('success')
-          setNotice({ tone: 'info', message: '여행 API 연결 전이라 임시 목록을 다시 불러왔습니다.' })
-          return
-        }
         setTripsStatus('error')
         setNotice({ tone: 'error', message: toUserMessage(error) })
       })
@@ -275,7 +219,6 @@ export function MainPage({ accessToken, user, onLogout, onOpenTrip }: MainPagePr
           <TripDashboard
             trips={trips}
             status={tripsStatus}
-            apiMode={tripsApiMode}
             onCreateTrip={() => setCreatePanelOpen(true)}
             onOpenTrip={onOpenTrip}
             onReloadTrips={handleReloadTrips}
@@ -294,36 +237,6 @@ export function MainPage({ accessToken, user, onLogout, onOpenTrip }: MainPagePr
   )
 }
 
-export function TripDetailPreparationPage({
-  tripId,
-  user,
-  onBackToMain,
-  onLogout,
-}: TripDetailPreparationPageProps) {
-  return (
-    <main className="dashboard-page trip-detail-ready-page">
-      <div className="dashboard-map-grid" aria-hidden="true" />
-      <MainHeader displayName={user?.nickname ?? '여행자'} onLogout={onLogout} />
-      <section className="trip-detail-ready-card" aria-label="여행 상세 준비 화면">
-        <p className="eyebrow">Trip detail</p>
-        <h1>여행 상세 진입 준비</h1>
-        <p>
-          선택한 여행 ID는 <strong>{tripId}</strong>입니다. 이후 백엔드의 여행 상세, 숙소, 선호도,
-          AI 일정 생성 API가 준비되면 이 경로에 상세 화면을 연결하면 됩니다.
-        </p>
-        <div className="detail-ready-steps">
-          <span>여행 기본 정보</span>
-          <span>숙소 등록</span>
-          <span>취향 입력</span>
-          <span>AI 일정 생성</span>
-        </div>
-        <button className="primary-action" type="button" onClick={onBackToMain}>
-          메인으로 돌아가기
-        </button>
-      </section>
-    </main>
-  )
-}
 
 function MainHeader({ displayName, onLogout }: { displayName: string; onLogout: () => void }) {
   return (
@@ -610,14 +523,12 @@ function NicknameEditForm({
 function TripDashboard({
   trips,
   status,
-  apiMode,
   onCreateTrip,
   onOpenTrip,
   onReloadTrips,
 }: {
   trips: TripSummary[]
   status: AsyncStatus
-  apiMode: TripsApiMode
   onCreateTrip: () => void
   onOpenTrip: (tripId: string) => void
   onReloadTrips: () => void
@@ -634,11 +545,6 @@ function TripDashboard({
         </button>
       </div>
 
-      {apiMode === 'pending' && (
-        <p className="inline-api-note">
-          백엔드 여행 API 연결 전입니다. 생성한 카드는 이 브라우저에 임시 저장됩니다.
-        </p>
-      )}
 
       {status === 'loading' && <TripSkeletonList />}
       {status === 'error' && (
@@ -682,7 +588,6 @@ function TripCard({ trip, onOpen }: { trip: TripSummary; onOpen: () => void }) {
     <article className="trip-card">
       <div className="trip-card-topline">
         <span className={`trip-status ${trip.status.toLowerCase()}`}>{tripStatusLabel(trip.status)}</span>
-        {trip.source === 'local' && <span className="local-badge">임시</span>}
       </div>
       <h3>{trip.title}</h3>
       <p>{trip.destination}</p>
@@ -792,44 +697,8 @@ function CreateTripPanel({
   )
 }
 
-function normalizeTrip(trip: TripSummary, source: 'api' | 'local'): TripSummary {
-  return {
-    ...trip,
-    id: String(trip.id),
-    source,
-  }
-}
 
-function createLocalTrip(payload: CreateTripRequest): TripSummary {
-  return {
-    id: `local-${Date.now()}`,
-    title: payload.title,
-    destination: payload.destination,
-    startDate: payload.startDate,
-    endDate: payload.endDate,
-    status: resolveTripStatus(payload.startDate, payload.endDate),
-    memberCount: 1,
-    createdAt: new Date().toISOString(),
-    source: 'local',
-  }
-}
 
-function resolveTripStatus(startDate: string, endDate: string): TripStatus {
-  const today = new Date()
-  const start = new Date(`${startDate}T00:00:00`)
-  const end = new Date(`${endDate}T23:59:59`)
-
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-    return 'PLANNING'
-  }
-  if (end < today) {
-    return 'COMPLETED'
-  }
-  if (start > today) {
-    return 'UPCOMING'
-  }
-  return 'PLANNING'
-}
 
 function tripStatusLabel(status: TripStatus) {
   const labels: Record<TripStatus, string> = {
@@ -879,9 +748,6 @@ function resolveBackendAssetUrl(path: string) {
   return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`
 }
 
-function isEndpointPendingError(error: unknown) {
-  return error instanceof ApiError && [404, 405, 501].includes(error.status)
-}
 
 function toUserMessage(error: unknown) {
   if (error instanceof ApiError) {
@@ -891,24 +757,4 @@ function toUserMessage(error: unknown) {
     return error.message
   }
   return '요청 처리 중 오류가 발생했습니다.'
-}
-
-function readLocalTrips(ownerId?: number) {
-  try {
-    const value = localStorage.getItem(localTripsKey(ownerId))
-    if (!value) {
-      return []
-    }
-    return (JSON.parse(value) as TripSummary[]).map((trip) => normalizeTrip(trip, 'local'))
-  } catch {
-    return []
-  }
-}
-
-function writeLocalTrips(ownerId: number | undefined, trips: TripSummary[]) {
-  localStorage.setItem(localTripsKey(ownerId), JSON.stringify(trips))
-}
-
-function localTripsKey(ownerId?: number) {
-  return `${LOCAL_TRIPS_KEY_PREFIX}.${ownerId ?? 'anonymous'}`
 }
