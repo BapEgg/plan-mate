@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import type { AuthUser } from '../../api/auth'
 import { API_BASE_URL, ApiError } from '../../api/client'
-import { createTrip, listMyTrips } from '../../api/trips'
-import type { CreateTripRequest, TripStatus, TripSummary } from '../../api/trips'
+import { listMyTrips } from '../../api/trips'
+import type { TripStatus, TripSummary } from '../../api/trips'
 import { clearMyProfileImage, getMe, updateMyNickname, updateMyProfileImage } from '../../api/users'
 import type { MeProfile } from '../../api/users'
 import './MainPage.css'
@@ -12,6 +12,7 @@ type MainPageProps = {
   accessToken: string
   user: AuthUser | null
   onLogout: () => void
+  onCreateTrip: () => void
   onOpenTrip: (tripId: string) => void
 }
 
@@ -32,15 +33,13 @@ type TripStats = {
 
 const PROFILE_IMAGE_MAX_BYTES = 2_097_152
 
-export function MainPage({ accessToken, user, onLogout, onOpenTrip }: MainPageProps) {
+export function MainPage({ accessToken, user, onLogout, onCreateTrip, onOpenTrip }: MainPageProps) {
   const [profile, setProfile] = useState<MeProfile | null>(null)
   const [profileStatus, setProfileStatus] = useState<AsyncStatus>('idle')
   const [nicknameSaveStatus, setNicknameSaveStatus] = useState<AsyncStatus>('idle')
   const [trips, setTrips] = useState<TripSummary[]>([])
   const [tripsStatus, setTripsStatus] = useState<AsyncStatus>('idle')
-  const [createStatus, setCreateStatus] = useState<AsyncStatus>('idle')
   const [notice, setNotice] = useState<DashboardNotice | null>(null)
-  const [createPanelOpen, setCreatePanelOpen] = useState(false)
 
   const displayName = profile?.nickname ?? user?.nickname ?? '여행자'
 
@@ -153,27 +152,6 @@ export function MainPage({ accessToken, user, onLogout, onOpenTrip }: MainPagePr
     }
   }
 
-  async function handleCreateTrip(payload: CreateTripRequest) {
-    if (!accessToken) {
-      return
-    }
-
-    setCreateStatus('loading')
-    setNotice(null)
-
-    try {
-      const created = await createTrip(accessToken, payload)
-      setTrips((currentTrips) => [created, ...currentTrips])
-      setCreateStatus('success')
-      setCreatePanelOpen(false)
-      setNotice({ tone: 'success', message: '새 여행을 생성했습니다.' })
-    } catch (error: unknown) {
-
-      setCreateStatus('error')
-      setNotice({ tone: 'error', message: toUserMessage(error) })
-    }
-  }
-
   function handleReloadTrips() {
     if (!accessToken) {
       return
@@ -200,7 +178,7 @@ export function MainPage({ accessToken, user, onLogout, onOpenTrip }: MainPagePr
         <DashboardHero
           displayName={displayName}
           tripStats={tripStats}
-          onCreateTrip={() => setCreatePanelOpen(true)}
+          onCreateTrip={onCreateTrip}
         />
 
         {notice && <DashboardNoticeBanner notice={notice} onClose={() => setNotice(null)} />}
@@ -219,20 +197,12 @@ export function MainPage({ accessToken, user, onLogout, onOpenTrip }: MainPagePr
           <TripDashboard
             trips={trips}
             status={tripsStatus}
-            onCreateTrip={() => setCreatePanelOpen(true)}
+            onCreateTrip={onCreateTrip}
             onOpenTrip={onOpenTrip}
             onReloadTrips={handleReloadTrips}
           />
         </div>
       </section>
-
-      {createPanelOpen && (
-        <CreateTripPanel
-          status={createStatus}
-          onClose={() => setCreatePanelOpen(false)}
-          onSubmit={handleCreateTrip}
-        />
-      )}
     </main>
   )
 }
@@ -616,89 +586,6 @@ function TripSkeletonList() {
     </div>
   )
 }
-
-function CreateTripPanel({
-  status,
-  onClose,
-  onSubmit,
-}: {
-  status: AsyncStatus
-  onClose: () => void
-  onSubmit: (payload: CreateTripRequest) => Promise<void>
-}) {
-  const [formError, setFormError] = useState('')
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const form = new FormData(event.currentTarget)
-    const payload = {
-      title: String(form.get('title') ?? '').trim(),
-      destination: String(form.get('destination') ?? '').trim(),
-      startDate: String(form.get('startDate') ?? ''),
-      endDate: String(form.get('endDate') ?? ''),
-    }
-
-    if (!payload.title || !payload.destination || !payload.startDate || !payload.endDate) {
-      setFormError('모든 항목을 입력하세요.')
-      return
-    }
-
-    if (payload.startDate > payload.endDate) {
-      setFormError('종료일은 시작일 이후여야 합니다.')
-      return
-    }
-
-    setFormError('')
-    await onSubmit(payload)
-  }
-
-  return (
-    <div className="create-trip-backdrop" role="presentation">
-      <section className="create-trip-panel" role="dialog" aria-modal="true" aria-labelledby="create-trip-title">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">New trip</p>
-            <h2 id="create-trip-title">새 여행 만들기</h2>
-          </div>
-          <button className="compact-action" type="button" onClick={onClose}>
-            닫기
-          </button>
-        </div>
-
-        <form className="create-trip-form" onSubmit={handleSubmit}>
-          <label>
-            <span>여행 제목</span>
-            <input name="title" type="text" placeholder="예: 강릉 2박 3일" maxLength={60} required />
-          </label>
-          <label>
-            <span>대표 여행지</span>
-            <input name="destination" type="text" placeholder="예: 강릉" maxLength={60} required />
-          </label>
-          <div className="date-input-grid">
-            <label>
-              <span>시작일</span>
-              <input name="startDate" type="date" required />
-            </label>
-            <label>
-              <span>종료일</span>
-              <input name="endDate" type="date" required />
-            </label>
-          </div>
-          {formError && <p className="field-error">{formError}</p>}
-          <p className="form-guide">
-            숙소, 예산, 이동수단, 취향 입력은 다음 단계의 여행 상세 화면에서 확장합니다.
-          </p>
-          <button className="primary-action" type="submit" disabled={status === 'loading'}>
-            여행 카드 생성
-          </button>
-        </form>
-      </section>
-    </div>
-  )
-}
-
-
-
 
 function tripStatusLabel(status: TripStatus) {
   const labels: Record<TripStatus, string> = {

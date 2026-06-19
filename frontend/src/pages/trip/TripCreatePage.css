@@ -1,0 +1,208 @@
+.trip-create-page {
+  --create-ink: #18211f;
+  --create-muted: #62675e;
+  --create-green: #1b4e42;
+  --create-sand: #eadfc9;
+  --create-line: rgba(24, 33, 31, 0.14);
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  padding: 28px;
+  color: var(--create-ink);
+  background:
+    radial-gradient(circle at 12% 16%, rgba(240, 154, 99, 0.28), transparent 24%),
+    radial-gradient(circle at 86% 18%, rgba(71, 139, 118, 0.24), transparent 28%),
+    linear-gradient(135deg, #f9f2e3 0%, #e4dcc8 56%, #f4ead8 100%);
+}
+
+.trip-create-map-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.22;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(27, 78, 66, 0.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(27, 78, 66, 0.14) 1px, transparent 1px),
+    radial-gradient(circle, rgba(167, 95, 42, 0.2) 1px, transparent 1px);
+  background-position: 0 0, 0 0, 18px 18px;
+  background-size: 56px 56px, 56px 56px, 56px 56px;
+}
+
+.trip-create-nav,
+.trip-create-shell {
+  position: relative;
+  width: min(1080px, 100%);
+  margin: 0 auto;
+}
+
+.trip-create-nav {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) auto minmax(120px, 1fr);
+  gap: 18px;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.trip-create-brand,
+.trip-create-user-menu {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.trip-create-brand {
+  justify-self: center;
+}
+
+.trip-create-user-menu {
+  justify-self: end;
+}
+
+.trip-create-brand strong,
+.trip-create-user-menu span {
+  color: var(--create-green);
+  font-weight: 900;
+}
+
+.trip-create-brand strong {
+  font-size: 1.35rem;
+}
+
+.trip-create-brand-mark {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 15px;
+  color: #fff8e9;
+  font-size: 0.86rem;
+  font-weight: 900;
+  background: #183f36;
+  box-shadow: 0 14px 28px rgba(27, 78, 66, 0.22);
+}
+
+.trip-create-back-button {
+  justify-self: start;
+  border: 0;
+  border-radius: 16px;
+  padding: 13px 16px;
+  color: var(--create-green);
+  font-weight: 900;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.trip-create-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 460px);
+  gap: clamp(24px, 5vw, 56px);
+  align-items: start;
+  padding: clamp(28px, 6vw, 64px);
+  border: 1px solid var(--create-line);
+  border-radius: 34px;
+  background:
+    linear-gradient(135deg, rgba(255, 252, 245, 0.96), rgba(242, 229, 204, 0.9)),
+    repeating-linear-gradient(120deg, transparent, transparent 18px, rgba(27, 78, 66, 0.06) 18px, rgba(27, 78, 66, 0.06) 20px);
+  box-shadow: 0 24px 70px rgba(45, 43, 32, 0.16);
+  backdrop-filter: blur(18px);
+}
+
+.trip-create-intro {
+  max-width: 620px;
+}
+
+.trip-create-intro h1 {
+  margin: 0;
+  font-size: clamp(2.4rem, 6vw, 5rem);
+  line-height: 0.96;
+  letter-spacing: -0.06em;
+}
+
+.trip-create-intro p {
+  color: var(--create-muted);
+  line-height: 1.75;
+}
+
+.trip-create-form {
+  display: grid;
+  gap: 15px;
+  padding: 26px;
+  border: 1px solid rgba(24, 33, 31, 0.12);
+  border-radius: 24px;
+  background: rgba(255, 250, 240, 0.86);
+}
+
+.trip-create-form label {
+  display: grid;
+  gap: 8px;
+  color: #394039;
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.trip-create-form input {
+  width: 100%;
+  border: 1px solid rgba(24, 33, 31, 0.16);
+  border-radius: 16px;
+  padding: 14px 15px;
+  color: var(--create-ink);
+  background: #fffaf0;
+  outline: none;
+}
+
+.trip-create-form input:focus {
+  border-color: var(--create-green);
+  box-shadow: 0 0 0 4px rgba(27, 78, 66, 0.12);
+}
+
+.trip-create-date-grid,
+.trip-create-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.trip-create-submit-error {
+  margin: -6px 0 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  color: #9f321f;
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1.5;
+  background: #f8dfd7;
+}
+
+@media (max-width: 860px) {
+  .trip-create-page {
+    padding: 18px;
+  }
+
+  .trip-create-nav,
+  .trip-create-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .trip-create-brand,
+  .trip-create-user-menu,
+  .trip-create-back-button {
+    justify-self: stretch;
+  }
+
+  .trip-create-user-menu {
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 560px) {
+  .trip-create-shell,
+  .trip-create-form {
+    border-radius: 24px;
+    padding: 22px;
+  }
+
+  .trip-create-date-grid,
+  .trip-create-actions {
+    grid-template-columns: 1fr;
+  }
+}

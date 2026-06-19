@@ -387,14 +387,12 @@
   width: 100%;
 }
 
-.nickname-form,
-.create-trip-form {
+.nickname-form {
   display: grid;
   gap: 15px;
 }
 
-.nickname-form label,
-.create-trip-form label {
+.nickname-form label {
   display: grid;
   gap: 8px;
   color: #394039;
@@ -402,8 +400,7 @@
   font-weight: 900;
 }
 
-.nickname-form input,
-.create-trip-form input {
+.nickname-form input {
   width: 100%;
   border: 1px solid rgba(24, 33, 31, 0.16);
   border-radius: 16px;
@@ -413,8 +410,7 @@
   outline: none;
 }
 
-.nickname-form input:focus,
-.create-trip-form input:focus {
+.nickname-form input:focus {
   border-color: var(--dash-green);
   box-shadow: 0 0 0 4px rgba(27, 78, 66, 0.12);
 }
@@ -593,52 +589,12 @@
   height: 16px;
 }
 
-.create-trip-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 20;
-  display: flex;
-  justify-content: flex-end;
-  padding: 20px;
-  background: rgba(24, 33, 31, 0.42);
-  backdrop-filter: blur(8px);
-}
-
-.create-trip-panel {
-  width: min(460px, 100%);
-  height: 100%;
-  overflow-y: auto;
-  padding: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.44);
-  border-radius: 30px;
-  background: #fffaf0;
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.24);
-  animation: dashboard-panel-in 180ms ease-out;
-}
-
-.date-input-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
 @keyframes dashboard-shimmer {
   0% {
     background-position: 0% 50%;
   }
   100% {
     background-position: -220% 50%;
-  }
-}
-
-@keyframes dashboard-panel-in {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
   }
 }
 
@@ -680,7 +636,6 @@
   }
 
   .trip-stat-board,
-  .date-input-grid,
   .form-button-row {
     grid-template-columns: 1fr;
   }
@@ -690,12 +645,4 @@
     gap: 4px;
   }
 
-  .create-trip-backdrop {
-    padding: 10px;
-  }
-
-  .create-trip-panel {
-    border-radius: 24px;
-    padding: 22px;
-  }
 }

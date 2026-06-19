@@ -2,6 +2,7 @@
 import type { FormEvent } from 'react'
 import './App.css'
 import { MainPage } from './pages/main/MainPage'
+import { TripCreatePage } from './pages/trip/TripCreatePage'
 import { TripDetailPage } from './pages/trip/TripDetailPage'
 import {
   ApiError,
@@ -19,7 +20,7 @@ import {
 } from './api/auth'
 import type { AuthUser, OAuth2Provider } from './api/auth'
 
-type Page = 'auth' | 'emailVerification' | 'findLoginId' | 'resetPassword' | 'main' | 'tripDetail'
+type Page = 'auth' | 'emailVerification' | 'findLoginId' | 'resetPassword' | 'main' | 'tripCreate' | 'tripDetail'
 type AuthMode = 'login' | 'signup'
 type NoticeTone = 'info' | 'success' | 'error'
 
@@ -35,6 +36,9 @@ const ACCESS_TOKEN_KEY = 'planmate.accessToken'
 function resolvePage(): Page {
   if (window.location.pathname === '/main') {
     return 'main'
+  }
+  if (window.location.pathname === '/trips/new') {
+    return 'tripCreate'
   }
   if (window.location.pathname.startsWith('/trips/')) {
     return 'tripDetail'
@@ -180,7 +184,7 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (page === 'main' || page === 'tripDetail') {
+    if (page === 'main' || page === 'tripCreate' || page === 'tripDetail') {
       const timeoutId = window.setTimeout(() => {
         void restoreSession()
       }, 0)
@@ -353,7 +357,20 @@ function App() {
         accessToken={accessToken}
         user={currentUser}
         onLogout={handleLogout}
+        onCreateTrip={() => navigate('/trips/new')}
         onOpenTrip={(tripId) => navigate('/trips/' + tripId)}
+      />
+    )
+  }
+
+  if (page === 'tripCreate') {
+    return (
+      <TripCreatePage
+        accessToken={accessToken}
+        user={currentUser}
+        onBackToMain={() => navigate('/main')}
+        onCreatedTrip={(tripId) => navigate('/trips/' + tripId)}
+        onLogout={handleLogout}
       />
     )
   }
