@@ -27,6 +27,9 @@ public class TripEntity {
     @Column(nullable = false, length = 60)
     private String destination;
 
+    @Column(name = "destination_place_id", length = 255)
+    private String destinationPlaceId;
+
     @Column(nullable = false)
     private LocalDate startDate;
 
@@ -49,6 +52,7 @@ public class TripEntity {
     private TripEntity(
             String title,
             String destination,
+            String destinationPlaceId,
             LocalDate startDate,
             LocalDate endDate,
             UserEntity createdBy,
@@ -56,6 +60,7 @@ public class TripEntity {
     ) {
         this.title = title;
         this.destination = destination;
+        this.destinationPlaceId = destinationPlaceId;
         this.startDate = startDate;
         this.endDate = endDate;
         this.createdBy = createdBy;
@@ -66,12 +71,13 @@ public class TripEntity {
     public static TripEntity create(
             String title,
             String destination,
+            String destinationPlaceId,
             LocalDate startDate,
             LocalDate endDate,
             UserEntity createdBy,
             Instant now
     ) {
-        return new TripEntity(title, destination, startDate, endDate, createdBy, now);
+        return new TripEntity(title, destination, destinationPlaceId, startDate, endDate, createdBy, now);
     }
 
     public Long getId() {
@@ -84,6 +90,10 @@ public class TripEntity {
 
     public String getDestination() {
         return destination;
+    }
+
+    public String getDestinationPlaceId() {
+        return destinationPlaceId;
     }
 
     public LocalDate getStartDate() {

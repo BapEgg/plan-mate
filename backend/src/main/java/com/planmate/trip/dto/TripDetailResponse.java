@@ -8,6 +8,7 @@ public record TripDetailResponse(
         String id,
         String title,
         String destination,
+        String destinationPlaceId,
         LocalDate startDate,
         LocalDate endDate,
         TripStatus status,

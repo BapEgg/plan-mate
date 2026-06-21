@@ -159,6 +159,13 @@
   background: var(--dash-sand);
 }
 
+.main-actions .primary-action,
+.empty-trip-state .primary-action {
+  color: #fff8e9;
+  background: linear-gradient(135deg, var(--dash-green), #2f7a65);
+  box-shadow: 0 16px 34px rgba(27, 78, 66, 0.24);
+}
+
 .dashboard-notice {
   display: flex;
   align-items: center;

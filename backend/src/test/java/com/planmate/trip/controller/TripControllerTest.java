@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.planmate.auth.security.JwtTokenProvider;
+import com.planmate.place.service.GooglePlacesService;
 import com.planmate.trip.entity.TripMemberRole;
 import com.planmate.trip.repository.TripMemberRepository;
 import com.planmate.user.domain.UserRole;
@@ -24,6 +25,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,6 +50,9 @@ class TripControllerTest {
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
+    @MockitoBean
+    private GooglePlacesService googlePlacesService;
+
     @Test
     void createTripCreatesOwnerMembership() throws Exception {
         UserEntity user = createUser();
@@ -62,6 +67,7 @@ class TripControllerTest {
                                 {
                                   "title": "강릉 2박 3일",
                                   "destination": "강릉",
+                                  "destinationPlaceId": "place-gangneung",
                                   "startDate": "%s",
                                   "endDate": "%s"
                                 }
@@ -70,6 +76,7 @@ class TripControllerTest {
                 .andExpect(header().string(HttpHeaders.LOCATION, org.hamcrest.Matchers.startsWith("/api/trips/")))
                 .andExpect(jsonPath("$.title").value("강릉 2박 3일"))
                 .andExpect(jsonPath("$.destination").value("강릉"))
+                .andExpect(jsonPath("$.destinationPlaceId").value("place-gangneung"))
                 .andExpect(jsonPath("$.status").value("UPCOMING"))
                 .andExpect(jsonPath("$.memberCount").value(1));
 
@@ -116,6 +123,7 @@ class TripControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(tripId))
                 .andExpect(jsonPath("$.title").value("상세 여행"))
+                .andExpect(jsonPath("$.destinationPlaceId").value("place-제주"))
                 .andExpect(jsonPath("$.status").value("PLANNING"))
                 .andExpect(jsonPath("$.memberCount").value(1))
                 .andExpect(jsonPath("$.members.length()").value(1))
@@ -154,6 +162,7 @@ class TripControllerTest {
                                 {
                                   "title": "잘못된 여행",
                                   "destination": "서울",
+                                  "destinationPlaceId": "place-seoul",
                                   "startDate": "2026-08-10",
                                   "endDate": "2026-08-01"
                                 }
@@ -176,10 +185,11 @@ class TripControllerTest {
                                 {
                                   "title": "%s",
                                   "destination": "%s",
+                                  "destinationPlaceId": "place-%s",
                                   "startDate": "%s",
                                   "endDate": "%s"
                                 }
-                                """.formatted(title, destination, startDate, endDate)))
+                                """.formatted(title, destination, destination, startDate, endDate)))
                 .andExpect(status().isCreated())
                 .andReturn();
 

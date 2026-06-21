@@ -6,6 +6,7 @@ export type TripSummary = {
   id: string
   title: string
   destination: string
+  destinationPlaceId: string | null
   startDate: string
   endDate: string
   status: TripStatus
@@ -27,6 +28,7 @@ export type TripDetail = TripSummary & {
 export type CreateTripRequest = {
   title: string
   destination: string
+  destinationPlaceId: string
   startDate: string
   endDate: string
 }

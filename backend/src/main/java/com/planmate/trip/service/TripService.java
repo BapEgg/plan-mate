@@ -1,5 +1,6 @@
 package com.planmate.trip.service;
 
+import com.planmate.place.service.GooglePlacesService;
 import com.planmate.trip.dto.TripCreateRequest;
 import com.planmate.trip.dto.TripDetailResponse;
 import com.planmate.trip.dto.TripMemberResponse;
@@ -26,17 +27,20 @@ public class TripService {
     private final TripRepository tripRepository;
     private final TripMemberRepository tripMemberRepository;
     private final UserRepository userRepository;
+    private final GooglePlacesService googlePlacesService;
     private final Clock clock;
 
     public TripService(
             TripRepository tripRepository,
             TripMemberRepository tripMemberRepository,
             UserRepository userRepository,
+            GooglePlacesService googlePlacesService,
             Clock clock
     ) {
         this.tripRepository = tripRepository;
         this.tripMemberRepository = tripMemberRepository;
         this.userRepository = userRepository;
+        this.googlePlacesService = googlePlacesService;
         this.clock = clock;
     }
 
@@ -44,10 +48,14 @@ public class TripService {
     public TripSummaryResponse create(Long userId, TripCreateRequest request) {
         UserEntity owner = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
         Instant now = Instant.now(clock);
+        String destinationPlaceId = request.destinationPlaceId().trim();
+
+        googlePlacesService.validatePlaceId(destinationPlaceId);
 
         TripEntity trip = tripRepository.save(TripEntity.create(
                 request.title().trim(),
                 request.destination().trim(),
+                destinationPlaceId,
                 request.startDate(),
                 request.endDate(),
                 owner,
@@ -87,6 +95,7 @@ public class TripService {
                 trip.getId().toString(),
                 trip.getTitle(),
                 trip.getDestination(),
+                trip.getDestinationPlaceId(),
                 trip.getStartDate(),
                 trip.getEndDate(),
                 statusOf(trip),
@@ -101,6 +110,7 @@ public class TripService {
                 trip.getId().toString(),
                 trip.getTitle(),
                 trip.getDestination(),
+                trip.getDestinationPlaceId(),
                 trip.getStartDate(),
                 trip.getEndDate(),
                 statusOf(trip),

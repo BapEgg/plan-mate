@@ -7,6 +7,7 @@ public record TripSummaryResponse(
         String id,
         String title,
         String destination,
+        String destinationPlaceId,
         LocalDate startDate,
         LocalDate endDate,
         TripStatus status,
