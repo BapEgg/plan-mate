@@ -1,21 +1,29 @@
 package com.planmate.trip.service;
 
+import com.planmate.place.dto.GeoPoint;
+import com.planmate.place.dto.ResolvedDestination;
 import com.planmate.place.service.GooglePlacesService;
+import com.planmate.itinerary.service.ItineraryQueryService;
+import com.planmate.trip.domain.AccommodationMode;
+import com.planmate.trip.domain.MustVisitPlaceSnapshot;
+import com.planmate.trip.domain.ResolvedAccommodation;
+import com.planmate.trip.domain.ResolvedSchedulePreference;
 import com.planmate.trip.dto.TripCreateRequest;
+import com.planmate.trip.dto.TripDestinationResponse;
 import com.planmate.trip.dto.TripDetailResponse;
 import com.planmate.trip.dto.TripMemberResponse;
+import com.planmate.trip.dto.TripPlanningProfileResponse;
 import com.planmate.trip.dto.TripStatus;
 import com.planmate.trip.dto.TripSummaryResponse;
 import com.planmate.trip.entity.TripEntity;
 import com.planmate.trip.entity.TripMemberEntity;
+import com.planmate.trip.entity.TripPlanningProfileEntity;
+import com.planmate.trip.exception.InvalidTripRequestException;
 import com.planmate.trip.exception.TripNotFoundException;
 import com.planmate.trip.repository.TripMemberRepository;
+import com.planmate.trip.repository.TripPlanningProfileRepository;
 import com.planmate.trip.repository.TripRepository;
-import com.planmate.user.entity.UserEntity;
-import com.planmate.user.exception.UserNotFoundException;
-import com.planmate.user.repository.UserRepository;
 import java.time.Clock;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -26,44 +34,92 @@ public class TripService {
 
     private final TripRepository tripRepository;
     private final TripMemberRepository tripMemberRepository;
-    private final UserRepository userRepository;
+    private final TripPlanningProfileRepository tripPlanningProfileRepository;
+    private final TripCreationPersistenceService tripCreationPersistenceService;
+    private final ItineraryQueryService itineraryQueryService;
     private final GooglePlacesService googlePlacesService;
+    private final SchedulePreferenceResolver schedulePreferenceResolver;
     private final Clock clock;
 
     public TripService(
             TripRepository tripRepository,
             TripMemberRepository tripMemberRepository,
-            UserRepository userRepository,
+            TripPlanningProfileRepository tripPlanningProfileRepository,
+            TripCreationPersistenceService tripCreationPersistenceService,
+            ItineraryQueryService itineraryQueryService,
             GooglePlacesService googlePlacesService,
+            SchedulePreferenceResolver schedulePreferenceResolver,
             Clock clock
     ) {
         this.tripRepository = tripRepository;
         this.tripMemberRepository = tripMemberRepository;
-        this.userRepository = userRepository;
+        this.tripPlanningProfileRepository = tripPlanningProfileRepository;
+        this.tripCreationPersistenceService = tripCreationPersistenceService;
+        this.itineraryQueryService = itineraryQueryService;
         this.googlePlacesService = googlePlacesService;
+        this.schedulePreferenceResolver = schedulePreferenceResolver;
         this.clock = clock;
     }
 
-    @Transactional
     public TripSummaryResponse create(Long userId, TripCreateRequest request) {
-        UserEntity owner = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
-        Instant now = Instant.now(clock);
         String destinationPlaceId = request.destinationPlaceId().trim();
-
-        googlePlacesService.validatePlaceId(destinationPlaceId);
-
-        TripEntity trip = tripRepository.save(TripEntity.create(
-                request.title().trim(),
-                request.destination().trim(),
-                destinationPlaceId,
-                request.startDate(),
-                request.endDate(),
-                owner,
-                now
-        ));
-        tripMemberRepository.save(TripMemberEntity.owner(trip, owner, now));
+        ResolvedDestination destination = googlePlacesService.resolveDestination(destinationPlaceId, "ko");
+        ResolvedAccommodation accommodation = resolveAccommodation(request.accommodation());
+        List<MustVisitPlaceSnapshot> mustVisitPlaces = resolveMustVisitPlaces(request.additionalRequest().mustVisitPlaceIds());
+        ResolvedSchedulePreference schedulePreference = schedulePreferenceResolver.resolve(request.schedulePreference());
+        TripEntity trip = tripCreationPersistenceService.create(
+                userId,
+                request,
+                destination,
+                accommodation,
+                mustVisitPlaces,
+                schedulePreference
+        );
 
         return toSummaryResponse(trip, 1);
+    }
+
+    private ResolvedAccommodation resolveAccommodation(TripCreateRequest.AccommodationRequest request) {
+        if (request.mode() != AccommodationMode.PLACE_SEARCH) {
+            return null;
+        }
+        ResolvedDestination place = googlePlacesService.resolveDestination(request.placeId().trim(), "ko");
+        GeoPoint location = place.location();
+        if (location == null) {
+            throw new InvalidTripRequestException("선택한 숙소의 위치 정보를 확인할 수 없습니다.");
+        }
+        return new ResolvedAccommodation(
+                place.placeId(),
+                place.displayName(),
+                place.formattedAddress(),
+                location.latitude(),
+                location.longitude(),
+                place.types(),
+                place.primaryType()
+        );
+    }
+
+    private List<MustVisitPlaceSnapshot> resolveMustVisitPlaces(List<String> placeIds) {
+        return placeIds.stream()
+                .map(String::trim)
+                .filter(placeId -> !placeId.isBlank())
+                .map(placeId -> {
+                    ResolvedDestination place = googlePlacesService.resolveDestination(placeId, "ko");
+                    GeoPoint location = place.location();
+                    if (location == null) {
+                        throw new InvalidTripRequestException("꼭 가보고 싶은 장소의 위치 정보를 확인할 수 없습니다.");
+                    }
+                    return new MustVisitPlaceSnapshot(
+                            place.placeId(),
+                            place.displayName(),
+                            place.formattedAddress(),
+                            location.latitude(),
+                            location.longitude(),
+                            place.types(),
+                            place.primaryType()
+                    );
+                })
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -101,7 +157,12 @@ public class TripService {
                 statusOf(trip),
                 members.size(),
                 trip.getCreatedAt(),
-                memberResponses
+                memberResponses,
+                toDestinationResponse(trip),
+                tripPlanningProfileRepository.findByTrip_Id(trip.getId())
+                        .map(this::toPlanningProfileResponse)
+                        .orElse(null),
+                itineraryQueryService.listTripItineraries(trip.getId())
         );
     }
 
@@ -128,6 +189,58 @@ public class TripService {
             return TripStatus.UPCOMING;
         }
         return TripStatus.PLANNING;
+    }
+
+    private TripDestinationResponse toDestinationResponse(TripEntity trip) {
+        return new TripDestinationResponse(
+                trip.getDestinationPlaceId(),
+                trip.getDestination(),
+                trip.getDestinationFormattedAddress(),
+                trip.getDestinationLatitude(),
+                trip.getDestinationLongitude(),
+                trip.getDestinationViewportLowLatitude(),
+                trip.getDestinationViewportLowLongitude(),
+                trip.getDestinationViewportHighLatitude(),
+                trip.getDestinationViewportHighLongitude(),
+                trip.getDestinationTypes(),
+                trip.getDestinationPrimaryType()
+        );
+    }
+
+    private TripPlanningProfileResponse toPlanningProfileResponse(TripPlanningProfileEntity profile) {
+        return new TripPlanningProfileResponse(
+                profile.getCompanionCount(),
+                profile.getCompanionType(),
+                profile.isHasChildren(),
+                profile.getChildCount(),
+                profile.getChildAgeGroup(),
+                profile.isHasSeniors(),
+                profile.getSeniorCount(),
+                profile.getCurrencyCode(),
+                profile.getBudgetAmount(),
+                profile.getBudgetLevel(),
+                profile.getIncludedBudgetItems(),
+                profile.getTravelPace(),
+                profile.getInterests(),
+                profile.getPrimaryTransportMode(),
+                profile.getSecondaryTransportModes(),
+                profile.getAccommodationMode(),
+                profile.getAccommodationArea(),
+                profile.getAccommodationName(),
+                profile.getAccommodationPlaceId(),
+                profile.getAccommodationFormattedAddress(),
+                profile.getAccommodationLatitude(),
+                profile.getAccommodationLongitude(),
+                profile.getAccommodationTypes(),
+                profile.getAccommodationPrimaryType(),
+                profile.getCheckInTime(),
+                profile.getCheckOutTime(),
+                profile.getDailyStartTime(),
+                profile.getDailyEndTime(),
+                profile.getMustVisitPlaces(),
+                profile.getAvoidConditions(),
+                profile.getFreeRequest()
+        );
     }
 
 }

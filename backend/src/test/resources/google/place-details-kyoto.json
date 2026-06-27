@@ -1,0 +1,23 @@
+{
+  "id": "place-kyoto",
+  "displayName": {
+    "text": "Kyoto"
+  },
+  "formattedAddress": "Kyoto, Japan",
+  "location": {
+    "latitude": 35.0116,
+    "longitude": 135.7681
+  },
+  "viewport": {
+    "low": {
+      "latitude": 34.8,
+      "longitude": 135.5
+    },
+    "high": {
+      "latitude": 35.2,
+      "longitude": 136.0
+    }
+  },
+  "types": ["locality", "political"],
+  "primaryType": "locality"
+}

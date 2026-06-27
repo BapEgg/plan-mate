@@ -1,0 +1,51 @@
+package com.planmate.trip.dto;
+
+import com.planmate.trip.domain.AccommodationArea;
+import com.planmate.trip.domain.AccommodationMode;
+import com.planmate.trip.domain.AvoidCondition;
+import com.planmate.trip.domain.BudgetItem;
+import com.planmate.trip.domain.BudgetLevel;
+import com.planmate.trip.domain.ChildAgeGroup;
+import com.planmate.trip.domain.CompanionType;
+import com.planmate.trip.domain.CurrencyCode;
+import com.planmate.trip.domain.MustVisitPlaceSnapshot;
+import com.planmate.trip.domain.TransportMode;
+import com.planmate.trip.domain.TravelPace;
+import com.planmate.trip.domain.TripInterest;
+import java.time.LocalTime;
+import java.util.List;
+
+public record TripPlanningProfileResponse(
+        int companionCount,
+        CompanionType companionType,
+        boolean hasChildren,
+        int childCount,
+        ChildAgeGroup childAgeGroup,
+        boolean hasSeniors,
+        int seniorCount,
+        CurrencyCode currencyCode,
+        Long budgetAmount,
+        BudgetLevel budgetLevel,
+        List<BudgetItem> includedBudgetItems,
+        TravelPace travelPace,
+        List<TripInterest> interests,
+        TransportMode primaryTransportMode,
+        List<TransportMode> secondaryTransportModes,
+        AccommodationMode accommodationMode,
+        AccommodationArea accommodationArea,
+        String accommodationName,
+        String accommodationPlaceId,
+        String accommodationFormattedAddress,
+        Double accommodationLatitude,
+        Double accommodationLongitude,
+        List<String> accommodationTypes,
+        String accommodationPrimaryType,
+        LocalTime checkInTime,
+        LocalTime checkOutTime,
+        LocalTime dailyStartTime,
+        LocalTime dailyEndTime,
+        List<MustVisitPlaceSnapshot> mustVisitPlaces,
+        List<AvoidCondition> avoidConditions,
+        String freeRequest
+) {
+}

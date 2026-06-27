@@ -19,6 +19,98 @@
     linear-gradient(135deg, #f8f2e4 0%, #e1d7bd 52%, #f5ead3 100%);
 }
 
+.manual-handoff-panel {
+  display: grid;
+  gap: 14px;
+  width: min(100%, 920px);
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.manual-handoff-heading {
+  display: grid;
+  gap: 4px;
+}
+
+.manual-handoff-heading span {
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #2563eb;
+}
+
+.manual-handoff-heading strong {
+  font-size: 1rem;
+  color: #111827;
+}
+
+.manual-handoff-heading p,
+.manual-handoff-message {
+  margin: 0;
+  color: #475569;
+}
+
+.manual-handoff-message.error {
+  color: #b91c1c;
+}
+
+.manual-handoff-message.success {
+  color: #047857;
+}
+
+.manual-handoff-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.manual-handoff-actions button,
+.manual-handoff-output button {
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  border-radius: 8px;
+  background: #fff;
+  color: #111827;
+  font-weight: 800;
+  padding: 9px 12px;
+}
+
+.manual-handoff-actions button:disabled,
+.manual-handoff-output button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.manual-handoff-output {
+  display: grid;
+  gap: 8px;
+}
+
+.manual-handoff-output > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.manual-handoff-output strong {
+  color: #111827;
+}
+
+.manual-handoff-output textarea {
+  width: 100%;
+  min-height: 140px;
+  resize: vertical;
+  border: 1px solid rgba(15, 23, 42, 0.16);
+  border-radius: 8px;
+  padding: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
 .trip-create-map-grid {
   position: fixed;
   inset: 0;
@@ -1864,6 +1956,10 @@
   line-height: 1.45;
 }
 
+.trip-info-field .field-error {
+  color: #b5472f;
+}
+
 .trip-info-field input:focus,
 .trip-info-field select:focus,
 .trip-info-field textarea:focus,
@@ -1996,10 +2092,41 @@
   color: var(--trip-muted);
 }
 
+.accommodation-search-section,
+.accommodation-candidate-area,
+.must-visit-search-section,
+.must-visit-candidate-area {
+  width: 100%;
+  margin-top: 0;
+}
+
+.selected-place-card-list {
+  display: grid;
+  gap: 12px;
+}
+
+.selected-place-card-list > span {
+  color: var(--trip-muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.schedule-time-help {
+  margin: 0;
+  color: var(--trip-muted);
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
 .option-card-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+}
+
+.option-card-grid.compact .toggle-card {
+  min-height: 58px;
 }
 
 .option-card,

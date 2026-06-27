@@ -111,6 +111,17 @@ app:
   google:
     places:
       api-key: ${GOOGLE_PLACES_API_KEY:}
+      text-search-radius-meters: ${GOOGLE_PLACES_TEXT_SEARCH_RADIUS_METERS:30000}
+  itinerary:
+    manual-handoff-enabled: ${APP_ITINERARY_MANUAL_HANDOFF_ENABLED:false}
+    schedule:
+      default-start-time: ${APP_ITINERARY_SCHEDULE_DEFAULT_START_TIME:08:00}
+      default-end-time: ${APP_ITINERARY_SCHEDULE_DEFAULT_END_TIME:20:00}
+    candidates:
+      target-count: ${APP_ITINERARY_CANDIDATE_TARGET_COUNT:120}
+      max-raw-count: ${APP_ITINERARY_CANDIDATE_MAX_RAW_COUNT:180}
+      page-size: ${APP_ITINERARY_CANDIDATE_PAGE_SIZE:20}
+      max-distance-meters: ${APP_ITINERARY_CANDIDATE_MAX_DISTANCE_METERS:50000}
   jwt:
     secret: ${JWT_SECRET:planmate-local-development-jwt-secret-key-must-be-at-least-32-bytes}
     access-token-ttl: 15m

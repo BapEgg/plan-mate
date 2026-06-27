@@ -1,0 +1,24 @@
+{
+  "places": [
+    {
+      "id": "candidate-1",
+      "displayName": {
+        "text": "Kiyomizu-dera"
+      },
+      "formattedAddress": "1-294 Kiyomizu, Kyoto",
+      "location": {
+        "latitude": 34.9949,
+        "longitude": 135.7850
+      },
+      "types": ["tourist_attraction", "place_of_worship"],
+      "primaryType": "tourist_attraction",
+      "businessStatus": "OPERATIONAL",
+      "rating": 4.5,
+      "userRatingCount": 10000,
+      "regularOpeningHours": {
+        "weekdayDescriptions": ["Monday: 06:00-18:00"]
+      }
+    }
+  ],
+  "nextPageToken": "next-token"
+}

@@ -34,6 +34,22 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
   return response.json() as Promise<T>
 }
 
+export async function requestText(path: string, options: RequestInit = {}): Promise<string> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    credentials: 'include',
+    ...options,
+    headers: {
+      ...options.headers,
+    },
+  })
+
+  if (!response.ok) {
+    throw await toApiError(response)
+  }
+
+  return response.text()
+}
+
 export function bearerHeaders(accessToken: string) {
   return {
     Authorization: `Bearer ${accessToken}`,

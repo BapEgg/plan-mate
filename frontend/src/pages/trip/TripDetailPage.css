@@ -22,6 +22,26 @@
     linear-gradient(135deg, #f8f2e4 0%, #e7dcc4 54%, #f7ecd8 100%);
 }
 
+.planning-empty-state {
+  display: grid;
+  gap: 10px;
+  margin: 24px;
+  padding: 28px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.planning-empty-state h2 {
+  margin: 0;
+  color: #111827;
+}
+
+.planning-empty-state p {
+  margin: 0;
+  color: #64748b;
+}
+
 .trip-detail-page::before {
   content: '';
   position: fixed;
@@ -123,6 +143,50 @@
   color: var(--trip-muted);
   font-size: 0.98rem;
   font-weight: 800;
+}
+
+.planning-profile-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.planning-profile-summary article {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--trip-line);
+  border-radius: 20px;
+  padding: 16px 18px;
+  background: rgba(255, 250, 240, 0.9);
+  box-shadow: var(--trip-soft-shadow);
+}
+
+.planning-profile-summary span {
+  color: var(--trip-orange);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.planning-profile-summary strong {
+  overflow: hidden;
+  color: var(--trip-green);
+  font-size: 1.05rem;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.planning-profile-summary p {
+  overflow: hidden;
+  margin: 0;
+  color: var(--trip-muted);
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .planning-header-actions {
@@ -1187,5 +1251,9 @@
   .trip-detail-state-card {
     margin: 24px auto;
     padding: 28px;
+  }
+
+  .planning-profile-summary {
+    grid-template-columns: 1fr;
   }
 }

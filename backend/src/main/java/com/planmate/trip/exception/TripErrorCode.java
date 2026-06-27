@@ -5,7 +5,8 @@ import org.springframework.http.HttpStatus;
 
 public enum TripErrorCode implements ErrorCode {
 
-    TRIP_NOT_FOUND(HttpStatus.NOT_FOUND, "TRIP_NOT_FOUND", "Trip not found.");
+    TRIP_NOT_FOUND(HttpStatus.NOT_FOUND, "TRIP_NOT_FOUND", "Trip not found."),
+    INVALID_TRIP_REQUEST(HttpStatus.BAD_REQUEST, "INVALID_TRIP_REQUEST", "Invalid trip request.");
 
     private final HttpStatus status;
     private final String code;
