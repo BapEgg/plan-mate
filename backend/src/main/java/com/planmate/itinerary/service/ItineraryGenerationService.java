@@ -25,24 +25,26 @@ public class ItineraryGenerationService {
     }
 
     public ItineraryGenerationCreateResponse create(Long userId, Long tripId) {
-        ItineraryGenerationEntity generation = persistenceService.createGeneration(
+        ItineraryGenerationEntity generation = persistenceService.createGenerationRequest(
                 userId,
                 tripId,
                 ItineraryPromptService.PROMPT_VERSION
         );
+        return new ItineraryGenerationCreateResponse(
+                generation.getId().toString(),
+                generation.getStatus(),
+                0
+        );
+    }
+
+    public void collectCandidates(Long userId, Long tripId, Long generationId) {
         try {
-            persistenceService.markCollecting(generation.getId());
-            GenerationCollectionContext context = persistenceService.loadCollectionContext(userId, tripId, generation.getId());
+            persistenceService.markCollecting(generationId);
+            GenerationCollectionContext context = persistenceService.loadCollectionContext(userId, tripId, generationId);
             List<CollectedPlaceCandidate> candidates = candidateCollectionService.collect(context.destination(), context.profile());
-            persistenceService.saveCandidatesAndMarkReady(generation.getId(), candidates);
-            ItineraryGenerationDetailResponse detail = persistenceService.getDetail(userId, tripId, generation.getId());
-            return new ItineraryGenerationCreateResponse(
-                    detail.generationId(),
-                    detail.status(),
-                    detail.candidateCount()
-            );
+            persistenceService.saveCandidatesAndMarkReady(generationId, candidates);
         } catch (RuntimeException exception) {
-            persistenceService.markFailed(generation.getId(), safeFailureReason(exception));
+            persistenceService.markFailed(generationId, safeFailureReason(exception));
             throw exception;
         }
     }

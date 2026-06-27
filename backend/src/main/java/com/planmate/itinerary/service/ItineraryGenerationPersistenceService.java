@@ -1,5 +1,7 @@
 package com.planmate.itinerary.service;
 
+import com.planmate.common.outbox.OutboxEventEntity;
+import com.planmate.common.outbox.OutboxEventRepository;
 import com.planmate.itinerary.dto.ItineraryGenerationDetailResponse;
 import com.planmate.itinerary.entity.ItineraryGenerationEntity;
 import com.planmate.itinerary.entity.PlaceCandidateEntity;
@@ -18,15 +20,21 @@ import com.planmate.trip.repository.TripPlanningProfileRepository;
 import com.planmate.trip.repository.TripRepository;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ItineraryGenerationPersistenceService {
 
+    private static final String ITINERARY_GENERATION_AGGREGATE_TYPE = "ITINERARY_GENERATION";
+    private static final String ITINERARY_GENERATION_REQUESTED_EVENT_TYPE = "ITINERARY_GENERATION_REQUESTED";
+
     private final ItineraryGenerationRepository generationRepository;
     private final PlaceCandidateRepository placeCandidateRepository;
+    private final OutboxEventRepository outboxEventRepository;
     private final TripRepository tripRepository;
     private final TripPlanningProfileRepository tripPlanningProfileRepository;
     private final Clock clock;
@@ -34,22 +42,33 @@ public class ItineraryGenerationPersistenceService {
     public ItineraryGenerationPersistenceService(
             ItineraryGenerationRepository generationRepository,
             PlaceCandidateRepository placeCandidateRepository,
+            OutboxEventRepository outboxEventRepository,
             TripRepository tripRepository,
             TripPlanningProfileRepository tripPlanningProfileRepository,
             Clock clock
     ) {
         this.generationRepository = generationRepository;
         this.placeCandidateRepository = placeCandidateRepository;
+        this.outboxEventRepository = outboxEventRepository;
         this.tripRepository = tripRepository;
         this.tripPlanningProfileRepository = tripPlanningProfileRepository;
         this.clock = clock;
     }
 
     @Transactional
-    public ItineraryGenerationEntity createGeneration(Long userId, Long tripId, String promptVersion) {
+    public ItineraryGenerationEntity createGenerationRequest(Long userId, Long tripId, String promptVersion) {
         TripEntity trip = tripRepository.findAccessibleTrip(tripId, userId)
                 .orElseThrow(TripNotFoundException::new);
-        return generationRepository.save(ItineraryGenerationEntity.create(trip, promptVersion, Instant.now(clock)));
+        Instant now = Instant.now(clock);
+        ItineraryGenerationEntity generation = generationRepository.save(ItineraryGenerationEntity.create(trip, promptVersion, now));
+        outboxEventRepository.save(OutboxEventEntity.create(
+                ITINERARY_GENERATION_AGGREGATE_TYPE,
+                generation.getId().toString(),
+                ITINERARY_GENERATION_REQUESTED_EVENT_TYPE,
+                itineraryGenerationRequestedPayload(generation.getId(), trip.getId(), userId),
+                now
+        ));
+        return generation;
     }
 
     @Transactional
@@ -127,6 +146,14 @@ public class ItineraryGenerationPersistenceService {
     private ItineraryGenerationEntity findGeneration(Long generationId) {
         return generationRepository.findById(generationId)
                 .orElseThrow(() -> new ItineraryException(ItineraryErrorCode.GENERATION_NOT_FOUND));
+    }
+
+    private Map<String, Object> itineraryGenerationRequestedPayload(Long generationId, Long tripId, Long userId) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("generationId", generationId);
+        payload.put("tripId", tripId);
+        payload.put("userId", userId);
+        return payload;
     }
 
     private ResolvedDestination toResolvedDestination(TripEntity trip) {

@@ -205,6 +205,24 @@ const AVOID_OPTIONS: Array<{ id: AvoidItem; label: string }> = [
 ]
 const MANUAL_HANDOFF_ENABLED = import.meta.env.VITE_MANUAL_HANDOFF_ENABLED === 'true'
 
+function isGenerationReadyForManualHandoff(generation: ItineraryGenerationCreateResponse | null) {
+  return generation?.status === 'READY_FOR_PLANNING'
+}
+
+function generationStatusMessage(generation: ItineraryGenerationCreateResponse) {
+  if (isGenerationReadyForManualHandoff(generation)) {
+    return `후보 ${generation.candidateCount}개를 수집했고 ${generation.status} 상태가 되었습니다.`
+  }
+  return `일정 생성 요청을 접수했습니다. 현재 ${generation.status} 상태입니다.`
+}
+
+function generationCandidateMessage(generation: ItineraryGenerationCreateResponse) {
+  if (isGenerationReadyForManualHandoff(generation)) {
+    return `후보 ${generation.candidateCount}개를 실제 Google Places 결과에서 수집했습니다.`
+  }
+  return '후보 수집은 비동기 작업으로 처리됩니다.'
+}
+
 export function TripCreatePage({
   accessToken,
   user,
@@ -921,7 +939,7 @@ export function TripCreatePage({
       if (MANUAL_HANDOFF_ENABLED) {
         const generation = await createItineraryGeneration(accessToken, created.id)
         setItineraryGeneration(generation)
-        setManualMessage(`후보 ${generation.candidateCount}개를 수집했고 ${generation.status} 상태가 되었습니다.`)
+        setManualMessage(generationStatusMessage(generation))
         setSubmitStatus('success')
         return
       }
@@ -3217,6 +3235,7 @@ function GeneratingTripPanel({
 }) {
   const destinationName = destination?.mainText ?? '여행지'
   const mascotImage = MASCOT_IMAGE_BY_COMPANION[companionType]
+  const isManualHandoffReady = isGenerationReadyForManualHandoff(generation)
   const steps = [
     '여행 정보 확인',
     '목적지 주변 장소 탐색',
@@ -3251,13 +3270,13 @@ function GeneratingTripPanel({
           <div className="manual-handoff-heading">
             <span>Manual handoff</span>
             <strong>{generation.status}</strong>
-            <p>후보 {generation.candidateCount}개를 실제 Google Places 결과에서 수집했습니다.</p>
+            <p>{generationCandidateMessage(generation)}</p>
           </div>
           <div className="manual-handoff-actions">
-            <button type="button" onClick={onManualPromptLoad} disabled={manualStatus === 'loading'}>
+            <button type="button" onClick={onManualPromptLoad} disabled={manualStatus === 'loading' || !isManualHandoffReady}>
               프롬프트 조회
             </button>
-            <button type="button" onClick={onAiRequestLoad} disabled={manualStatus === 'loading'}>
+            <button type="button" onClick={onAiRequestLoad} disabled={manualStatus === 'loading' || !isManualHandoffReady}>
               AI request JSON 조회
             </button>
             <button type="button" onClick={() => onOpenCreatedTrip(createdTripId)} disabled={!createdTripId}>
