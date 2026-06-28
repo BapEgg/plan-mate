@@ -1,6 +1,5 @@
 package com.planmate.itinerary.service;
 
-import com.planmate.common.exception.PlanMateException;
 import com.planmate.itinerary.dto.ItineraryGenerationCreateResponse;
 import com.planmate.itinerary.dto.ItineraryGenerationDetailResponse;
 import com.planmate.itinerary.entity.ItineraryGenerationEntity;
@@ -38,25 +37,13 @@ public class ItineraryGenerationService {
     }
 
     public void collectCandidates(Long userId, Long tripId, Long generationId) {
-        try {
-            persistenceService.markCollecting(generationId);
-            GenerationCollectionContext context = persistenceService.loadCollectionContext(userId, tripId, generationId);
-            List<CollectedPlaceCandidate> candidates = candidateCollectionService.collect(context.destination(), context.profile());
-            persistenceService.saveCandidatesAndMarkReady(generationId, candidates);
-        } catch (RuntimeException exception) {
-            persistenceService.markFailed(generationId, safeFailureReason(exception));
-            throw exception;
-        }
+        GenerationCollectionContext context = persistenceService.loadCollectionContext(userId, tripId, generationId);
+        List<CollectedPlaceCandidate> candidates = candidateCollectionService.collect(context.destination(), context.profile());
+        persistenceService.saveCandidatesAndMarkReady(generationId, candidates);
     }
 
     public ItineraryGenerationDetailResponse getDetail(Long userId, Long tripId, Long generationId) {
         return persistenceService.getDetail(userId, tripId, generationId);
     }
 
-    private String safeFailureReason(RuntimeException exception) {
-        if (exception instanceof PlanMateException planMateException) {
-            return planMateException.code();
-        }
-        return exception.getClass().getSimpleName();
-    }
 }

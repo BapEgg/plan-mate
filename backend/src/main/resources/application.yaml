@@ -77,6 +77,15 @@ spring:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT}
 
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    listener:
+      simple:
+        default-requeue-rejected: false
+
   jpa:
     hibernate:
       ddl-auto: validate
@@ -89,6 +98,8 @@ management:
   health:
     mail:
       enabled: ${MAIL_HEALTH_ENABLED:false}
+    rabbit:
+      enabled: ${RABBITMQ_HEALTH_ENABLED:false}
   endpoints:
     web:
       exposure:
@@ -114,6 +125,15 @@ app:
       text-search-radius-meters: ${GOOGLE_PLACES_TEXT_SEARCH_RADIUS_METERS:30000}
   itinerary:
     manual-handoff-enabled: ${APP_ITINERARY_MANUAL_HANDOFF_ENABLED:false}
+    generation-worker:
+      enabled: ${APP_ITINERARY_GENERATION_WORKER_ENABLED:false}
+      max-attempts: ${APP_ITINERARY_GENERATION_WORKER_MAX_ATTEMPTS:3}
+      exchange: ${APP_ITINERARY_GENERATION_EXCHANGE:planmate.itinerary}
+      queue: ${APP_ITINERARY_GENERATION_QUEUE:planmate.itinerary.generation.requested}
+      routing-key: ${APP_ITINERARY_GENERATION_ROUTING_KEY:itinerary.generation.requested}
+      dead-letter-exchange: ${APP_ITINERARY_GENERATION_DLX:planmate.itinerary.dlx}
+      dead-letter-queue: ${APP_ITINERARY_GENERATION_DLQ:planmate.itinerary.generation.requested.dlq}
+      dead-letter-routing-key: ${APP_ITINERARY_GENERATION_DLQ_ROUTING_KEY:itinerary.generation.requested.dlq}
     schedule:
       default-start-time: ${APP_ITINERARY_SCHEDULE_DEFAULT_START_TIME:08:00}
       default-end-time: ${APP_ITINERARY_SCHEDULE_DEFAULT_END_TIME:20:00}

@@ -47,6 +47,28 @@ services:
     networks:
       - planmate-local
 
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: planmate-rabbitmq
+    restart: unless-stopped
+
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-planmate}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-planmate}
+
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - planmate-local
+
   nginx:
     image: nginx:stable-alpine
     container_name: planmate-nginx

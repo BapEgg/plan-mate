@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import com.planmate.common.outbox.OutboxEventEntity;
 import com.planmate.common.outbox.OutboxEventRepository;
 import com.planmate.itinerary.entity.ItineraryGenerationEntity;
+import com.planmate.itinerary.entity.ItineraryGenerationStatus;
 import com.planmate.itinerary.repository.ItineraryGenerationRepository;
 import com.planmate.itinerary.repository.PlaceCandidateRepository;
 import com.planmate.trip.entity.TripEntity;
@@ -93,6 +94,33 @@ class ItineraryGenerationPersistenceServiceTest {
         assertThat(outboxEvent.getCreatedAt()).isEqualTo(NOW);
     }
 
+    @Test
+    void markCollectingIfCreatedMarksCreatedGenerationAndReturnsTrue() {
+        TripEntity trip = trip(45L);
+        ItineraryGenerationEntity generation = generation(123L, trip);
+        given(tripRepository.findAccessibleTrip(45L, 7L)).willReturn(Optional.of(trip));
+        given(generationRepository.findWithLockById(123L)).willReturn(Optional.of(generation));
+
+        boolean result = service.markCollectingIfCreated(7L, 45L, 123L);
+
+        assertThat(result).isTrue();
+        assertThat(generation.getStatus()).isEqualTo(ItineraryGenerationStatus.COLLECTING_CANDIDATES);
+    }
+
+    @Test
+    void markCollectingIfCreatedReturnsFalseForAlreadyProcessedGeneration() {
+        TripEntity trip = trip(45L);
+        ItineraryGenerationEntity generation = generation(123L, trip);
+        generation.markReady(NOW);
+        given(tripRepository.findAccessibleTrip(45L, 7L)).willReturn(Optional.of(trip));
+        given(generationRepository.findWithLockById(123L)).willReturn(Optional.of(generation));
+
+        boolean result = service.markCollectingIfCreated(7L, 45L, 123L);
+
+        assertThat(result).isFalse();
+        assertThat(generation.getStatus()).isEqualTo(ItineraryGenerationStatus.READY_FOR_PLANNING);
+    }
+
     private TripEntity trip(Long tripId) {
         TripEntity trip = TripEntity.create(
                 "Kyoto trip",
@@ -114,5 +142,15 @@ class ItineraryGenerationPersistenceServiceTest {
         );
         ReflectionTestUtils.setField(trip, "id", tripId);
         return trip;
+    }
+
+    private ItineraryGenerationEntity generation(Long generationId, TripEntity trip) {
+        ItineraryGenerationEntity generation = ItineraryGenerationEntity.create(
+                trip,
+                ItineraryPromptService.PROMPT_VERSION,
+                NOW
+        );
+        ReflectionTestUtils.setField(generation, "id", generationId);
+        return generation;
     }
 }

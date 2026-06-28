@@ -82,7 +82,6 @@ class ItineraryGenerationServiceTest {
 
         service.collectCandidates(7L, 45L, 123L);
 
-        verify(persistenceService).markCollecting(123L);
         verify(persistenceService).loadCollectionContext(7L, 45L, 123L);
         verify(candidateCollectionService).collect(destination, profile);
         verify(persistenceService).saveCandidatesAndMarkReady(123L, candidates);

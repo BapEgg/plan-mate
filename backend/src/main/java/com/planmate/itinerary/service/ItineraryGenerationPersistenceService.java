@@ -4,6 +4,7 @@ import com.planmate.common.outbox.OutboxEventEntity;
 import com.planmate.common.outbox.OutboxEventRepository;
 import com.planmate.itinerary.dto.ItineraryGenerationDetailResponse;
 import com.planmate.itinerary.entity.ItineraryGenerationEntity;
+import com.planmate.itinerary.entity.ItineraryGenerationStatus;
 import com.planmate.itinerary.entity.PlaceCandidateEntity;
 import com.planmate.itinerary.exception.ItineraryErrorCode;
 import com.planmate.itinerary.exception.ItineraryException;
@@ -75,6 +76,22 @@ public class ItineraryGenerationPersistenceService {
     public void markCollecting(Long generationId) {
         ItineraryGenerationEntity generation = findGeneration(generationId);
         generation.markCollecting(Instant.now(clock));
+    }
+
+    @Transactional
+    public boolean markCollectingIfCreated(Long userId, Long tripId, Long generationId) {
+        TripEntity trip = tripRepository.findAccessibleTrip(tripId, userId)
+                .orElseThrow(TripNotFoundException::new);
+        ItineraryGenerationEntity generation = generationRepository.findWithLockById(generationId)
+                .orElseThrow(() -> new ItineraryException(ItineraryErrorCode.GENERATION_NOT_FOUND));
+        if (!generation.getTrip().getId().equals(trip.getId())) {
+            throw new ItineraryException(ItineraryErrorCode.GENERATION_NOT_FOUND);
+        }
+        if (generation.getStatus() != ItineraryGenerationStatus.CREATED) {
+            return false;
+        }
+        generation.markCollecting(Instant.now(clock));
+        return true;
     }
 
     @Transactional(readOnly = true)
