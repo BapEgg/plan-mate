@@ -5,11 +5,19 @@ services:
     image: postgres:17
     container_name: planmate-postgres
     restart: unless-stopped
+    command:
+      - postgres
+      - -c
+      - wal_level=logical
+      - -c
+      - max_wal_senders=10
+      - -c
+      - max_replication_slots=10
 
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-planmate}
+      POSTGRES_USER: ${POSTGRES_USER:-planmate}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-planmate}
 
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
@@ -69,6 +77,39 @@ services:
     networks:
       - planmate-local
 
+  debezium:
+    image: quay.io/debezium/server:3.5
+    container_name: planmate-debezium
+    restart: unless-stopped
+    profiles:
+      - cdc
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-planmate}
+      POSTGRES_USER: ${POSTGRES_USER:-planmate}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-planmate}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-planmate}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-planmate}
+      DEBEZIUM_SLOT_NAME: ${DEBEZIUM_SLOT_NAME:-planmate_outbox_slot}
+      DEBEZIUM_PUBLICATION_NAME: ${DEBEZIUM_PUBLICATION_NAME:-planmate_outbox_publication}
+
+    volumes:
+      - ./debezium/application.properties:/debezium/conf/application.properties:ro
+      - debezium-data:/debezium/data
+
+    networks:
+      - planmate-local
+
   nginx:
     image: nginx:stable-alpine
     container_name: planmate-nginx
@@ -89,6 +130,7 @@ services:
 volumes:
   postgres-data:
   redis-data:
+  debezium-data:
 
 networks:
   planmate-local:

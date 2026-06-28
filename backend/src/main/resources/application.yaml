@@ -99,7 +99,7 @@ management:
     mail:
       enabled: ${MAIL_HEALTH_ENABLED:false}
     rabbit:
-      enabled: ${RABBITMQ_HEALTH_ENABLED:false}
+      enabled: ${RABBITMQ_HEALTH_ENABLED:true}
   endpoints:
     web:
       exposure:
@@ -126,7 +126,7 @@ app:
   itinerary:
     manual-handoff-enabled: ${APP_ITINERARY_MANUAL_HANDOFF_ENABLED:false}
     generation-worker:
-      enabled: ${APP_ITINERARY_GENERATION_WORKER_ENABLED:false}
+      enabled: ${APP_ITINERARY_GENERATION_WORKER_ENABLED:true}
       max-attempts: ${APP_ITINERARY_GENERATION_WORKER_MAX_ATTEMPTS:3}
       exchange: ${APP_ITINERARY_GENERATION_EXCHANGE:planmate.itinerary}
       queue: ${APP_ITINERARY_GENERATION_QUEUE:planmate.itinerary.generation.requested}
