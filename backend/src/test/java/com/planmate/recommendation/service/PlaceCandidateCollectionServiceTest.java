@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import com.planmate.place.dto.GeoPoint;
 import com.planmate.place.dto.GeoViewport;
@@ -13,6 +15,8 @@ import com.planmate.place.dto.PlaceTextSearchResponse;
 import com.planmate.place.dto.ResolvedDestination;
 import com.planmate.place.service.GooglePlacesService;
 import com.planmate.recommendation.domain.CollectedPlaceCandidate;
+import com.planmate.recommendation.domain.PlaceTypePolicy;
+import com.planmate.recommendation.domain.PlaceTypePolicyRule;
 import com.planmate.trip.domain.AccommodationMode;
 import com.planmate.trip.domain.MustVisitPlaceSnapshot;
 import com.planmate.trip.domain.ResolvedAccommodation;
@@ -24,6 +28,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class PlaceCandidateCollectionServiceTest {
@@ -110,7 +115,58 @@ class PlaceCandidateCollectionServiceTest {
         assertThat(candidates.getFirst().sourceCategories()).contains(com.planmate.recommendation.domain.CandidateSearchCategory.MUST_VISIT);
     }
 
+    @Test
+    void blockedTypePolicyExcludesCandidatesAndLoadsPoliciesOnce() {
+        GooglePlacesService googlePlacesService = mock(GooglePlacesService.class);
+        given(googlePlacesService.searchText(any()))
+                .willReturn(new PlaceTextSearchResponse(List.of(
+                        candidate(
+                                "blocked-place",
+                                new GeoPoint(35.0116, 135.7681),
+                                List.of("tourist_attraction"),
+                                "tourist_attraction"
+                        ),
+                        candidate(
+                                "allowed-place",
+                                new GeoPoint(35.0117, 135.7682),
+                                List.of("museum"),
+                                "museum"
+                        )
+                ), null));
+        PlaceTypePolicyService placeTypePolicyService = mock(PlaceTypePolicyService.class);
+        given(placeTypePolicyService.loadEnabledPoliciesByTypeName())
+                .willReturn(Map.of(
+                        "tourist_attraction",
+                        new PlaceTypePolicyRule(
+                                "tourist_attraction",
+                                PlaceTypePolicy.BLOCK,
+                                0,
+                                "blocked for test"
+                        )
+                ));
+        PlaceCandidateCollectionService service = service(googlePlacesService, placeTypePolicyService);
+
+        List<CollectedPlaceCandidate> candidates = service.collect(
+                destination(),
+                profile(AccommodationMode.UNDECIDED, null)
+        );
+
+        assertThat(candidates).extracting(CollectedPlaceCandidate::placeId)
+                .contains("allowed-place")
+                .doesNotContain("blocked-place");
+        verify(placeTypePolicyService, times(1)).loadEnabledPoliciesByTypeName();
+    }
+
     private PlaceCandidateCollectionService service(GooglePlacesService googlePlacesService) {
+        PlaceTypePolicyService placeTypePolicyService = mock(PlaceTypePolicyService.class);
+        given(placeTypePolicyService.loadEnabledPoliciesByTypeName()).willReturn(Map.of());
+        return service(googlePlacesService, placeTypePolicyService);
+    }
+
+    private PlaceCandidateCollectionService service(
+            GooglePlacesService googlePlacesService,
+            PlaceTypePolicyService placeTypePolicyService
+    ) {
         return new PlaceCandidateCollectionService(
                 googlePlacesService,
                 new CandidateCategoryWeightCalculator(),
@@ -120,6 +176,7 @@ class PlaceCandidateCollectionServiceTest {
                 new CandidateScorer(),
                 new CandidateSelector(new CandidateQuotaCalculator()),
                 new CandidateSearchAnchorResolver(),
+                placeTypePolicyService,
                 5,
                 20,
                 20,
@@ -181,13 +238,22 @@ class PlaceCandidateCollectionServiceTest {
     }
 
     private PlaceSearchCandidate candidate(String placeId, GeoPoint location) {
+        return candidate(placeId, location, List.of("tourist_attraction"), "tourist_attraction");
+    }
+
+    private PlaceSearchCandidate candidate(
+            String placeId,
+            GeoPoint location,
+            List<String> types,
+            String primaryType
+    ) {
         return new PlaceSearchCandidate(
                 placeId,
                 "Candidate",
                 "address",
                 location,
-                List.of("tourist_attraction"),
-                "tourist_attraction",
+                types,
+                primaryType,
                 "OPERATIONAL",
                 4.5,
                 100,

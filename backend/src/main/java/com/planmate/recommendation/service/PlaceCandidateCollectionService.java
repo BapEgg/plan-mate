@@ -10,6 +10,7 @@ import com.planmate.recommendation.domain.CandidateSearchCategory;
 import com.planmate.recommendation.domain.CandidateSearchAnchor;
 import com.planmate.recommendation.domain.CandidateSearchQuery;
 import com.planmate.recommendation.domain.CollectedPlaceCandidate;
+import com.planmate.recommendation.domain.PlaceTypePolicyRule;
 import com.planmate.recommendation.service.PlaceCandidateAccumulator.CategorizedPlaceSearchCandidate;
 import com.planmate.trip.domain.MustVisitPlaceSnapshot;
 import com.planmate.trip.entity.TripPlanningProfileEntity;
@@ -30,24 +31,6 @@ public class PlaceCandidateCollectionService {
     public static final int DEFAULT_MAX_RAW_CANDIDATE_COUNT = 180;
     public static final int DEFAULT_PAGE_SIZE = 20;
 
-    private static final Set<String> BLOCKED_TYPES = Set.of(
-            "locality",
-            "political",
-            "country",
-            "administrative_area_level_1",
-            "administrative_area_level_2",
-            "administrative_area_level_3",
-            "postal_code",
-            "route",
-            "street_address",
-            "lodging",
-            "parking",
-            "atm",
-            "bank",
-            "gas_station",
-            "real_estate_agency"
-    );
-
     private final GooglePlacesService googlePlacesService;
     private final CandidateCategoryWeightCalculator weightCalculator;
     private final CandidateSearchQueryFactory queryFactory;
@@ -56,6 +39,7 @@ public class PlaceCandidateCollectionService {
     private final CandidateScorer scorer;
     private final CandidateSelector selector;
     private final CandidateSearchAnchorResolver searchAnchorResolver;
+    private final PlaceTypePolicyService placeTypePolicyService;
     private final int targetCandidateCount;
     private final int maxRawCandidateCount;
     private final int pageSize;
@@ -70,6 +54,7 @@ public class PlaceCandidateCollectionService {
             CandidateScorer scorer,
             CandidateSelector selector,
             CandidateSearchAnchorResolver searchAnchorResolver,
+            PlaceTypePolicyService placeTypePolicyService,
             @Value("${app.itinerary.candidates.target-count:120}") int targetCandidateCount,
             @Value("${app.itinerary.candidates.max-raw-count:180}") int maxRawCandidateCount,
             @Value("${app.itinerary.candidates.page-size:20}") int pageSize,
@@ -83,6 +68,7 @@ public class PlaceCandidateCollectionService {
         this.scorer = scorer;
         this.selector = selector;
         this.searchAnchorResolver = searchAnchorResolver;
+        this.placeTypePolicyService = placeTypePolicyService;
         this.targetCandidateCount = targetCandidateCount;
         this.maxRawCandidateCount = maxRawCandidateCount;
         this.pageSize = pageSize;
@@ -93,6 +79,7 @@ public class PlaceCandidateCollectionService {
         Map<CandidateSearchCategory, Integer> weights = weightCalculator.calculate(profile.getInterests());
         List<CandidateSearchQuery> queries = queryFactory.create(destination.displayName(), weights, profile.getInterests());
         CandidateSearchAnchor searchAnchor = searchAnchorResolver.resolve(destination, profile);
+        Map<String, PlaceTypePolicyRule> typePolicies = placeTypePolicyService.loadEnabledPoliciesByTypeName();
         List<CategorizedPlaceSearchCandidate> collected = new ArrayList<>();
         Set<String> uniquePlaceIds = new HashSet<>();
         int rawCount = 0;
@@ -111,7 +98,7 @@ public class PlaceCandidateCollectionService {
                 rawCount += response.places().size();
 
                 for (PlaceSearchCandidate candidate : response.places()) {
-                    if (!isUsableCandidate(candidate, searchAnchor)) {
+                    if (!isUsableCandidate(candidate, searchAnchor, typePolicies)) {
                         continue;
                     }
                     double distanceMeters = distanceCalculator.distanceMeters(searchAnchor.location(), candidate.location());
@@ -192,7 +179,11 @@ public class PlaceCandidateCollectionService {
         return new ArrayList<>(merged.values());
     }
 
-    private boolean isUsableCandidate(PlaceSearchCandidate candidate, CandidateSearchAnchor searchAnchor) {
+    private boolean isUsableCandidate(
+            PlaceSearchCandidate candidate,
+            CandidateSearchAnchor searchAnchor,
+            Map<String, PlaceTypePolicyRule> typePolicies
+    ) {
         if (!StringUtils.hasText(candidate.displayName()) || !StringUtils.hasText(candidate.placeId())) {
             return false;
         }
@@ -202,15 +193,24 @@ public class PlaceCandidateCollectionService {
         if (StringUtils.hasText(candidate.businessStatus()) && !"OPERATIONAL".equals(candidate.businessStatus())) {
             return false;
         }
-        if (hasBlockedType(candidate)) {
+        if (hasBlockedType(candidate, typePolicies)) {
             return false;
         }
         return isWithinSearchRange(candidate.location(), searchAnchor);
     }
 
-    private boolean hasBlockedType(PlaceSearchCandidate candidate) {
-        return candidate.types().stream().anyMatch(BLOCKED_TYPES::contains)
-                || (candidate.primaryType() != null && BLOCKED_TYPES.contains(candidate.primaryType()));
+    private boolean hasBlockedType(PlaceSearchCandidate candidate, Map<String, PlaceTypePolicyRule> typePolicies) {
+        List<String> types = candidate.types() == null ? List.of() : candidate.types();
+        return types.stream().anyMatch(type -> isBlockedType(type, typePolicies))
+                || isBlockedType(candidate.primaryType(), typePolicies);
+    }
+
+    private boolean isBlockedType(String typeName, Map<String, PlaceTypePolicyRule> typePolicies) {
+        if (!StringUtils.hasText(typeName)) {
+            return false;
+        }
+        PlaceTypePolicyRule policy = typePolicies.get(typeName);
+        return policy != null && policy.isBlock();
     }
 
     private boolean isWithinSearchRange(GeoPoint point, CandidateSearchAnchor searchAnchor) {
