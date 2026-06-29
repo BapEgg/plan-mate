@@ -132,3 +132,44 @@ POST /api/trips/{tripId}/itinerary-generations
 docker compose -f compose.local.yaml down
 docker compose -f compose.local.yaml up -d postgres redis rabbitmq
 ```
+
+## Monitoring
+
+4차 모니터링 구성은 `monitoring` profile로 분리되어 있습니다. Prometheus는 로컬에서
+실행 중인 백엔드의 `/actuator/prometheus`와 compose 네트워크의 RabbitMQ, Debezium
+metrics endpoint를 수집합니다.
+
+백엔드를 먼저 실행합니다.
+
+```powershell
+cd backend
+.\gradlew.bat bootRun
+```
+
+`infra` 디렉터리에서 Prometheus와 Grafana를 실행합니다.
+
+```powershell
+docker compose -f compose.local.yaml --profile monitoring up -d prometheus grafana
+```
+
+CDC 흐름까지 같이 확인하려면 `cdc` profile을 함께 켭니다.
+
+```powershell
+docker compose -f compose.local.yaml --profile cdc --profile monitoring up -d
+```
+
+로컬 접속 정보:
+
+```text
+Prometheus: http://localhost:9090
+Grafana: http://localhost:3000
+Grafana login: planmate / planmate
+RabbitMQ metrics: http://localhost:15692/metrics
+Debezium metrics: http://localhost:8083/q/metrics
+Backend metrics: http://localhost:8080/actuator/prometheus
+```
+
+Grafana는 `PlanMate / PlanMate Itinerary Monitoring` 대시보드를 자동으로 로드합니다.
+Debezium을 `cdc` profile로 실행하지 않은 경우 Prometheus의 `debezium` target이 down으로
+보이는 것은 정상입니다. 백엔드를 실행하지 않은 경우에도 `planmate-backend` target은 down으로
+표시됩니다.

@@ -67,6 +67,10 @@ services:
     ports:
       - "${RABBITMQ_PORT:-5672}:5672"
       - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+      - "${RABBITMQ_PROMETHEUS_PORT:-15692}:15692"
+
+    volumes:
+      - ./rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
 
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
@@ -107,6 +111,59 @@ services:
       - ./debezium/application.properties:/debezium/conf/application.properties:ro
       - debezium-data:/debezium/data
 
+    ports:
+      - "${DEBEZIUM_METRICS_PORT:-8083}:8080"
+
+    networks:
+      - planmate-local
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: planmate-prometheus
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    networks:
+      - planmate-local
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: planmate-grafana
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+    depends_on:
+      - prometheus
+
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-planmate}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-planmate}
+      GF_USERS_DEFAULT_THEME: light
+
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+
     networks:
       - planmate-local
 
@@ -131,6 +188,7 @@ volumes:
   postgres-data:
   redis-data:
   debezium-data:
+  grafana-data:
 
 networks:
   planmate-local:

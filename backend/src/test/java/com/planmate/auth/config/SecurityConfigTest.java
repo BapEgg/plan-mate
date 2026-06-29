@@ -32,6 +32,12 @@ class SecurityConfigTest {
     }
 
     @Test
+    void actuatorPrometheusIsPublic() throws Exception {
+        mockMvc.perform(get("/actuator/prometheus"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void oauth2AuthorizationEndpointRedirectsToProvider() throws Exception {
         mockMvc.perform(get("/oauth2/authorization/google"))
                 .andExpect(status().is3xxRedirection())

@@ -1,5 +1,6 @@
 package com.planmate.itinerary.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -12,6 +13,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.planmate.itinerary.config.ItineraryGenerationWorkerProperties;
 import com.planmate.itinerary.messaging.ItineraryGenerationRequestedMessage;
+import com.planmate.itinerary.metrics.ItineraryGenerationWorkerMetrics;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,13 +31,20 @@ class ItineraryGenerationWorkerServiceTest {
     private ItineraryGenerationService generationService;
 
     private ItineraryGenerationWorkerProperties properties;
+    private SimpleMeterRegistry meterRegistry;
     private ItineraryGenerationWorkerService workerService;
 
     @BeforeEach
     void setUp() {
         properties = new ItineraryGenerationWorkerProperties();
         properties.setMaxAttempts(2);
-        workerService = new ItineraryGenerationWorkerService(persistenceService, generationService, properties);
+        meterRegistry = new SimpleMeterRegistry();
+        workerService = new ItineraryGenerationWorkerService(
+                persistenceService,
+                generationService,
+                properties,
+                new ItineraryGenerationWorkerMetrics(meterRegistry)
+        );
     }
 
     @Test
@@ -47,6 +57,8 @@ class ItineraryGenerationWorkerServiceTest {
         verify(persistenceService).markCollectingIfCreated(7L, 45L, 123L);
         verify(generationService).collectCandidates(7L, 45L, 123L);
         verify(persistenceService, never()).markFailed(anyLong(), anyString());
+        assertProcessedCount("success", 1.0);
+        assertDurationCount("success", 1L);
     }
 
     @Test
@@ -58,6 +70,8 @@ class ItineraryGenerationWorkerServiceTest {
 
         verify(persistenceService).markCollectingIfCreated(7L, 45L, 123L);
         verifyNoInteractions(generationService);
+        assertProcessedCount("skipped", 1.0);
+        assertDurationCount("skipped", 1L);
     }
 
     @Test
@@ -72,6 +86,9 @@ class ItineraryGenerationWorkerServiceTest {
 
         verify(generationService, times(2)).collectCandidates(7L, 45L, 123L);
         verify(persistenceService).markFailed(123L, "IllegalStateException");
+        assertProcessedCount("failed", 1.0);
+        assertDurationCount("failed", 1L);
+        assertRetryCount(1.0);
     }
 
     @Test
@@ -83,5 +100,30 @@ class ItineraryGenerationWorkerServiceTest {
                 .hasMessage("itinerary generation message must include generationId, tripId, and userId");
 
         verifyNoInteractions(persistenceService, generationService);
+        assertProcessedCount("failed", 1.0);
+        assertDurationCount("failed", 1L);
+    }
+
+    private void assertProcessedCount(String result, double count) {
+        assertThat(meterRegistry.get("planmate.itinerary.generation.worker.processed")
+                        .tag("result", result)
+                        .counter()
+                        .count())
+                .isEqualTo(count);
+    }
+
+    private void assertDurationCount(String result, long count) {
+        assertThat(meterRegistry.get("planmate.itinerary.generation.worker.duration")
+                        .tag("result", result)
+                        .timer()
+                        .count())
+                .isEqualTo(count);
+    }
+
+    private void assertRetryCount(double count) {
+        assertThat(meterRegistry.get("planmate.itinerary.generation.worker.retry")
+                        .counter()
+                        .count())
+                .isEqualTo(count);
     }
 }

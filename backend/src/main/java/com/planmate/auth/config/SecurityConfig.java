@@ -60,7 +60,8 @@ public class SecurityConfig {
                                 "/",
                                 "/error",
                                 "/actuator/health",
-                                "/actuator/info"
+                                "/actuator/info",
+                                "/actuator/prometheus"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/api/auth/status",

@@ -3,6 +3,8 @@ package com.planmate.itinerary.service;
 import com.planmate.common.exception.PlanMateException;
 import com.planmate.itinerary.config.ItineraryGenerationWorkerProperties;
 import com.planmate.itinerary.messaging.ItineraryGenerationRequestedMessage;
+import com.planmate.itinerary.metrics.ItineraryGenerationWorkerMetrics;
+import io.micrometer.core.instrument.Timer;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -11,28 +13,43 @@ public class ItineraryGenerationWorkerService {
     private final ItineraryGenerationPersistenceService persistenceService;
     private final ItineraryGenerationService generationService;
     private final ItineraryGenerationWorkerProperties properties;
+    private final ItineraryGenerationWorkerMetrics metrics;
 
     public ItineraryGenerationWorkerService(
             ItineraryGenerationPersistenceService persistenceService,
             ItineraryGenerationService generationService,
-            ItineraryGenerationWorkerProperties properties
+            ItineraryGenerationWorkerProperties properties,
+            ItineraryGenerationWorkerMetrics metrics
     ) {
         this.persistenceService = persistenceService;
         this.generationService = generationService;
         this.properties = properties;
+        this.metrics = metrics;
     }
 
     public void process(ItineraryGenerationRequestedMessage message) {
-        validate(message);
-        boolean shouldProcess = persistenceService.markCollectingIfCreated(
-                message.userId(),
-                message.tripId(),
-                message.generationId()
-        );
-        if (!shouldProcess) {
-            return;
-        }
+        Timer.Sample sample = metrics.start();
+        String result = ItineraryGenerationWorkerMetrics.RESULT_FAILED;
+        try {
+            validate(message);
+            boolean shouldProcess = persistenceService.markCollectingIfCreated(
+                    message.userId(),
+                    message.tripId(),
+                    message.generationId()
+            );
+            if (!shouldProcess) {
+                result = ItineraryGenerationWorkerMetrics.RESULT_SKIPPED;
+                return;
+            }
 
+            collectCandidatesWithRetry(message);
+            result = ItineraryGenerationWorkerMetrics.RESULT_SUCCESS;
+        } finally {
+            metrics.recordProcessed(result, sample);
+        }
+    }
+
+    private void collectCandidatesWithRetry(ItineraryGenerationRequestedMessage message) {
         RuntimeException lastFailure = null;
         for (int attempt = 1; attempt <= properties.getMaxAttempts(); attempt++) {
             try {
@@ -40,6 +57,9 @@ public class ItineraryGenerationWorkerService {
                 return;
             } catch (RuntimeException exception) {
                 lastFailure = exception;
+                if (attempt < properties.getMaxAttempts()) {
+                    metrics.recordRetry();
+                }
             }
         }
 

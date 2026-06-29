@@ -95,6 +95,10 @@ spring:
     open-in-view: false
 
 management:
+  prometheus:
+    metrics:
+      export:
+        enabled: true
   health:
     mail:
       enabled: ${MAIL_HEALTH_ENABLED:false}
@@ -103,7 +107,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus
 
 app:
   cors:
