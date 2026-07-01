@@ -15,10 +15,9 @@ scrape_configs:
           - rabbitmq:15692
 
   - job_name: debezium
-    metrics_path: /q/metrics
     static_configs:
       - targets:
-          - debezium:8080
+          - debezium:9404
 
   - job_name: prometheus
     static_configs:

@@ -165,7 +165,8 @@ Prometheus: http://localhost:9090
 Grafana: http://localhost:3000
 Grafana login: planmate / planmate
 RabbitMQ metrics: http://localhost:15692/metrics
-Debezium metrics: http://localhost:8083/q/metrics
+Debezium health: http://localhost:8083/q/health
+Debezium metrics: http://localhost:9404/metrics
 Backend metrics: http://localhost:8080/actuator/prometheus
 ```
 

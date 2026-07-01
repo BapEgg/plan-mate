@@ -106,13 +106,15 @@ services:
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-planmate}
       DEBEZIUM_SLOT_NAME: ${DEBEZIUM_SLOT_NAME:-planmate_outbox_slot}
       DEBEZIUM_PUBLICATION_NAME: ${DEBEZIUM_PUBLICATION_NAME:-planmate_outbox_publication}
+      JMX_EXPORTER_PORT: 9404
 
     volumes:
-      - ./debezium/application.properties:/debezium/conf/application.properties:ro
+      - ./debezium/application.properties:/debezium/config/application.properties:ro
       - debezium-data:/debezium/data
 
     ports:
-      - "${DEBEZIUM_METRICS_PORT:-8083}:8080"
+      - "${DEBEZIUM_HTTP_PORT:-8083}:8080"
+      - "${DEBEZIUM_METRICS_PORT:-9404}:9404"
 
     networks:
       - planmate-local
