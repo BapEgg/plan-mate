@@ -8,10 +8,14 @@ import {
   createItineraryGeneration,
   createTrip,
   getAiRequest,
+  getItineraryGeneration,
   getManualPrompt,
+  getTripDetail,
   submitManualResponse,
 } from '../../api/trips'
-import type { AiItineraryResponse, CreateTripRequest, ItineraryGenerationCreateResponse } from '../../api/trips'
+import type { AiItineraryResponse, CreateTripRequest, ItineraryGenerationCreateResponse, ItineraryGenerationDetailResponse } from '../../api/trips'
+import { connectTripRealtimeEvents, ITINERARY_GENERATION_STATUS_CHANGED } from '../../api/realtime'
+import type { ItineraryGenerationStatusChangedPayload } from '../../api/realtime'
 import coupleMascotUrl from '../../assets/mascots/couple.png'
 import coworkersMascotUrl from '../../assets/mascots/coworkers.png'
 import familyMascotUrl from '../../assets/mascots/family.png'
@@ -97,6 +101,9 @@ type AvoidItem =
   | 'MUSEUM'
   | 'EXPENSIVE_RESTAURANT'
   | 'TIGHT_SCHEDULE'
+type TrackedItineraryGeneration = ItineraryGenerationCreateResponse & {
+  failureReason?: string | null
+}
 
 const MIN_DESTINATION_QUERY_LENGTH = 2
 const MIN_ACCOMMODATION_QUERY_LENGTH = 2
@@ -205,18 +212,32 @@ const AVOID_OPTIONS: Array<{ id: AvoidItem; label: string }> = [
 ]
 const MANUAL_HANDOFF_ENABLED = import.meta.env.VITE_MANUAL_HANDOFF_ENABLED === 'true'
 
-function isGenerationReadyForManualHandoff(generation: ItineraryGenerationCreateResponse | null) {
+function isGenerationReadyForManualHandoff(generation: TrackedItineraryGeneration | null) {
   return generation?.status === 'READY_FOR_PLANNING'
 }
 
-function generationStatusMessage(generation: ItineraryGenerationCreateResponse) {
+function generationStatusMessage(generation: TrackedItineraryGeneration) {
+  if (generation.status === 'FAILED') {
+    return generation.failureReason
+      ? `?쇱젙 ?앹꽦???ㅽ뙣?덉뒿?덈떎. ${generation.failureReason}`
+      : '?쇱젙 ?앹꽦???ㅽ뙣?덉뒿?덈떎.'
+  }
+  if (generation.status === 'COMPLETED') {
+    return '?쇱젙????λ릺?덉뒿?덈떎. ?곸꽭 ?붾㈃?쇰줈 ?대룞?⑸땲??'
+  }
   if (isGenerationReadyForManualHandoff(generation)) {
     return `후보 ${generation.candidateCount}개를 수집했고 ${generation.status} 상태가 되었습니다.`
   }
   return `일정 생성 요청을 접수했습니다. 현재 ${generation.status} 상태입니다.`
 }
 
-function generationCandidateMessage(generation: ItineraryGenerationCreateResponse) {
+function generationCandidateMessage(generation: TrackedItineraryGeneration) {
+  if (generation.status === 'FAILED') {
+    return generation.failureReason ?? '?꾨낫 ?섏쭛 ?먮뒗 ?쇱젙 以鍮?以??ㅽ뙣?덉뒿?덈떎.'
+  }
+  if (generation.status === 'COMPLETED') {
+    return '??λ맂 ?쇱젙???곸꽭 ?붾㈃?먯꽌 ?뺤씤?????덉뒿?덈떎.'
+  }
   if (isGenerationReadyForManualHandoff(generation)) {
     return `후보 ${generation.candidateCount}개를 실제 Google Places 결과에서 수집했습니다.`
   }
@@ -242,7 +263,7 @@ export function TripCreatePage({
   const [endDate, setEndDate] = useState('')
   const [submitStatus, setSubmitStatus] = useState<AsyncStatus>('idle')
   const [createdTripId, setCreatedTripId] = useState('')
-  const [itineraryGeneration, setItineraryGeneration] = useState<ItineraryGenerationCreateResponse | null>(null)
+  const [itineraryGeneration, setItineraryGeneration] = useState<TrackedItineraryGeneration | null>(null)
   const [manualPrompt, setManualPrompt] = useState('')
   const [aiRequestJson, setAiRequestJson] = useState('')
   const [manualResponseJson, setManualResponseJson] = useState('')
@@ -302,6 +323,7 @@ export function TripCreatePage({
   const mustVisitComposingRef = useRef(false)
   const previewCacheRef = useRef(new Map<string, PlacePreview>())
   const visualTimerRef = useRef<number[]>([])
+  const completedNavigationScheduledRef = useRef(false)
 
   const trimmedTitle = title.trim()
   const trimmedSearchQuery = searchQuery.trim()
@@ -338,6 +360,60 @@ export function TripCreatePage({
   )
 
   useEffect(() => () => clearVisualTimers(), [])
+
+  useEffect(() => {
+    if (!MANUAL_HANDOFF_ENABLED || !createdTripId || !itineraryGeneration?.generationId) {
+      return undefined
+    }
+
+    let active = true
+    const generationId = itineraryGeneration.generationId
+
+    async function refetchGeneration() {
+      try {
+        const latest = await getItineraryGeneration(accessToken, createdTripId, generationId)
+        if (!active) {
+          return
+        }
+        await applyGenerationDetail(latest)
+      } catch (error: unknown) {
+        if (!active) {
+          return
+        }
+        setManualStatus('error')
+        setManualMessage(toUserMessage(error))
+      }
+    }
+
+    const connection = connectTripRealtimeEvents({
+      accessToken,
+      tripId: createdTripId,
+      onConnect: () => {
+        void refetchGeneration()
+      },
+      onError: (message) => {
+        if (active) {
+          setManualMessage(message)
+        }
+      },
+      onEvent: (event) => {
+        if (event.type !== ITINERARY_GENERATION_STATUS_CHANGED || event.payload.generationId !== generationId) {
+          return
+        }
+        void applyGenerationPayload(event.payload).catch((error: unknown) => {
+          if (active) {
+            setManualStatus('error')
+            setManualMessage(toUserMessage(error))
+          }
+        })
+      },
+    })
+
+    return () => {
+      active = false
+      connection.disconnect()
+    }
+  }, [accessToken, createdTripId, itineraryGeneration?.generationId])
 
   async function handleAccommodationSearch() {
     if (accommodationMode !== 'PLACE_SEARCH') {
@@ -392,6 +468,53 @@ export function TripCreatePage({
   function scheduleVisualTimer(callback: () => void, delay: number) {
     const timerId = window.setTimeout(callback, delay)
     visualTimerRef.current.push(timerId)
+  }
+
+  async function applyGenerationDetail(generation: ItineraryGenerationDetailResponse) {
+    await applyGenerationSnapshot({
+      generationId: generation.generationId,
+      status: generation.status,
+      candidateCount: generation.candidateCount,
+      failureReason: generation.failureReason,
+    })
+  }
+
+  async function applyGenerationPayload(payload: ItineraryGenerationStatusChangedPayload) {
+    await applyGenerationSnapshot({
+      generationId: payload.generationId,
+      status: payload.status,
+      candidateCount: payload.candidateCount,
+      failureReason: payload.failureReason,
+    })
+  }
+
+  async function applyGenerationSnapshot(generation: TrackedItineraryGeneration) {
+    setItineraryGeneration(generation)
+    setManualMessage(generationStatusMessage(generation))
+
+    if (generation.status === 'READY_FOR_PLANNING') {
+      setManualStatus('success')
+      setSubmitStatus('success')
+    }
+    if (generation.status === 'FAILED') {
+      setManualStatus('error')
+      setSubmitStatus('error')
+      return
+    }
+    if (generation.status === 'COMPLETED' && createdTripId) {
+      setManualStatus('success')
+      setSubmitStatus('success')
+      await openCompletedTrip(createdTripId)
+    }
+  }
+
+  async function openCompletedTrip(tripIdToOpen: string) {
+    if (completedNavigationScheduledRef.current) {
+      return
+    }
+    completedNavigationScheduledRef.current = true
+    await getTripDetail(accessToken, tripIdToOpen)
+    scheduleVisualTimer(() => onCreatedTrip(tripIdToOpen), 700)
   }
 
   function handleSearchQueryChange(event: ChangeEvent<HTMLInputElement>) {
@@ -930,6 +1053,7 @@ export function TripCreatePage({
     setManualResponseJson('')
     setManualStatus('idle')
     setManualMessage('')
+    completedNavigationScheduledRef.current = false
     setStepDirection('forward')
     setInfoStep('GENERATING')
 
@@ -1003,6 +1127,8 @@ export function TripCreatePage({
     setManualMessage('')
     try {
       const result = await submitManualResponse(accessToken, createdTripId, itineraryGeneration.generationId, parsed)
+      await applyGenerationDetail(result)
+      return
       setItineraryGeneration({
         generationId: result.generationId,
         status: result.status,
@@ -1010,7 +1136,7 @@ export function TripCreatePage({
       })
       setManualStatus('success')
       setManualMessage('일정이 저장되었습니다. 여행 상세 화면으로 이동합니다.')
-      scheduleVisualTimer(() => onCreatedTrip(createdTripId), 700)
+      void openCompletedTrip(createdTripId)
     } catch (error: unknown) {
       setManualStatus('error')
       setManualMessage(toUserMessage(error))
@@ -1739,7 +1865,7 @@ function TripConditionStep({
   freeRequest: string
   aiRequestJson: string
   createdTripId: string
-  generation: ItineraryGenerationCreateResponse | null
+  generation: TrackedItineraryGeneration | null
   manualMessage: string
   manualPrompt: string
   manualResponseJson: string
@@ -3218,7 +3344,7 @@ function GeneratingTripPanel({
   companionType: CompanionType
   createdTripId: string
   destination: PlaceAutocompleteItem | null
-  generation: ItineraryGenerationCreateResponse | null
+  generation: TrackedItineraryGeneration | null
   manualMessage: string
   manualPrompt: string
   manualResponseJson: string

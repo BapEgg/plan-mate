@@ -4,11 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.planmate.common.outbox.OutboxEventEntity;
 import com.planmate.common.outbox.OutboxEventRepository;
 import com.planmate.itinerary.entity.ItineraryGenerationEntity;
 import com.planmate.itinerary.entity.ItineraryGenerationStatus;
+import com.planmate.itinerary.realtime.ItineraryGenerationStatusChangedEvent;
 import com.planmate.itinerary.repository.ItineraryGenerationRepository;
 import com.planmate.itinerary.repository.PlaceCandidateRepository;
 import com.planmate.trip.entity.TripEntity;
@@ -26,6 +28,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,6 +51,9 @@ class ItineraryGenerationPersistenceServiceTest {
     @Mock
     private TripPlanningProfileRepository tripPlanningProfileRepository;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private ItineraryGenerationPersistenceService service;
 
     @BeforeEach
@@ -58,7 +64,8 @@ class ItineraryGenerationPersistenceServiceTest {
                 outboxEventRepository,
                 tripRepository,
                 tripPlanningProfileRepository,
-                Clock.fixed(NOW, ZoneOffset.UTC)
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                eventPublisher
         );
     }
 
@@ -105,6 +112,7 @@ class ItineraryGenerationPersistenceServiceTest {
 
         assertThat(result).isTrue();
         assertThat(generation.getStatus()).isEqualTo(ItineraryGenerationStatus.COLLECTING_CANDIDATES);
+        verify(eventPublisher).publishEvent(any(Object.class));
     }
 
     @Test
@@ -119,6 +127,62 @@ class ItineraryGenerationPersistenceServiceTest {
 
         assertThat(result).isFalse();
         assertThat(generation.getStatus()).isEqualTo(ItineraryGenerationStatus.READY_FOR_PLANNING);
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void markFailedPublishesStatusChangedEvent() {
+        TripEntity trip = trip(45L);
+        ItineraryGenerationEntity generation = generation(123L, trip);
+        generation.markCollecting(NOW);
+        given(generationRepository.findById(123L)).willReturn(Optional.of(generation));
+        given(placeCandidateRepository.countByGeneration_Id(123L)).willReturn(10L);
+
+        service.markFailed(123L, "GOOGLE_PLACES_UNAVAILABLE");
+
+        ArgumentCaptor<ItineraryGenerationStatusChangedEvent> eventCaptor =
+                ArgumentCaptor.forClass(ItineraryGenerationStatusChangedEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getValue()).satisfies(event -> {
+            assertThat(event.tripId()).isEqualTo(45L);
+            assertThat(event.generationId()).isEqualTo(123L);
+            assertThat(event.previousStatus()).isEqualTo(ItineraryGenerationStatus.COLLECTING_CANDIDATES);
+            assertThat(event.status()).isEqualTo(ItineraryGenerationStatus.FAILED);
+            assertThat(event.candidateCount()).isEqualTo(10);
+            assertThat(event.failureReason()).isEqualTo("GOOGLE_PLACES_UNAVAILABLE");
+        });
+    }
+
+    @Test
+    void getLatestReturnsLatestGenerationAfterTripAccessCheck() {
+        TripEntity trip = trip(45L);
+        ItineraryGenerationEntity generation = generation(123L, trip);
+        generation.markReady(NOW);
+        given(tripRepository.findAccessibleTrip(45L, 7L)).willReturn(Optional.of(trip));
+        given(generationRepository.findFirstByTrip_IdOrderByCreatedAtDesc(45L)).willReturn(Optional.of(generation));
+        given(placeCandidateRepository.countByGeneration_Id(123L)).willReturn(120L);
+
+        Optional<com.planmate.itinerary.dto.ItineraryGenerationDetailResponse> result = service.getLatest(7L, 45L);
+
+        assertThat(result).isPresent()
+                .get()
+                .satisfies(response -> {
+                    assertThat(response.generationId()).isEqualTo("123");
+                    assertThat(response.tripId()).isEqualTo("45");
+                    assertThat(response.status()).isEqualTo(ItineraryGenerationStatus.READY_FOR_PLANNING);
+                    assertThat(response.candidateCount()).isEqualTo(120);
+                });
+    }
+
+    @Test
+    void getLatestReturnsEmptyWhenTripHasNoGeneration() {
+        TripEntity trip = trip(45L);
+        given(tripRepository.findAccessibleTrip(45L, 7L)).willReturn(Optional.of(trip));
+        given(generationRepository.findFirstByTrip_IdOrderByCreatedAtDesc(45L)).willReturn(Optional.empty());
+
+        Optional<com.planmate.itinerary.dto.ItineraryGenerationDetailResponse> result = service.getLatest(7L, 45L);
+
+        assertThat(result).isEmpty();
     }
 
     private TripEntity trip(Long tripId) {

@@ -1,5 +1,6 @@
 package com.planmate.itinerary.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
@@ -7,6 +8,8 @@ import static org.mockito.Mockito.verify;
 
 import com.planmate.itinerary.dto.AiItineraryResponse;
 import com.planmate.itinerary.entity.ItineraryGenerationEntity;
+import com.planmate.itinerary.entity.ItineraryGenerationStatus;
+import com.planmate.itinerary.realtime.ItineraryGenerationStatusChangedEvent;
 import com.planmate.itinerary.entity.PlaceCandidateEntity;
 import com.planmate.itinerary.exception.ItineraryException;
 import com.planmate.itinerary.repository.ItineraryDayRepository;
@@ -28,7 +31,9 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 class ManualItineraryResponseServiceTest {
@@ -39,6 +44,7 @@ class ManualItineraryResponseServiceTest {
     private final ItineraryRepository itineraryRepository = Mockito.mock(ItineraryRepository.class);
     private final ItineraryDayRepository itineraryDayRepository = Mockito.mock(ItineraryDayRepository.class);
     private final ItineraryItemRepository itineraryItemRepository = Mockito.mock(ItineraryItemRepository.class);
+    private final ApplicationEventPublisher eventPublisher = Mockito.mock(ApplicationEventPublisher.class);
     private final Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
     private final ManualItineraryResponseService service = new ManualItineraryResponseService(
             tripRepository,
@@ -47,7 +53,8 @@ class ManualItineraryResponseServiceTest {
             itineraryRepository,
             itineraryDayRepository,
             itineraryItemRepository,
-            clock
+            clock,
+            eventPublisher
     );
 
     private TripEntity trip;
@@ -65,6 +72,28 @@ class ManualItineraryResponseServiceTest {
         given(tripRepository.findAccessibleTrip(1L, 99L)).willReturn(Optional.of(trip));
         given(generationRepository.findWithTripById(10L)).willReturn(Optional.of(generation));
         given(placeCandidateRepository.findByGeneration_IdOrderByRankAsc(10L)).willReturn(List.of(candidate));
+    }
+
+    @Test
+    void savesValidResponseAndPublishesCompletedEvent() {
+        given(itineraryRepository.save(Mockito.any())).willAnswer(invocation -> invocation.getArgument(0));
+        given(itineraryDayRepository.save(Mockito.any())).willAnswer(invocation -> invocation.getArgument(0));
+        given(itineraryItemRepository.save(Mockito.any())).willAnswer(invocation -> invocation.getArgument(0));
+
+        service.submit(99L, 1L, 10L, response("place-1", "Temple"));
+
+        assertThat(generation.getStatus()).isEqualTo(ItineraryGenerationStatus.COMPLETED);
+        ArgumentCaptor<ItineraryGenerationStatusChangedEvent> eventCaptor =
+                ArgumentCaptor.forClass(ItineraryGenerationStatusChangedEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getValue()).satisfies(event -> {
+            assertThat(event.tripId()).isEqualTo(1L);
+            assertThat(event.generationId()).isEqualTo(10L);
+            assertThat(event.previousStatus()).isEqualTo(ItineraryGenerationStatus.VALIDATING);
+            assertThat(event.status()).isEqualTo(ItineraryGenerationStatus.COMPLETED);
+            assertThat(event.candidateCount()).isEqualTo(1);
+            assertThat(event.failureReason()).isNull();
+        });
     }
 
     @Test

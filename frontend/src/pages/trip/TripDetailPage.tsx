@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { AuthUser } from '../../api/auth'
 import { ApiError } from '../../api/client'
-import { getTripDetail } from '../../api/trips'
-import type { Itinerary, ItineraryItem, TripDetail, TripMember, TripPlanningProfile } from '../../api/trips'
+import { getAiRequest, getLatestItineraryGeneration, getManualPrompt, getTripDetail, submitManualResponse } from '../../api/trips'
+import type { AiItineraryResponse, Itinerary, ItineraryGenerationDetailResponse, ItineraryItem, TripDetail, TripMember, TripPlanningProfile } from '../../api/trips'
+import { connectTripRealtimeEvents, ITINERARY_GENERATION_STATUS_CHANGED } from '../../api/realtime'
 import './TripDetailPage.css'
 
 type TripDetailPageProps = {
@@ -42,8 +43,14 @@ export function TripDetailPage({
   onLogout,
 }: TripDetailPageProps) {
   const [trip, setTrip] = useState<TripDetail | null>(null)
+  const [latestGeneration, setLatestGeneration] = useState<ItineraryGenerationDetailResponse | null>(null)
   const [status, setStatus] = useState<AsyncStatus>('idle')
   const [errorMessage, setErrorMessage] = useState('')
+  const [manualPrompt, setManualPrompt] = useState('')
+  const [aiRequestJson, setAiRequestJson] = useState('')
+  const [manualResponseJson, setManualResponseJson] = useState('')
+  const [manualStatus, setManualStatus] = useState<AsyncStatus>('idle')
+  const [manualMessage, setManualMessage] = useState('')
 
   useEffect(() => {
     let active = true
@@ -52,11 +59,15 @@ export function TripDetailPage({
       setStatus('loading')
       setErrorMessage('')
       try {
-        const response = await getTripDetail(accessToken, tripId)
+        const [response, generation] = await Promise.all([
+          getTripDetail(accessToken, tripId),
+          getLatestItineraryGeneration(accessToken, tripId),
+        ])
         if (!active) {
           return
         }
         setTrip(response)
+        setLatestGeneration(generation)
         setStatus('success')
       } catch (error: unknown) {
         if (!active) {
@@ -72,6 +83,152 @@ export function TripDetailPage({
       active = false
     }
   }, [accessToken, tripId])
+
+  useEffect(() => {
+    if (!accessToken || !tripId) {
+      return undefined
+    }
+
+    let active = true
+
+    async function refetchLatestGeneration() {
+      try {
+        const generation = await getLatestItineraryGeneration(accessToken, tripId)
+        if (active) {
+          setLatestGeneration(generation)
+        }
+      } catch (error: unknown) {
+        if (active) {
+          setManualStatus('error')
+          setManualMessage(errorMessageFrom(error))
+        }
+      }
+    }
+
+    async function refetchTrip() {
+      const response = await getTripDetail(accessToken, tripId)
+      if (active) {
+        setTrip(response)
+        setStatus('success')
+      }
+    }
+
+    const connection = connectTripRealtimeEvents({
+      accessToken,
+      tripId,
+      onConnect: () => {
+        void refetchLatestGeneration()
+      },
+      onError: (message) => {
+        if (active) {
+          setManualMessage(message)
+        }
+      },
+      onEvent: (event) => {
+        if (event.type !== ITINERARY_GENERATION_STATUS_CHANGED) {
+          return
+        }
+        void refetchLatestGeneration()
+        setLatestGeneration((current) => {
+          if (!current || current.generationId !== event.payload.generationId) {
+            return current
+          }
+          return {
+            ...current,
+            status: event.payload.status,
+            candidateCount: event.payload.candidateCount,
+            failureReason: event.payload.failureReason,
+            updatedAt: event.payload.updatedAt,
+          }
+        })
+        if (event.payload.status === 'READY_FOR_PLANNING') {
+          setManualStatus('success')
+          setManualMessage('?쇱젙 ?앹꽦 ?꾨낫媛 以鍮꾨릺?덉뒿?덈떎.')
+        }
+        if (event.payload.status === 'FAILED') {
+          setManualStatus('error')
+          setManualMessage(event.payload.failureReason ?? '?쇱젙 ?앹꽦???ㅽ뙣?덉뒿?덈떎.')
+        }
+        if (event.payload.status === 'COMPLETED') {
+          setManualStatus('success')
+          setManualMessage('?쇱젙????λ릺?덉뒿?덈떎.')
+          void refetchTrip().catch((error: unknown) => {
+            if (active) {
+              setManualStatus('error')
+              setManualMessage(errorMessageFrom(error))
+            }
+          })
+        }
+      },
+    })
+
+    return () => {
+      active = false
+      connection.disconnect()
+    }
+  }, [accessToken, tripId])
+
+  async function handleLoadManualPrompt() {
+    if (!latestGeneration || latestGeneration.status !== 'READY_FOR_PLANNING') {
+      return
+    }
+    setManualStatus('loading')
+    setManualMessage('')
+    try {
+      const prompt = await getManualPrompt(accessToken, tripId, latestGeneration.generationId)
+      setManualPrompt(prompt)
+      setManualStatus('success')
+      setManualMessage('?꾨＼?꾪듃瑜?遺덈윭?붿뒿?덈떎.')
+    } catch (error: unknown) {
+      setManualStatus('error')
+      setManualMessage(errorMessageFrom(error))
+    }
+  }
+
+  async function handleLoadAiRequest() {
+    if (!latestGeneration || latestGeneration.status !== 'READY_FOR_PLANNING') {
+      return
+    }
+    setManualStatus('loading')
+    setManualMessage('')
+    try {
+      const aiRequest = await getAiRequest(accessToken, tripId, latestGeneration.generationId)
+      setAiRequestJson(JSON.stringify(aiRequest, null, 2))
+      setManualStatus('success')
+      setManualMessage('AI request JSON??遺덈윭?붿뒿?덈떎.')
+    } catch (error: unknown) {
+      setManualStatus('error')
+      setManualMessage(errorMessageFrom(error))
+    }
+  }
+
+  async function handleSubmitManualResponse() {
+    if (!latestGeneration || latestGeneration.status !== 'READY_FOR_PLANNING') {
+      return
+    }
+    let parsed: AiItineraryResponse
+    try {
+      parsed = JSON.parse(manualResponseJson) as AiItineraryResponse
+    } catch {
+      setManualStatus('error')
+      setManualMessage('ChatGPT ?묐떟 JSON ?뺤떇???щ컮瑜댁? ?딆뒿?덈떎.')
+      return
+    }
+
+    setManualStatus('loading')
+    setManualMessage('')
+    try {
+      const generation = await submitManualResponse(accessToken, tripId, latestGeneration.generationId, parsed)
+      setLatestGeneration(generation)
+      setManualStatus('success')
+      setManualMessage('?쇱젙????λ릺?덉뒿?덈떎.')
+      const response = await getTripDetail(accessToken, tripId)
+      setTrip(response)
+    } catch (error: unknown) {
+      setManualStatus('error')
+      setManualMessage(errorMessageFrom(error))
+    }
+  }
 
   if (status === 'loading' || status === 'idle') {
     return (
@@ -101,6 +258,16 @@ export function TripDetailPage({
         currentUser={user}
         onBackToMain={onBackToMain}
         onLogout={onLogout}
+        latestGeneration={latestGeneration}
+        manualPrompt={manualPrompt}
+        aiRequestJson={aiRequestJson}
+        manualResponseJson={manualResponseJson}
+        manualStatus={manualStatus}
+        manualMessage={manualMessage}
+        onAiRequestLoad={handleLoadAiRequest}
+        onManualPromptLoad={handleLoadManualPrompt}
+        onManualResponseChange={setManualResponseJson}
+        onManualResponseSubmit={handleSubmitManualResponse}
         trip={trip}
       />
     </main>
@@ -110,13 +277,33 @@ export function TripDetailPage({
 function TripPlanningWorkspace({
   trip,
   currentUser,
+  latestGeneration,
+  manualPrompt,
+  aiRequestJson,
+  manualResponseJson,
+  manualStatus,
+  manualMessage,
   onBackToMain,
   onLogout,
+  onAiRequestLoad,
+  onManualPromptLoad,
+  onManualResponseChange,
+  onManualResponseSubmit,
 }: {
   trip: TripDetail
   currentUser: AuthUser | null
+  latestGeneration: ItineraryGenerationDetailResponse | null
+  manualPrompt: string
+  aiRequestJson: string
+  manualResponseJson: string
+  manualStatus: AsyncStatus
+  manualMessage: string
   onBackToMain: () => void
   onLogout: () => void
+  onAiRequestLoad: () => void
+  onManualPromptLoad: () => void
+  onManualResponseChange: (value: string) => void
+  onManualResponseSubmit: () => void
 }) {
   const latestItinerary = trip.itineraries[0] ?? null
   const dayOptions = latestItinerary?.days.map((day) => day.day) ?? []
@@ -159,10 +346,91 @@ function TripPlanningWorkspace({
         </div>
       ) : (
         <section className="planning-empty-state">
+          <TripGenerationRecoveryPanel
+            aiRequestJson={aiRequestJson}
+            generation={latestGeneration}
+            manualMessage={manualMessage}
+            manualPrompt={manualPrompt}
+            manualResponseJson={manualResponseJson}
+            manualStatus={manualStatus}
+            onAiRequestLoad={onAiRequestLoad}
+            onManualPromptLoad={onManualPromptLoad}
+            onManualResponseChange={onManualResponseChange}
+            onManualResponseSubmit={onManualResponseSubmit}
+          />
           <h2>저장된 일정이 아직 없습니다.</h2>
           <p>manual handoff에서 ChatGPT 응답 JSON을 제출하면 이 화면에 실제 일정이 표시됩니다.</p>
         </section>
       )}
+    </section>
+  )
+}
+
+function TripGenerationRecoveryPanel({
+  aiRequestJson,
+  generation,
+  manualMessage,
+  manualPrompt,
+  manualResponseJson,
+  manualStatus,
+  onAiRequestLoad,
+  onManualPromptLoad,
+  onManualResponseChange,
+  onManualResponseSubmit,
+}: {
+  aiRequestJson: string
+  generation: ItineraryGenerationDetailResponse | null
+  manualMessage: string
+  manualPrompt: string
+  manualResponseJson: string
+  manualStatus: AsyncStatus
+  onAiRequestLoad: () => void
+  onManualPromptLoad: () => void
+  onManualResponseChange: (value: string) => void
+  onManualResponseSubmit: () => void
+}) {
+  if (!generation) {
+    return null
+  }
+
+  const isReady = generation.status === 'READY_FOR_PLANNING'
+  const isFailed = generation.status === 'FAILED'
+
+  return (
+    <section className="trip-generation-recovery" aria-live="polite">
+      <div>
+        <span>Generation</span>
+        <strong>{generation.status}</strong>
+        <p>
+          {isFailed
+            ? generation.failureReason ?? '?쇱젙 ?앹꽦???ㅽ뙣?덉뒿?덈떎.'
+            : `?꾨낫 ${generation.candidateCount}媛쒕? ?뺤씤?덉뒿?덈떎.`}
+        </p>
+      </div>
+      <div className="trip-generation-actions">
+        <button type="button" onClick={onManualPromptLoad} disabled={!isReady || manualStatus === 'loading'}>
+          Prompt
+        </button>
+        <button type="button" onClick={onAiRequestLoad} disabled={!isReady || manualStatus === 'loading'}>
+          AI request
+        </button>
+      </div>
+      {manualMessage && <p className={`trip-generation-message ${manualStatus}`}>{manualMessage}</p>}
+      {manualPrompt && <textarea readOnly value={manualPrompt} />}
+      {aiRequestJson && <textarea readOnly value={aiRequestJson} />}
+      <textarea
+        placeholder="ChatGPT response JSON"
+        value={manualResponseJson}
+        onChange={(event) => onManualResponseChange(event.target.value)}
+      />
+      <button
+        className="trip-generation-submit"
+        type="button"
+        onClick={onManualResponseSubmit}
+        disabled={!isReady || manualStatus === 'loading' || !manualResponseJson.trim()}
+      >
+        Submit response
+      </button>
     </section>
   )
 }

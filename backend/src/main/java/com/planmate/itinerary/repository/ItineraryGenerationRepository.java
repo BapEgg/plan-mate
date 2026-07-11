@@ -18,6 +18,9 @@ public interface ItineraryGenerationRepository extends JpaRepository<ItineraryGe
     @EntityGraph(attributePaths = {"trip"})
     Optional<ItineraryGenerationEntity> findWithTripById(Long id);
 
+    @EntityGraph(attributePaths = {"trip"})
+    Optional<ItineraryGenerationEntity> findFirstByTrip_IdOrderByCreatedAtDesc(Long tripId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<ItineraryGenerationEntity> findWithLockById(Long id);
 }

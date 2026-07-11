@@ -7,6 +7,7 @@ import com.planmate.itinerary.service.ItineraryGenerationPersistenceService.Gene
 import com.planmate.recommendation.domain.CollectedPlaceCandidate;
 import com.planmate.recommendation.service.PlaceCandidateCollectionService;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -44,6 +45,10 @@ public class ItineraryGenerationService {
 
     public ItineraryGenerationDetailResponse getDetail(Long userId, Long tripId, Long generationId) {
         return persistenceService.getDetail(userId, tripId, generationId);
+    }
+
+    public Optional<ItineraryGenerationDetailResponse> getLatest(Long userId, Long tripId) {
+        return persistenceService.getLatest(userId, tripId);
     }
 
 }

@@ -59,6 +59,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/",
                                 "/error",
+                                "/ws/events",
+                                "/ws/events/**",
                                 "/actuator/health",
                                 "/actuator/info",
                                 "/actuator/prometheus"

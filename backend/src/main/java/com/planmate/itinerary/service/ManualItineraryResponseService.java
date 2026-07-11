@@ -9,6 +9,7 @@ import com.planmate.itinerary.entity.ItineraryItemEntity;
 import com.planmate.itinerary.entity.PlaceCandidateEntity;
 import com.planmate.itinerary.exception.ItineraryErrorCode;
 import com.planmate.itinerary.exception.ItineraryException;
+import com.planmate.itinerary.realtime.ItineraryGenerationStatusChangedEvent;
 import com.planmate.itinerary.repository.ItineraryDayRepository;
 import com.planmate.itinerary.repository.ItineraryGenerationRepository;
 import com.planmate.itinerary.repository.ItineraryItemRepository;
@@ -28,6 +29,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,6 +45,7 @@ public class ManualItineraryResponseService {
     private final ItineraryDayRepository itineraryDayRepository;
     private final ItineraryItemRepository itineraryItemRepository;
     private final Clock clock;
+    private final ApplicationEventPublisher eventPublisher;
 
     public ManualItineraryResponseService(
             TripRepository tripRepository,
@@ -51,7 +54,8 @@ public class ManualItineraryResponseService {
             ItineraryRepository itineraryRepository,
             ItineraryDayRepository itineraryDayRepository,
             ItineraryItemRepository itineraryItemRepository,
-            Clock clock
+            Clock clock,
+            ApplicationEventPublisher eventPublisher
     ) {
         this.tripRepository = tripRepository;
         this.generationRepository = generationRepository;
@@ -60,6 +64,7 @@ public class ManualItineraryResponseService {
         this.itineraryDayRepository = itineraryDayRepository;
         this.itineraryItemRepository = itineraryItemRepository;
         this.clock = clock;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -107,7 +112,17 @@ public class ManualItineraryResponseService {
                 ));
             }
         }
+        ItineraryGenerationStatus previousStatus = generation.getStatus();
         generation.markCompleted(now);
+        eventPublisher.publishEvent(new ItineraryGenerationStatusChangedEvent(
+                trip.getId(),
+                generation.getId(),
+                previousStatus,
+                generation.getStatus(),
+                candidates.size(),
+                generation.getFailureReason(),
+                generation.getUpdatedAt()
+        ));
     }
 
     private void validateResponse(

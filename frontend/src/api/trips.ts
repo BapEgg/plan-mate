@@ -269,6 +269,14 @@ export function getItineraryGeneration(accessToken: string, tripId: string, gene
   })
 }
 
+export async function getLatestItineraryGeneration(accessToken: string, tripId: string) {
+  const response = await request<ItineraryGenerationDetailResponse | undefined>(`/api/trips/${tripId}/itinerary-generations/latest`, {
+    method: 'GET',
+    headers: bearerHeaders(accessToken),
+  })
+  return response ?? null
+}
+
 export function getManualPrompt(accessToken: string, tripId: string, generationId: string) {
   return requestText(`/api/trips/${tripId}/itinerary-generations/${generationId}/manual-prompt`, {
     method: 'GET',

@@ -42,6 +42,72 @@
   color: #64748b;
 }
 
+.trip-generation-recovery {
+  display: grid;
+  gap: 12px;
+  order: 1;
+  margin-top: 10px;
+  border: 1px solid rgba(27, 78, 66, 0.14);
+  border-radius: 8px;
+  padding: 16px;
+  background: rgba(255, 250, 240, 0.94);
+}
+
+.trip-generation-recovery span {
+  color: var(--trip-orange);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.trip-generation-recovery strong {
+  color: var(--trip-green);
+  font-size: 1.1rem;
+}
+
+.trip-generation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.trip-generation-actions button,
+.trip-generation-submit {
+  min-height: 40px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 14px;
+  color: #fff8e9;
+  font-weight: 900;
+  background: var(--trip-green);
+}
+
+.trip-generation-actions button:disabled,
+.trip-generation-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.trip-generation-recovery textarea {
+  width: 100%;
+  min-height: 120px;
+  resize: vertical;
+  border: 1px solid rgba(27, 78, 66, 0.16);
+  border-radius: 8px;
+  padding: 12px;
+  color: var(--trip-ink);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.trip-generation-message.error {
+  color: #b42318;
+}
+
+.trip-generation-message.success {
+  color: var(--trip-green);
+}
+
 .trip-detail-page::before {
   content: '';
   position: fixed;

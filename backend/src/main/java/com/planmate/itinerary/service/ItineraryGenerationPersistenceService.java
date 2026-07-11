@@ -8,6 +8,7 @@ import com.planmate.itinerary.entity.ItineraryGenerationStatus;
 import com.planmate.itinerary.entity.PlaceCandidateEntity;
 import com.planmate.itinerary.exception.ItineraryErrorCode;
 import com.planmate.itinerary.exception.ItineraryException;
+import com.planmate.itinerary.realtime.ItineraryGenerationStatusChangedEvent;
 import com.planmate.itinerary.repository.ItineraryGenerationRepository;
 import com.planmate.itinerary.repository.PlaceCandidateRepository;
 import com.planmate.place.dto.GeoPoint;
@@ -24,6 +25,8 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +42,7 @@ public class ItineraryGenerationPersistenceService {
     private final TripRepository tripRepository;
     private final TripPlanningProfileRepository tripPlanningProfileRepository;
     private final Clock clock;
+    private final ApplicationEventPublisher eventPublisher;
 
     public ItineraryGenerationPersistenceService(
             ItineraryGenerationRepository generationRepository,
@@ -46,7 +50,8 @@ public class ItineraryGenerationPersistenceService {
             OutboxEventRepository outboxEventRepository,
             TripRepository tripRepository,
             TripPlanningProfileRepository tripPlanningProfileRepository,
-            Clock clock
+            Clock clock,
+            ApplicationEventPublisher eventPublisher
     ) {
         this.generationRepository = generationRepository;
         this.placeCandidateRepository = placeCandidateRepository;
@@ -54,6 +59,7 @@ public class ItineraryGenerationPersistenceService {
         this.tripRepository = tripRepository;
         this.tripPlanningProfileRepository = tripPlanningProfileRepository;
         this.clock = clock;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -90,7 +96,10 @@ public class ItineraryGenerationPersistenceService {
         if (generation.getStatus() != ItineraryGenerationStatus.CREATED) {
             return false;
         }
-        generation.markCollecting(Instant.now(clock));
+        ItineraryGenerationStatus previousStatus = generation.getStatus();
+        Instant now = Instant.now(clock);
+        generation.markCollecting(now);
+        publishStatusChanged(trip.getId(), generation, previousStatus, 0);
         return true;
     }
 
@@ -111,17 +120,26 @@ public class ItineraryGenerationPersistenceService {
     @Transactional
     public void saveCandidatesAndMarkReady(Long generationId, List<CollectedPlaceCandidate> candidates) {
         ItineraryGenerationEntity generation = findGeneration(generationId);
+        ItineraryGenerationStatus previousStatus = generation.getStatus();
         int rank = 1;
         for (CollectedPlaceCandidate candidate : candidates) {
             placeCandidateRepository.save(PlaceCandidateEntity.from(generation, candidate, rank++));
         }
         generation.markReady(Instant.now(clock));
+        publishStatusChanged(generation.getTrip().getId(), generation, previousStatus, candidates.size());
     }
 
     @Transactional
     public void markFailed(Long generationId, String safeReason) {
         ItineraryGenerationEntity generation = findGeneration(generationId);
+        ItineraryGenerationStatus previousStatus = generation.getStatus();
         generation.markFailed(safeReason, Instant.now(clock));
+        publishStatusChanged(
+                generation.getTrip().getId(),
+                generation,
+                previousStatus,
+                placeCandidateRepository.countByGeneration_Id(generationId)
+        );
     }
 
     @Transactional(readOnly = true)
@@ -146,6 +164,14 @@ public class ItineraryGenerationPersistenceService {
     }
 
     @Transactional(readOnly = true)
+    public Optional<ItineraryGenerationDetailResponse> getLatest(Long userId, Long tripId) {
+        TripEntity trip = tripRepository.findAccessibleTrip(tripId, userId)
+                .orElseThrow(TripNotFoundException::new);
+        return generationRepository.findFirstByTrip_IdOrderByCreatedAtDesc(trip.getId())
+                .map(generation -> toDetailResponse(trip, generation));
+    }
+
+    @Transactional(readOnly = true)
     public AiRequestContext loadAiRequestContext(Long userId, Long tripId, Long generationId) {
         TripEntity trip = tripRepository.findAccessibleTrip(tripId, userId)
                 .orElseThrow(TripNotFoundException::new);
@@ -163,6 +189,36 @@ public class ItineraryGenerationPersistenceService {
     private ItineraryGenerationEntity findGeneration(Long generationId) {
         return generationRepository.findById(generationId)
                 .orElseThrow(() -> new ItineraryException(ItineraryErrorCode.GENERATION_NOT_FOUND));
+    }
+
+    private ItineraryGenerationDetailResponse toDetailResponse(TripEntity trip, ItineraryGenerationEntity generation) {
+        return new ItineraryGenerationDetailResponse(
+                generation.getId().toString(),
+                trip.getId().toString(),
+                generation.getStatus(),
+                generation.getPromptVersion(),
+                placeCandidateRepository.countByGeneration_Id(generation.getId()),
+                generation.getFailureReason(),
+                generation.getCreatedAt(),
+                generation.getUpdatedAt()
+        );
+    }
+
+    private void publishStatusChanged(
+            Long tripId,
+            ItineraryGenerationEntity generation,
+            ItineraryGenerationStatus previousStatus,
+            long candidateCount
+    ) {
+        eventPublisher.publishEvent(new ItineraryGenerationStatusChangedEvent(
+                tripId,
+                generation.getId(),
+                previousStatus,
+                generation.getStatus(),
+                candidateCount,
+                generation.getFailureReason(),
+                generation.getUpdatedAt()
+        ));
     }
 
     private Map<String, Object> itineraryGenerationRequestedPayload(Long generationId, Long tripId, Long userId) {
