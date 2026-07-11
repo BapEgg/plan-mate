@@ -2,7 +2,7 @@ package com.planmate.itinerary.controller;
 
 import com.planmate.auth.security.AuthenticatedUser;
 import com.planmate.itinerary.dto.AiItineraryRequest;
-import com.planmate.itinerary.dto.AiItineraryResponse;
+import com.planmate.itinerary.dto.GroundedItineraryDraft;
 import com.planmate.itinerary.dto.ItineraryGenerationCreateResponse;
 import com.planmate.itinerary.dto.ItineraryGenerationDetailResponse;
 import com.planmate.itinerary.service.AiItineraryRequestService;
@@ -89,7 +89,7 @@ public class ManualItineraryGenerationController {
             @AuthenticationPrincipal AuthenticatedUser user,
             @PathVariable Long tripId,
             @PathVariable Long generationId,
-            @Valid @RequestBody AiItineraryResponse response
+            @Valid @RequestBody GroundedItineraryDraft response
     ) {
         manualItineraryResponseService.submit(user.userId(), tripId, generationId, response);
         return generationService.getDetail(user.userId(), tripId, generationId);

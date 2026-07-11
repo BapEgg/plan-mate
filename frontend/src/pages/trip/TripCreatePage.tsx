@@ -13,7 +13,7 @@ import {
   getTripDetail,
   submitManualResponse,
 } from '../../api/trips'
-import type { AiItineraryResponse, CreateTripRequest, ItineraryGenerationCreateResponse, ItineraryGenerationDetailResponse } from '../../api/trips'
+import type { CreateTripRequest, GroundedItineraryDraft, ItineraryGenerationCreateResponse, ItineraryGenerationDetailResponse } from '../../api/trips'
 import { connectTripRealtimeEvents, ITINERARY_GENERATION_STATUS_CHANGED } from '../../api/realtime'
 import type { ItineraryGenerationStatusChangedPayload } from '../../api/realtime'
 import coupleMascotUrl from '../../assets/mascots/couple.png'
@@ -1114,9 +1114,9 @@ export function TripCreatePage({
     if (!createdTripId || !itineraryGeneration) {
       return
     }
-    let parsed: AiItineraryResponse
+    let parsed: GroundedItineraryDraft
     try {
-      parsed = JSON.parse(manualResponseJson) as AiItineraryResponse
+      parsed = JSON.parse(manualResponseJson) as GroundedItineraryDraft
     } catch {
       setManualStatus('error')
       setManualMessage('ChatGPT 응답 JSON 형식이 올바르지 않습니다.')

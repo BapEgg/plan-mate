@@ -6,21 +6,22 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-import com.planmate.itinerary.dto.AiItineraryResponse;
+import com.planmate.itinerary.dto.GroundedItineraryDraft;
+import com.planmate.itinerary.dto.ItineraryDraftDay;
+import com.planmate.itinerary.dto.ItineraryDraftItem;
 import com.planmate.itinerary.entity.ItineraryGenerationEntity;
 import com.planmate.itinerary.entity.ItineraryGenerationStatus;
-import com.planmate.itinerary.realtime.ItineraryGenerationStatusChangedEvent;
-import com.planmate.itinerary.entity.PlaceCandidateEntity;
+import com.planmate.itinerary.entity.ItineraryItemEntity;
 import com.planmate.itinerary.exception.ItineraryException;
+import com.planmate.itinerary.realtime.ItineraryGenerationStatusChangedEvent;
 import com.planmate.itinerary.repository.ItineraryDayRepository;
 import com.planmate.itinerary.repository.ItineraryGenerationRepository;
 import com.planmate.itinerary.repository.ItineraryItemRepository;
 import com.planmate.itinerary.repository.ItineraryRepository;
-import com.planmate.itinerary.repository.PlaceCandidateRepository;
-import com.planmate.place.dto.GeoPoint;
-import com.planmate.recommendation.domain.CandidateSearchCategory;
-import com.planmate.recommendation.domain.CollectedPlaceCandidate;
+import com.planmate.trip.domain.MustVisitPlaceSnapshot;
 import com.planmate.trip.entity.TripEntity;
+import com.planmate.trip.entity.TripPlanningProfileEntity;
+import com.planmate.trip.repository.TripPlanningProfileRepository;
 import com.planmate.trip.repository.TripRepository;
 import com.planmate.user.entity.UserEntity;
 import java.time.Clock;
@@ -40,7 +41,7 @@ class ManualItineraryResponseServiceTest {
 
     private final TripRepository tripRepository = Mockito.mock(TripRepository.class);
     private final ItineraryGenerationRepository generationRepository = Mockito.mock(ItineraryGenerationRepository.class);
-    private final PlaceCandidateRepository placeCandidateRepository = Mockito.mock(PlaceCandidateRepository.class);
+    private final TripPlanningProfileRepository tripPlanningProfileRepository = Mockito.mock(TripPlanningProfileRepository.class);
     private final ItineraryRepository itineraryRepository = Mockito.mock(ItineraryRepository.class);
     private final ItineraryDayRepository itineraryDayRepository = Mockito.mock(ItineraryDayRepository.class);
     private final ItineraryItemRepository itineraryItemRepository = Mockito.mock(ItineraryItemRepository.class);
@@ -49,7 +50,7 @@ class ManualItineraryResponseServiceTest {
     private final ManualItineraryResponseService service = new ManualItineraryResponseService(
             tripRepository,
             generationRepository,
-            placeCandidateRepository,
+            tripPlanningProfileRepository,
             itineraryRepository,
             itineraryDayRepository,
             itineraryItemRepository,
@@ -59,7 +60,7 @@ class ManualItineraryResponseServiceTest {
 
     private TripEntity trip;
     private ItineraryGenerationEntity generation;
-    private PlaceCandidateEntity candidate;
+    private TripPlanningProfileEntity profile;
 
     @BeforeEach
     void setUp() {
@@ -67,22 +68,29 @@ class ManualItineraryResponseServiceTest {
         generation = ItineraryGenerationEntity.create(trip, ItineraryPromptService.PROMPT_VERSION, Instant.now(clock));
         generation.markReady(Instant.now(clock));
         ReflectionTestUtils.setField(generation, "id", 10L);
-        candidate = PlaceCandidateEntity.from(generation, collectedCandidate("place-1", "Temple"), 1);
+        profile = Mockito.mock(TripPlanningProfileEntity.class);
 
         given(tripRepository.findAccessibleTrip(1L, 99L)).willReturn(Optional.of(trip));
         given(generationRepository.findWithTripById(10L)).willReturn(Optional.of(generation));
-        given(placeCandidateRepository.findByGeneration_IdOrderByRankAsc(10L)).willReturn(List.of(candidate));
+        given(tripPlanningProfileRepository.findByTrip_Id(1L)).willReturn(Optional.of(profile));
+        given(profile.getMustVisitPlaces()).willReturn(List.of(mustVisitPlace("place-1"), mustVisitPlace("place-2")));
     }
 
     @Test
-    void savesValidResponseAndPublishesCompletedEvent() {
+    void savesPlaceIdOnlyDraftAndPublishesCompletedEvent() {
         given(itineraryRepository.save(Mockito.any())).willAnswer(invocation -> invocation.getArgument(0));
         given(itineraryDayRepository.save(Mockito.any())).willAnswer(invocation -> invocation.getArgument(0));
         given(itineraryItemRepository.save(Mockito.any())).willAnswer(invocation -> invocation.getArgument(0));
 
-        service.submit(99L, 1L, 10L, response("place-1", "Temple"));
+        service.submit(99L, 1L, 10L, validDraft());
 
         assertThat(generation.getStatus()).isEqualTo(ItineraryGenerationStatus.COMPLETED);
+        ArgumentCaptor<ItineraryItemEntity> itemCaptor = ArgumentCaptor.forClass(ItineraryItemEntity.class);
+        verify(itineraryItemRepository, Mockito.times(2)).save(itemCaptor.capture());
+        assertThat(itemCaptor.getAllValues())
+                .extracting(ItineraryItemEntity::getPlaceId)
+                .containsExactly("place-1", "place-2");
+
         ArgumentCaptor<ItineraryGenerationStatusChangedEvent> eventCaptor =
                 ArgumentCaptor.forClass(ItineraryGenerationStatusChangedEvent.class);
         verify(eventPublisher).publishEvent(eventCaptor.capture());
@@ -91,69 +99,83 @@ class ManualItineraryResponseServiceTest {
             assertThat(event.generationId()).isEqualTo(10L);
             assertThat(event.previousStatus()).isEqualTo(ItineraryGenerationStatus.VALIDATING);
             assertThat(event.status()).isEqualTo(ItineraryGenerationStatus.COMPLETED);
-            assertThat(event.candidateCount()).isEqualTo(1);
+            assertThat(event.candidateCount()).isZero();
             assertThat(event.failureReason()).isNull();
         });
     }
 
     @Test
-    void rejectsUnregisteredPlaceId() {
-        AiItineraryResponse response = response("missing-place", "Temple");
+    void rejectsDraftWhenDayCountDoesNotMatchTripDuration() {
+        GroundedItineraryDraft draft = new GroundedItineraryDraft(
+                "10",
+                List.of(day(1, item(1, "place-1")))
+        );
 
-        assertThatThrownBy(() -> service.submit(99L, 1L, 10L, response))
+        assertThatThrownBy(() -> service.submit(99L, 1L, 10L, draft))
                 .isInstanceOf(ItineraryException.class)
-                .hasMessage("placeId is not registered in this generation.");
+                .hasMessage("days 개수는 여행 일수와 일치해야 합니다.");
         verify(itineraryRepository, never()).save(Mockito.any());
     }
 
     @Test
-    void rejectsPlaceNameMismatch() {
-        AiItineraryResponse response = response("place-1", "Wrong name");
+    void rejectsDraftWhenMustVisitPlaceIsMissing() {
+        GroundedItineraryDraft draft = new GroundedItineraryDraft(
+                "10",
+                List.of(
+                        day(1, item(1, "place-1")),
+                        day(2, item(1, "place-3"))
+                )
+        );
 
-        assertThatThrownBy(() -> service.submit(99L, 1L, 10L, response))
+        assertThatThrownBy(() -> service.submit(99L, 1L, 10L, draft))
                 .isInstanceOf(ItineraryException.class)
-                .hasMessage("placeName does not match the registered candidate.");
+                .hasMessage("mustVisitPlaceIds는 일정에 포함되어야 합니다.");
         verify(itineraryRepository, never()).save(Mockito.any());
     }
 
     @Test
-    void rejectsDateOutsideTripRange() {
-        AiItineraryResponse response = new AiItineraryResponse(
+    void rejectsDraftWhenStartTimeIsInvalid() {
+        GroundedItineraryDraft draft = new GroundedItineraryDraft(
                 "10",
-                "summary",
-                List.of(new AiItineraryResponse.Day(
-                        1,
-                        LocalDate.of(2026, 10, 12),
-                        List.of(item("place-1", "Temple"))
-                ))
+                List.of(
+                        day(1, new ItineraryDraftItem(1, "place-1", "9am", 120)),
+                        day(2, item(1, "place-2"))
+                )
         );
 
-        assertThatThrownBy(() -> service.submit(99L, 1L, 10L, response))
+        assertThatThrownBy(() -> service.submit(99L, 1L, 10L, draft))
                 .isInstanceOf(ItineraryException.class)
-                .hasMessage("day and date do not match the trip date range.");
+                .hasMessage("startTime은 HH:mm 형식이어야 합니다.");
         verify(itineraryRepository, never()).save(Mockito.any());
     }
 
-    private AiItineraryResponse response(String placeId, String placeName) {
-        return new AiItineraryResponse(
+    private GroundedItineraryDraft validDraft() {
+        return new GroundedItineraryDraft(
                 "10",
-                "summary",
-                List.of(new AiItineraryResponse.Day(
-                        1,
-                        LocalDate.of(2026, 10, 9),
-                        List.of(item(placeId, placeName))
-                ))
+                List.of(
+                        day(1, item(1, "place-1")),
+                        day(2, item(1, "place-2"))
+                )
         );
     }
 
-    private AiItineraryResponse.Item item(String placeId, String placeName) {
-        return new AiItineraryResponse.Item(
-                1,
+    private ItineraryDraftDay day(int day, ItineraryDraftItem item) {
+        return new ItineraryDraftDay(day, List.of(item));
+    }
+
+    private ItineraryDraftItem item(int sequence, String placeId) {
+        return new ItineraryDraftItem(sequence, placeId, "09:00", 120);
+    }
+
+    private MustVisitPlaceSnapshot mustVisitPlace(String placeId) {
+        return new MustVisitPlaceSnapshot(
                 placeId,
-                placeName,
-                "09:00",
-                120,
-                "reason"
+                "장소",
+                "주소",
+                35.0,
+                135.0,
+                List.of("tourist_attraction"),
+                "tourist_attraction"
         );
     }
 
@@ -185,23 +207,5 @@ class ManualItineraryResponseServiceTest {
         );
         ReflectionTestUtils.setField(trip, "id", 1L);
         return trip;
-    }
-
-    private CollectedPlaceCandidate collectedCandidate(String placeId, String name) {
-        return new CollectedPlaceCandidate(
-                placeId,
-                name,
-                "address",
-                new GeoPoint(35.0, 135.0),
-                "tourist_attraction",
-                List.of("tourist_attraction"),
-                "OPERATIONAL",
-                4.5,
-                100,
-                List.of("09:00-18:00"),
-                List.of(CandidateSearchCategory.CORE_VISIT),
-                100,
-                50
-        );
     }
 }

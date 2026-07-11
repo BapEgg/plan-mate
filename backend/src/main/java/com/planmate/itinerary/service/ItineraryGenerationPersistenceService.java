@@ -5,16 +5,13 @@ import com.planmate.common.outbox.OutboxEventRepository;
 import com.planmate.itinerary.dto.ItineraryGenerationDetailResponse;
 import com.planmate.itinerary.entity.ItineraryGenerationEntity;
 import com.planmate.itinerary.entity.ItineraryGenerationStatus;
-import com.planmate.itinerary.entity.PlaceCandidateEntity;
 import com.planmate.itinerary.exception.ItineraryErrorCode;
 import com.planmate.itinerary.exception.ItineraryException;
 import com.planmate.itinerary.realtime.ItineraryGenerationStatusChangedEvent;
 import com.planmate.itinerary.repository.ItineraryGenerationRepository;
-import com.planmate.itinerary.repository.PlaceCandidateRepository;
 import com.planmate.place.dto.GeoPoint;
 import com.planmate.place.dto.GeoViewport;
 import com.planmate.place.dto.ResolvedDestination;
-import com.planmate.recommendation.domain.CollectedPlaceCandidate;
 import com.planmate.trip.entity.TripEntity;
 import com.planmate.trip.entity.TripPlanningProfileEntity;
 import com.planmate.trip.exception.TripNotFoundException;
@@ -23,7 +20,6 @@ import com.planmate.trip.repository.TripRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.context.ApplicationEventPublisher;
@@ -37,7 +33,6 @@ public class ItineraryGenerationPersistenceService {
     private static final String ITINERARY_GENERATION_REQUESTED_EVENT_TYPE = "ITINERARY_GENERATION_REQUESTED";
 
     private final ItineraryGenerationRepository generationRepository;
-    private final PlaceCandidateRepository placeCandidateRepository;
     private final OutboxEventRepository outboxEventRepository;
     private final TripRepository tripRepository;
     private final TripPlanningProfileRepository tripPlanningProfileRepository;
@@ -46,7 +41,6 @@ public class ItineraryGenerationPersistenceService {
 
     public ItineraryGenerationPersistenceService(
             ItineraryGenerationRepository generationRepository,
-            PlaceCandidateRepository placeCandidateRepository,
             OutboxEventRepository outboxEventRepository,
             TripRepository tripRepository,
             TripPlanningProfileRepository tripPlanningProfileRepository,
@@ -54,7 +48,6 @@ public class ItineraryGenerationPersistenceService {
             ApplicationEventPublisher eventPublisher
     ) {
         this.generationRepository = generationRepository;
-        this.placeCandidateRepository = placeCandidateRepository;
         this.outboxEventRepository = outboxEventRepository;
         this.tripRepository = tripRepository;
         this.tripPlanningProfileRepository = tripPlanningProfileRepository;
@@ -118,15 +111,11 @@ public class ItineraryGenerationPersistenceService {
     }
 
     @Transactional
-    public void saveCandidatesAndMarkReady(Long generationId, List<CollectedPlaceCandidate> candidates) {
+    public void markReadyForPlanning(Long generationId) {
         ItineraryGenerationEntity generation = findGeneration(generationId);
         ItineraryGenerationStatus previousStatus = generation.getStatus();
-        int rank = 1;
-        for (CollectedPlaceCandidate candidate : candidates) {
-            placeCandidateRepository.save(PlaceCandidateEntity.from(generation, candidate, rank++));
-        }
         generation.markReady(Instant.now(clock));
-        publishStatusChanged(generation.getTrip().getId(), generation, previousStatus, candidates.size());
+        publishStatusChanged(generation.getTrip().getId(), generation, previousStatus, 0);
     }
 
     @Transactional
@@ -138,7 +127,7 @@ public class ItineraryGenerationPersistenceService {
                 generation.getTrip().getId(),
                 generation,
                 previousStatus,
-                placeCandidateRepository.countByGeneration_Id(generationId)
+                0
         );
     }
 
@@ -156,7 +145,7 @@ public class ItineraryGenerationPersistenceService {
                 trip.getId().toString(),
                 generation.getStatus(),
                 generation.getPromptVersion(),
-                placeCandidateRepository.countByGeneration_Id(generation.getId()),
+                0,
                 generation.getFailureReason(),
                 generation.getCreatedAt(),
                 generation.getUpdatedAt()
@@ -182,8 +171,7 @@ public class ItineraryGenerationPersistenceService {
         }
         TripPlanningProfileEntity profile = tripPlanningProfileRepository.findByTrip_Id(trip.getId())
                 .orElseThrow(() -> new ItineraryException(ItineraryErrorCode.PLANNING_PROFILE_NOT_FOUND));
-        List<PlaceCandidateEntity> candidates = placeCandidateRepository.findByGeneration_IdOrderByRankAsc(generationId);
-        return new AiRequestContext(generation, profile, candidates);
+        return new AiRequestContext(generation, profile);
     }
 
     private ItineraryGenerationEntity findGeneration(Long generationId) {
@@ -197,7 +185,7 @@ public class ItineraryGenerationPersistenceService {
                 trip.getId().toString(),
                 generation.getStatus(),
                 generation.getPromptVersion(),
-                placeCandidateRepository.countByGeneration_Id(generation.getId()),
+                0,
                 generation.getFailureReason(),
                 generation.getCreatedAt(),
                 generation.getUpdatedAt()
@@ -264,8 +252,7 @@ public class ItineraryGenerationPersistenceService {
 
     public record AiRequestContext(
             ItineraryGenerationEntity generation,
-            TripPlanningProfileEntity profile,
-            List<PlaceCandidateEntity> candidates
+            TripPlanningProfileEntity profile
     ) {
     }
 }

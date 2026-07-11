@@ -3,10 +3,6 @@ package com.planmate.itinerary.service;
 import com.planmate.itinerary.dto.ItineraryGenerationCreateResponse;
 import com.planmate.itinerary.dto.ItineraryGenerationDetailResponse;
 import com.planmate.itinerary.entity.ItineraryGenerationEntity;
-import com.planmate.itinerary.service.ItineraryGenerationPersistenceService.GenerationCollectionContext;
-import com.planmate.recommendation.domain.CollectedPlaceCandidate;
-import com.planmate.recommendation.service.PlaceCandidateCollectionService;
-import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 
@@ -14,14 +10,9 @@ import org.springframework.stereotype.Service;
 public class ItineraryGenerationService {
 
     private final ItineraryGenerationPersistenceService persistenceService;
-    private final PlaceCandidateCollectionService candidateCollectionService;
 
-    public ItineraryGenerationService(
-            ItineraryGenerationPersistenceService persistenceService,
-            PlaceCandidateCollectionService candidateCollectionService
-    ) {
+    public ItineraryGenerationService(ItineraryGenerationPersistenceService persistenceService) {
         this.persistenceService = persistenceService;
-        this.candidateCollectionService = candidateCollectionService;
     }
 
     public ItineraryGenerationCreateResponse create(Long userId, Long tripId) {
@@ -38,9 +29,8 @@ public class ItineraryGenerationService {
     }
 
     public void collectCandidates(Long userId, Long tripId, Long generationId) {
-        GenerationCollectionContext context = persistenceService.loadCollectionContext(userId, tripId, generationId);
-        List<CollectedPlaceCandidate> candidates = candidateCollectionService.collect(context.destination(), context.profile());
-        persistenceService.saveCandidatesAndMarkReady(generationId, candidates);
+        persistenceService.loadCollectionContext(userId, tripId, generationId);
+        persistenceService.markReadyForPlanning(generationId);
     }
 
     public ItineraryGenerationDetailResponse getDetail(Long userId, Long tripId, Long generationId) {

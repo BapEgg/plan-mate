@@ -2,6 +2,8 @@ package com.planmate.itinerary.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -33,23 +35,15 @@ public class ItineraryItemEntity {
     @Column(name = "place_id", nullable = false, length = 255)
     private String placeId;
 
-    @Column(name = "place_name", nullable = false, length = 200)
-    private String placeName;
-
-    @Column(nullable = false)
-    private Double latitude;
-
-    @Column(nullable = false)
-    private Double longitude;
-
     @Column(name = "start_time", nullable = false)
     private LocalTime startTime;
 
     @Column(name = "duration_minutes", nullable = false)
     private int durationMinutes;
 
-    @Column(length = 500)
-    private String reason;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "created_source", nullable = false, length = 40)
+    private ItineraryItemCreatedSource createdSource;
 
     protected ItineraryItemEntity() {
     }
@@ -58,42 +52,33 @@ public class ItineraryItemEntity {
             ItineraryDayEntity day,
             int sequence,
             String placeId,
-            String placeName,
-            Double latitude,
-            Double longitude,
             LocalTime startTime,
             int durationMinutes,
-            String reason
+            ItineraryItemCreatedSource createdSource
     ) {
         this.day = day;
         this.sequence = sequence;
         this.placeId = placeId;
-        this.placeName = placeName;
-        this.latitude = latitude;
-        this.longitude = longitude;
         this.startTime = startTime;
         this.durationMinutes = durationMinutes;
-        this.reason = reason;
+        this.createdSource = createdSource == null ? ItineraryItemCreatedSource.AI_DRAFT : createdSource;
     }
 
     public static ItineraryItemEntity create(
             ItineraryDayEntity day,
             int sequence,
-            PlaceCandidateEntity candidate,
+            String placeId,
             LocalTime startTime,
             int durationMinutes,
-            String reason
+            ItineraryItemCreatedSource createdSource
     ) {
         return new ItineraryItemEntity(
                 day,
                 sequence,
-                candidate.getPlaceId(),
-                candidate.getName(),
-                candidate.getLatitude(),
-                candidate.getLongitude(),
+                placeId,
                 startTime,
                 durationMinutes,
-                reason
+                createdSource
         );
     }
 
@@ -113,18 +98,6 @@ public class ItineraryItemEntity {
         return placeId;
     }
 
-    public String getPlaceName() {
-        return placeName;
-    }
-
-    public Double getLatitude() {
-        return latitude;
-    }
-
-    public Double getLongitude() {
-        return longitude;
-    }
-
     public LocalTime getStartTime() {
         return startTime;
     }
@@ -133,7 +106,7 @@ public class ItineraryItemEntity {
         return durationMinutes;
     }
 
-    public String getReason() {
-        return reason;
+    public ItineraryItemCreatedSource getCreatedSource() {
+        return createdSource;
     }
 }

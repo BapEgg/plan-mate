@@ -2,8 +2,6 @@ package com.planmate.itinerary.service;
 
 import com.planmate.itinerary.dto.AiItineraryRequest;
 import com.planmate.itinerary.entity.ItineraryGenerationEntity;
-import com.planmate.itinerary.entity.PlaceCandidateEntity;
-import com.planmate.recommendation.domain.CandidateSearchCategory;
 import com.planmate.trip.domain.AvoidCondition;
 import com.planmate.trip.domain.BudgetItem;
 import com.planmate.trip.domain.MustVisitPlaceSnapshot;
@@ -11,29 +9,15 @@ import com.planmate.trip.domain.TransportMode;
 import com.planmate.trip.domain.TripInterest;
 import com.planmate.trip.entity.TripEntity;
 import com.planmate.trip.entity.TripPlanningProfileEntity;
-import java.util.Arrays;
 import java.util.List;
 import org.springframework.stereotype.Component;
 
 @Component
 public class AiItineraryRequestFactory {
 
-    private static final List<String> CANDIDATE_FIELDS = List.of(
-            "placeId",
-            "name",
-            "categories",
-            "lat",
-            "lng",
-            "rating",
-            "reviewCount",
-            "shortAddress",
-            "openingPeriods"
-    );
-
     public AiItineraryRequest create(
             ItineraryGenerationEntity generation,
-            TripPlanningProfileEntity profile,
-            List<PlaceCandidateEntity> candidates
+            TripPlanningProfileEntity profile
     ) {
         TripEntity trip = generation.getTrip();
         return new AiItineraryRequest(
@@ -51,8 +35,7 @@ public class AiItineraryRequestFactory {
                 mustVisitPlaces(profile),
                 profile.getAvoidConditions().stream().map(AvoidCondition::name).toList(),
                 profile.getFreeRequest(),
-                planningRules(),
-                candidateTable(candidates)
+                planningRules()
         );
     }
 
@@ -124,44 +107,14 @@ public class AiItineraryRequestFactory {
         );
     }
 
-    private AiItineraryRequest.CandidateTable candidateTable(List<PlaceCandidateEntity> candidates) {
-        return new AiItineraryRequest.CandidateTable(
-                CANDIDATE_FIELDS,
-                candidates.stream().map(this::candidateRow).toList()
-        );
-    }
-
-    private List<Object> candidateRow(PlaceCandidateEntity candidate) {
-        return Arrays.asList(
-                candidate.getPlaceId(),
-                candidate.getName(),
-                candidate.getSourceCategories().stream().map(CandidateSearchCategory::name).toList(),
-                candidate.getLatitude(),
-                candidate.getLongitude(),
-                candidate.getRating(),
-                candidate.getUserRatingCount(),
-                shortAddress(candidate.getAddress()),
-                candidate.getOpeningPeriods()
-        );
-    }
-
-    private String shortAddress(String address) {
-        if (address == null || address.length() <= 80) {
-            return address;
-        }
-        return address.substring(0, 80);
-    }
-
     private List<String> planningRules() {
         return List.of(
-                "Use only placeId values included in candidateTable.",
-                "Include all mustVisitPlaces in the itinerary unless impossible due to trip duration or opening hours.",
-                "mustVisitPlaces are user-selected required places and are also included in candidateTable. Use the same placeId, and use candidateTable.name as the response placeName.",
-                "Every itinerary item must include placeId and placeName.",
-                "placeName must exactly match the candidate name.",
-                "Do not invent places outside the candidate list.",
-                "Respect trip dates, travel pace, companions, budget level, transport modes, avoid conditions, and opening hours when provided.",
-                "Return only JSON matching AiItineraryResponse without Markdown code fences."
+                "Markdown 코드 블록이나 설명 없이 GroundedItineraryDraft 형식의 JSON만 반환한다.",
+                "모든 일정 항목은 sequence, placeId, startTime, durationMinutes를 포함해야 한다.",
+                "응답에는 placeName, address, latitude, longitude, rating, routeInfo, sourceLinks, 추천 이유를 포함하지 않는다.",
+                "여행 일수와 같은 개수의 day 항목을 만들고, day 번호는 1부터 시작한다.",
+                "여행 기간상 불가능한 경우가 아니라면 mustVisitPlaces를 모두 포함한다.",
+                "여행 날짜, 여행 속도, 동행자, 예산 수준, 이동수단, 회피 조건, freeRequest를 반영한다."
         );
     }
 }

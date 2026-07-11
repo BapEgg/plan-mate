@@ -12,7 +12,6 @@ import com.planmate.itinerary.entity.ItineraryGenerationEntity;
 import com.planmate.itinerary.entity.ItineraryGenerationStatus;
 import com.planmate.itinerary.realtime.ItineraryGenerationStatusChangedEvent;
 import com.planmate.itinerary.repository.ItineraryGenerationRepository;
-import com.planmate.itinerary.repository.PlaceCandidateRepository;
 import com.planmate.trip.entity.TripEntity;
 import com.planmate.trip.repository.TripPlanningProfileRepository;
 import com.planmate.trip.repository.TripRepository;
@@ -40,9 +39,6 @@ class ItineraryGenerationPersistenceServiceTest {
     private ItineraryGenerationRepository generationRepository;
 
     @Mock
-    private PlaceCandidateRepository placeCandidateRepository;
-
-    @Mock
     private OutboxEventRepository outboxEventRepository;
 
     @Mock
@@ -60,7 +56,6 @@ class ItineraryGenerationPersistenceServiceTest {
     void setUp() {
         service = new ItineraryGenerationPersistenceService(
                 generationRepository,
-                placeCandidateRepository,
                 outboxEventRepository,
                 tripRepository,
                 tripPlanningProfileRepository,
@@ -136,7 +131,6 @@ class ItineraryGenerationPersistenceServiceTest {
         ItineraryGenerationEntity generation = generation(123L, trip);
         generation.markCollecting(NOW);
         given(generationRepository.findById(123L)).willReturn(Optional.of(generation));
-        given(placeCandidateRepository.countByGeneration_Id(123L)).willReturn(10L);
 
         service.markFailed(123L, "GOOGLE_PLACES_UNAVAILABLE");
 
@@ -148,7 +142,7 @@ class ItineraryGenerationPersistenceServiceTest {
             assertThat(event.generationId()).isEqualTo(123L);
             assertThat(event.previousStatus()).isEqualTo(ItineraryGenerationStatus.COLLECTING_CANDIDATES);
             assertThat(event.status()).isEqualTo(ItineraryGenerationStatus.FAILED);
-            assertThat(event.candidateCount()).isEqualTo(10);
+            assertThat(event.candidateCount()).isZero();
             assertThat(event.failureReason()).isEqualTo("GOOGLE_PLACES_UNAVAILABLE");
         });
     }
@@ -160,7 +154,6 @@ class ItineraryGenerationPersistenceServiceTest {
         generation.markReady(NOW);
         given(tripRepository.findAccessibleTrip(45L, 7L)).willReturn(Optional.of(trip));
         given(generationRepository.findFirstByTrip_IdOrderByCreatedAtDesc(45L)).willReturn(Optional.of(generation));
-        given(placeCandidateRepository.countByGeneration_Id(123L)).willReturn(120L);
 
         Optional<com.planmate.itinerary.dto.ItineraryGenerationDetailResponse> result = service.getLatest(7L, 45L);
 
@@ -170,7 +163,7 @@ class ItineraryGenerationPersistenceServiceTest {
                     assertThat(response.generationId()).isEqualTo("123");
                     assertThat(response.tripId()).isEqualTo("45");
                     assertThat(response.status()).isEqualTo(ItineraryGenerationStatus.READY_FOR_PLANNING);
-                    assertThat(response.candidateCount()).isEqualTo(120);
+                    assertThat(response.candidateCount()).isZero();
                 });
     }
 

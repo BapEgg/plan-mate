@@ -1,12 +1,14 @@
 package com.planmate.itinerary.service;
 
-import com.planmate.itinerary.dto.AiItineraryResponse;
+import com.planmate.itinerary.dto.GroundedItineraryDraft;
+import com.planmate.itinerary.dto.ItineraryDraftDay;
+import com.planmate.itinerary.dto.ItineraryDraftItem;
 import com.planmate.itinerary.entity.ItineraryDayEntity;
 import com.planmate.itinerary.entity.ItineraryEntity;
 import com.planmate.itinerary.entity.ItineraryGenerationEntity;
 import com.planmate.itinerary.entity.ItineraryGenerationStatus;
+import com.planmate.itinerary.entity.ItineraryItemCreatedSource;
 import com.planmate.itinerary.entity.ItineraryItemEntity;
-import com.planmate.itinerary.entity.PlaceCandidateEntity;
 import com.planmate.itinerary.exception.ItineraryErrorCode;
 import com.planmate.itinerary.exception.ItineraryException;
 import com.planmate.itinerary.realtime.ItineraryGenerationStatusChangedEvent;
@@ -14,24 +16,25 @@ import com.planmate.itinerary.repository.ItineraryDayRepository;
 import com.planmate.itinerary.repository.ItineraryGenerationRepository;
 import com.planmate.itinerary.repository.ItineraryItemRepository;
 import com.planmate.itinerary.repository.ItineraryRepository;
-import com.planmate.itinerary.repository.PlaceCandidateRepository;
+import com.planmate.trip.domain.MustVisitPlaceSnapshot;
 import com.planmate.trip.entity.TripEntity;
+import com.planmate.trip.entity.TripPlanningProfileEntity;
 import com.planmate.trip.exception.TripNotFoundException;
+import com.planmate.trip.repository.TripPlanningProfileRepository;
 import com.planmate.trip.repository.TripRepository;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.HashMap;
+import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Service
 public class ManualItineraryResponseService {
@@ -40,7 +43,7 @@ public class ManualItineraryResponseService {
 
     private final TripRepository tripRepository;
     private final ItineraryGenerationRepository generationRepository;
-    private final PlaceCandidateRepository placeCandidateRepository;
+    private final TripPlanningProfileRepository tripPlanningProfileRepository;
     private final ItineraryRepository itineraryRepository;
     private final ItineraryDayRepository itineraryDayRepository;
     private final ItineraryItemRepository itineraryItemRepository;
@@ -50,7 +53,7 @@ public class ManualItineraryResponseService {
     public ManualItineraryResponseService(
             TripRepository tripRepository,
             ItineraryGenerationRepository generationRepository,
-            PlaceCandidateRepository placeCandidateRepository,
+            TripPlanningProfileRepository tripPlanningProfileRepository,
             ItineraryRepository itineraryRepository,
             ItineraryDayRepository itineraryDayRepository,
             ItineraryItemRepository itineraryItemRepository,
@@ -59,7 +62,7 @@ public class ManualItineraryResponseService {
     ) {
         this.tripRepository = tripRepository;
         this.generationRepository = generationRepository;
-        this.placeCandidateRepository = placeCandidateRepository;
+        this.tripPlanningProfileRepository = tripPlanningProfileRepository;
         this.itineraryRepository = itineraryRepository;
         this.itineraryDayRepository = itineraryDayRepository;
         this.itineraryItemRepository = itineraryItemRepository;
@@ -68,7 +71,7 @@ public class ManualItineraryResponseService {
     }
 
     @Transactional
-    public void submit(Long userId, Long tripId, Long generationId, AiItineraryResponse response) {
+    public void submit(Long userId, Long tripId, Long generationId, GroundedItineraryDraft draft) {
         TripEntity trip = tripRepository.findAccessibleTrip(tripId, userId)
                 .orElseThrow(TripNotFoundException::new);
         ItineraryGenerationEntity generation = generationRepository.findWithTripById(generationId)
@@ -79,36 +82,31 @@ public class ManualItineraryResponseService {
         if (generation.getStatus() != ItineraryGenerationStatus.READY_FOR_PLANNING) {
             throw new ItineraryException(ItineraryErrorCode.GENERATION_NOT_READY);
         }
-        if (response == null || !generation.getId().toString().equals(response.generationId())) {
-            throw invalid("generationId does not match.");
+        if (draft == null || !generation.getId().toString().equals(draft.generationId())) {
+            throw invalid("generationId가 현재 생성 작업과 일치하지 않습니다.");
         }
 
-        List<PlaceCandidateEntity> candidates = placeCandidateRepository.findByGeneration_IdOrderByRankAsc(generationId);
-        Map<String, PlaceCandidateEntity> candidateByPlaceId = new HashMap<>();
-        for (PlaceCandidateEntity candidate : candidates) {
-            candidateByPlaceId.put(candidate.getPlaceId(), candidate);
-        }
-
-        validateResponse(trip, response, candidateByPlaceId);
+        TripPlanningProfileEntity profile = tripPlanningProfileRepository.findByTrip_Id(trip.getId())
+                .orElseThrow(() -> new ItineraryException(ItineraryErrorCode.PLANNING_PROFILE_NOT_FOUND));
+        validateDraft(trip, profile.getMustVisitPlaces(), draft);
 
         Instant now = Instant.now(clock);
         generation.markValidating(now);
-        ItineraryEntity itinerary = itineraryRepository.save(ItineraryEntity.create(trip, generation, response.summary(), now));
-        for (AiItineraryResponse.Day responseDay : response.days()) {
+        ItineraryEntity itinerary = itineraryRepository.save(ItineraryEntity.create(trip, generation, now));
+        for (ItineraryDraftDay responseDay : draft.days()) {
             ItineraryDayEntity day = itineraryDayRepository.save(ItineraryDayEntity.create(
                     itinerary,
                     responseDay.day(),
-                    responseDay.date()
+                    trip.getStartDate().plusDays(responseDay.day() - 1L)
             ));
-            for (AiItineraryResponse.Item responseItem : responseDay.items()) {
-                PlaceCandidateEntity candidate = candidateByPlaceId.get(responseItem.placeId());
+            for (ItineraryDraftItem responseItem : responseDay.items()) {
                 itineraryItemRepository.save(ItineraryItemEntity.create(
                         day,
                         responseItem.sequence(),
-                        candidate,
+                        normalizePlaceId(responseItem.placeId()),
                         parseTime(responseItem.startTime()),
                         responseItem.durationMinutes(),
-                        responseItem.reason()
+                        ItineraryItemCreatedSource.AI_DRAFT
                 ));
             }
         }
@@ -119,80 +117,76 @@ public class ManualItineraryResponseService {
                 generation.getId(),
                 previousStatus,
                 generation.getStatus(),
-                candidates.size(),
+                0,
                 generation.getFailureReason(),
                 generation.getUpdatedAt()
         ));
     }
 
-    private void validateResponse(
+    private void validateDraft(
             TripEntity trip,
-            AiItineraryResponse response,
-            Map<String, PlaceCandidateEntity> candidateByPlaceId
+            List<MustVisitPlaceSnapshot> mustVisitPlaces,
+            GroundedItineraryDraft draft
     ) {
-        if (response.summary() != null && response.summary().length() > 500) {
-            throw invalid("summary is too long.");
+        if (draft.days() == null || draft.days().isEmpty()) {
+            throw invalid("days는 필수입니다.");
         }
-        if (response.days() == null || response.days().isEmpty()) {
-            throw invalid("days is required.");
+        int tripDayCount = tripDayCount(trip);
+        if (draft.days().size() != tripDayCount) {
+            throw invalid("days 개수는 여행 일수와 일치해야 합니다.");
         }
 
         Set<Integer> days = new HashSet<>();
-        Set<String> usedPlaceIds = new HashSet<>();
-        for (AiItineraryResponse.Day day : response.days()) {
-            validateDay(trip, day, days, candidateByPlaceId, usedPlaceIds);
+        Set<String> includedPlaceIds = new HashSet<>();
+        for (ItineraryDraftDay day : draft.days()) {
+            validateDay(tripDayCount, day, days, includedPlaceIds);
         }
+        validateMustVisitPlaces(mustVisitPlaces, includedPlaceIds);
     }
 
     private void validateDay(
-            TripEntity trip,
-            AiItineraryResponse.Day day,
+            int tripDayCount,
+            ItineraryDraftDay day,
             Set<Integer> days,
-            Map<String, PlaceCandidateEntity> candidateByPlaceId,
-            Set<String> usedPlaceIds
+            Set<String> includedPlaceIds
     ) {
-        if (day.day() < 1 || !days.add(day.day())) {
-            throw invalid("day is duplicated or invalid.");
-        }
-        LocalDate expectedDate = trip.getStartDate().plusDays(day.day() - 1L);
-        if (!expectedDate.equals(day.date()) || day.date().isBefore(trip.getStartDate()) || day.date().isAfter(trip.getEndDate())) {
-            throw invalid("day and date do not match the trip date range.");
+        if (day.day() < 1 || day.day() > tripDayCount || !days.add(day.day())) {
+            throw invalid("day가 중복되었거나 유효하지 않습니다.");
         }
         if (day.items() == null || day.items().isEmpty()) {
-            throw invalid("day items are required.");
+            throw invalid("day items는 필수입니다.");
         }
 
         Set<Integer> sequences = new HashSet<>();
-        for (AiItineraryResponse.Item item : day.items()) {
-            validateItem(item, sequences, candidateByPlaceId, usedPlaceIds);
+        for (ItineraryDraftItem item : day.items()) {
+            validateItem(item, sequences, includedPlaceIds);
         }
     }
 
     private void validateItem(
-            AiItineraryResponse.Item item,
+            ItineraryDraftItem item,
             Set<Integer> sequences,
-            Map<String, PlaceCandidateEntity> candidateByPlaceId,
-            Set<String> usedPlaceIds
+            Set<String> includedPlaceIds
     ) {
         if (item.sequence() < 1 || !sequences.add(item.sequence())) {
-            throw invalid("sequence is duplicated or invalid.");
+            throw invalid("sequence가 중복되었거나 유효하지 않습니다.");
         }
-        PlaceCandidateEntity candidate = candidateByPlaceId.get(item.placeId());
-        if (candidate == null) {
-            throw invalid("placeId is not registered in this generation.");
+        String placeId = normalizePlaceId(item.placeId());
+        if (!StringUtils.hasText(placeId)) {
+            throw invalid("placeId는 필수입니다.");
         }
-        if (!candidate.getName().equals(item.placeName())) {
-            throw invalid("placeName does not match the registered candidate.");
-        }
-        if (!usedPlaceIds.add(item.placeId())) {
-            throw invalid("placeId is repeated too often.");
-        }
+        includedPlaceIds.add(placeId);
         parseTime(item.startTime());
         if (item.durationMinutes() <= 0) {
-            throw invalid("durationMinutes must be positive.");
+            throw invalid("durationMinutes는 양수여야 합니다.");
         }
-        if (item.reason() != null && item.reason().length() > 500) {
-            throw invalid("reason is too long.");
+    }
+
+    private void validateMustVisitPlaces(List<MustVisitPlaceSnapshot> mustVisitPlaces, Set<String> includedPlaceIds) {
+        for (MustVisitPlaceSnapshot mustVisitPlace : mustVisitPlaces) {
+            if (StringUtils.hasText(mustVisitPlace.placeId()) && !includedPlaceIds.contains(mustVisitPlace.placeId())) {
+                throw invalid("mustVisitPlaceIds는 일정에 포함되어야 합니다.");
+            }
         }
     }
 
@@ -200,8 +194,16 @@ public class ManualItineraryResponseService {
         try {
             return LocalTime.parse(value, TIME_FORMATTER);
         } catch (DateTimeParseException | NullPointerException exception) {
-            throw invalid("startTime must use HH:mm format.");
+            throw invalid("startTime은 HH:mm 형식이어야 합니다.");
         }
+    }
+
+    private String normalizePlaceId(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private int tripDayCount(TripEntity trip) {
+        return Math.toIntExact(ChronoUnit.DAYS.between(trip.getStartDate(), trip.getEndDate()) + 1);
     }
 
     private ItineraryException invalid(String message) {

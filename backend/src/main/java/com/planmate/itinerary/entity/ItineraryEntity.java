@@ -32,9 +32,6 @@ public class ItineraryEntity {
     @JoinColumn(name = "generation_id", nullable = false)
     private ItineraryGenerationEntity generation;
 
-    @Column(length = 500)
-    private String summary;
-
     @Column(nullable = false)
     private Instant createdAt;
 
@@ -45,15 +42,14 @@ public class ItineraryEntity {
     protected ItineraryEntity() {
     }
 
-    private ItineraryEntity(TripEntity trip, ItineraryGenerationEntity generation, String summary, Instant createdAt) {
+    private ItineraryEntity(TripEntity trip, ItineraryGenerationEntity generation, Instant createdAt) {
         this.trip = trip;
         this.generation = generation;
-        this.summary = summary;
         this.createdAt = createdAt;
     }
 
-    public static ItineraryEntity create(TripEntity trip, ItineraryGenerationEntity generation, String summary, Instant createdAt) {
-        return new ItineraryEntity(trip, generation, summary, createdAt);
+    public static ItineraryEntity create(TripEntity trip, ItineraryGenerationEntity generation, Instant createdAt) {
+        return new ItineraryEntity(trip, generation, createdAt);
     }
 
     public Long getId() {
@@ -66,10 +62,6 @@ public class ItineraryEntity {
 
     public ItineraryGenerationEntity getGeneration() {
         return generation;
-    }
-
-    public String getSummary() {
-        return summary;
     }
 
     public Instant getCreatedAt() {

@@ -4,6 +4,7 @@ import com.planmate.place.dto.PlaceAutocompleteItemResponse;
 import com.planmate.place.dto.PlaceAutocompleteResponse;
 import com.planmate.place.dto.GeoPoint;
 import com.planmate.place.dto.GeoViewport;
+import com.planmate.place.dto.PlaceDisplay;
 import com.planmate.place.dto.PlaceSearchCandidate;
 import com.planmate.place.dto.PlaceSearchArea;
 import com.planmate.place.dto.PlaceTextSearchRequest;
@@ -52,6 +53,23 @@ public class GooglePlacesService {
             "primaryType"
     );
     public static final String DESTINATION_DETAILS_FIELD_MASK = PLACE_DETAILS_FIELD_MASK;
+    public static final String PLACE_DISPLAY_LIST_FIELD_MASK = String.join(",",
+            "id",
+            "displayName",
+            "location",
+            "googleMapsUri"
+    );
+    public static final String PLACE_DISPLAY_DETAIL_FIELD_MASK = String.join(",",
+            "id",
+            "displayName",
+            "formattedAddress",
+            "googleMapsUri",
+            "businessStatus",
+            "regularOpeningHours",
+            "rating",
+            "userRatingCount",
+            "attributions"
+    );
     public static final String TEXT_SEARCH_FIELD_MASK = String.join(",",
             "places.id",
             "places.displayName.text",
@@ -157,6 +175,36 @@ public class GooglePlacesService {
 
     public void validatePlaceId(String placeId) {
         resolveDestination(placeId, null);
+    }
+
+    public PlaceDisplay resolvePlaceDisplay(String placeId, String languageCode) {
+        assertApiKeyConfigured();
+
+        try {
+            GooglePlaceDetailsResponse response = restClient.get()
+                    .uri(uriBuilder -> {
+                        var builder = uriBuilder.path("/places/{placeId}");
+                        if (StringUtils.hasText(languageCode)) {
+                            builder.queryParam("languageCode", languageCode.trim());
+                        }
+                        return builder.build(placeId);
+                    })
+                    .headers(headers -> applyGoogleHeaders(headers, PLACE_DISPLAY_LIST_FIELD_MASK))
+                    .retrieve()
+                    .body(GooglePlaceDetailsResponse.class);
+
+            if (response == null || !placeId.equals(response.id())) {
+                throw new InvalidPlaceIdException();
+            }
+            return toPlaceDisplay(response);
+        } catch (RestClientResponseException exception) {
+            if (isInvalidPlaceIdResponse(exception.getStatusCode())) {
+                throw new InvalidPlaceIdException();
+            }
+            throw new PlaceProviderUnavailableException(exception);
+        } catch (RestClientException exception) {
+            throw new PlaceProviderUnavailableException(exception);
+        }
     }
 
     public PlaceTextSearchResponse searchText(PlaceTextSearchRequest request) {
@@ -355,6 +403,16 @@ public class GooglePlacesService {
         );
     }
 
+    private PlaceDisplay toPlaceDisplay(GooglePlaceDetailsResponse response) {
+        String displayName = textValue(response.displayName());
+        return new PlaceDisplay(
+                response.id(),
+                StringUtils.hasText(displayName) ? displayName : null,
+                toPoint(response.location()),
+                response.googleMapsUri()
+        );
+    }
+
     private PlaceTextSearchResponse normalizeTextSearch(GoogleTextSearchResponse response) {
         if (response == null || response.places() == null) {
             return new PlaceTextSearchResponse(List.of(), null);
@@ -451,7 +509,8 @@ public class GooglePlacesService {
             GoogleLocation location,
             GoogleViewport viewport,
             List<String> types,
-            String primaryType
+            String primaryType,
+            String googleMapsUri
     ) {
     }
 

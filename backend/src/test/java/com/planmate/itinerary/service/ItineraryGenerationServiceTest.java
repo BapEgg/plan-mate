@@ -5,7 +5,6 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import com.planmate.itinerary.dto.ItineraryGenerationCreateResponse;
@@ -13,8 +12,6 @@ import com.planmate.itinerary.entity.ItineraryGenerationEntity;
 import com.planmate.itinerary.entity.ItineraryGenerationStatus;
 import com.planmate.place.dto.GeoPoint;
 import com.planmate.place.dto.ResolvedDestination;
-import com.planmate.recommendation.domain.CollectedPlaceCandidate;
-import com.planmate.recommendation.service.PlaceCandidateCollectionService;
 import com.planmate.trip.entity.TripEntity;
 import com.planmate.trip.entity.TripPlanningProfileEntity;
 import java.time.Instant;
@@ -35,14 +32,11 @@ class ItineraryGenerationServiceTest {
     @Mock
     private ItineraryGenerationPersistenceService persistenceService;
 
-    @Mock
-    private PlaceCandidateCollectionService candidateCollectionService;
-
     private ItineraryGenerationService service;
 
     @BeforeEach
     void setUp() {
-        service = new ItineraryGenerationService(persistenceService, candidateCollectionService);
+        service = new ItineraryGenerationService(persistenceService);
     }
 
     @Test
@@ -59,11 +53,10 @@ class ItineraryGenerationServiceTest {
         verify(persistenceService).createGenerationRequest(7L, 45L, ItineraryPromptService.PROMPT_VERSION);
         verify(persistenceService, never()).markCollecting(anyLong());
         verifyNoMoreInteractions(persistenceService);
-        verifyNoInteractions(candidateCollectionService);
     }
 
     @Test
-    void collectCandidatesRunsMovedCandidateCollectionFlow() {
+    void collectCandidatesValidatesContextAndMarksReadyForPlanning() {
         ResolvedDestination destination = new ResolvedDestination(
                 "place-kyoto",
                 "Kyoto",
@@ -74,17 +67,13 @@ class ItineraryGenerationServiceTest {
                 "locality"
         );
         TripPlanningProfileEntity profile = org.mockito.Mockito.mock(TripPlanningProfileEntity.class);
-        CollectedPlaceCandidate candidate = org.mockito.Mockito.mock(CollectedPlaceCandidate.class);
-        List<CollectedPlaceCandidate> candidates = List.of(candidate);
         given(persistenceService.loadCollectionContext(7L, 45L, 123L))
                 .willReturn(new ItineraryGenerationPersistenceService.GenerationCollectionContext(123L, destination, profile));
-        given(candidateCollectionService.collect(destination, profile)).willReturn(candidates);
 
         service.collectCandidates(7L, 45L, 123L);
 
         verify(persistenceService).loadCollectionContext(7L, 45L, 123L);
-        verify(candidateCollectionService).collect(destination, profile);
-        verify(persistenceService).saveCandidatesAndMarkReady(123L, candidates);
+        verify(persistenceService).markReadyForPlanning(123L);
     }
 
     private ItineraryGenerationEntity generation(Long generationId, TripEntity trip) {

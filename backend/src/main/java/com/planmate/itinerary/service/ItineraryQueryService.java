@@ -33,7 +33,6 @@ public class ItineraryQueryService {
         return new ItineraryResponse(
                 itinerary.getId(),
                 itinerary.getGeneration().getId(),
-                itinerary.getSummary(),
                 itinerary.getCreatedAt(),
                 itinerary.getDays().stream()
                         .sorted(Comparator.comparingInt(ItineraryDayEntity::getDay))
@@ -59,12 +58,9 @@ public class ItineraryQueryService {
                 item.getId(),
                 item.getSequence(),
                 item.getPlaceId(),
-                item.getPlaceName(),
-                item.getLatitude(),
-                item.getLongitude(),
                 item.getStartTime(),
                 item.getDurationMinutes(),
-                item.getReason()
+                item.getCreatedSource()
         );
     }
 }

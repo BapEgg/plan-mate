@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { AuthUser } from '../../api/auth'
 import { ApiError } from '../../api/client'
-import { getAiRequest, getLatestItineraryGeneration, getManualPrompt, getTripDetail, submitManualResponse } from '../../api/trips'
-import type { AiItineraryResponse, Itinerary, ItineraryGenerationDetailResponse, ItineraryItem, TripDetail, TripMember, TripPlanningProfile } from '../../api/trips'
+import { getAiRequest, getItineraryPlaceViews, getLatestItineraryGeneration, getManualPrompt, getTripDetail, submitManualResponse } from '../../api/trips'
+import type { GroundedItineraryDraft, ItineraryPlaceView, ItineraryGenerationDetailResponse, TripDetail, TripMember, TripPlanningProfile } from '../../api/trips'
 import { connectTripRealtimeEvents, ITINERARY_GENERATION_STATUS_CHANGED } from '../../api/realtime'
 import './TripDetailPage.css'
 
@@ -43,6 +43,7 @@ export function TripDetailPage({
   onLogout,
 }: TripDetailPageProps) {
   const [trip, setTrip] = useState<TripDetail | null>(null)
+  const [placeViews, setPlaceViews] = useState<ItineraryPlaceView[]>([])
   const [latestGeneration, setLatestGeneration] = useState<ItineraryGenerationDetailResponse | null>(null)
   const [status, setStatus] = useState<AsyncStatus>('idle')
   const [errorMessage, setErrorMessage] = useState('')
@@ -59,14 +60,16 @@ export function TripDetailPage({
       setStatus('loading')
       setErrorMessage('')
       try {
-        const [response, generation] = await Promise.all([
+        const [response, generation, views] = await Promise.all([
           getTripDetail(accessToken, tripId),
           getLatestItineraryGeneration(accessToken, tripId),
+          getItineraryPlaceViews(accessToken, tripId),
         ])
         if (!active) {
           return
         }
         setTrip(response)
+        setPlaceViews(views)
         setLatestGeneration(generation)
         setStatus('success')
       } catch (error: unknown) {
@@ -106,9 +109,13 @@ export function TripDetailPage({
     }
 
     async function refetchTrip() {
-      const response = await getTripDetail(accessToken, tripId)
+      const [response, views] = await Promise.all([
+        getTripDetail(accessToken, tripId),
+        getItineraryPlaceViews(accessToken, tripId),
+      ])
       if (active) {
         setTrip(response)
+        setPlaceViews(views)
         setStatus('success')
       }
     }
@@ -206,9 +213,9 @@ export function TripDetailPage({
     if (!latestGeneration || latestGeneration.status !== 'READY_FOR_PLANNING') {
       return
     }
-    let parsed: AiItineraryResponse
+    let parsed: GroundedItineraryDraft
     try {
-      parsed = JSON.parse(manualResponseJson) as AiItineraryResponse
+      parsed = JSON.parse(manualResponseJson) as GroundedItineraryDraft
     } catch {
       setManualStatus('error')
       setManualMessage('ChatGPT ?묐떟 JSON ?뺤떇???щ컮瑜댁? ?딆뒿?덈떎.')
@@ -222,8 +229,12 @@ export function TripDetailPage({
       setLatestGeneration(generation)
       setManualStatus('success')
       setManualMessage('?쇱젙????λ릺?덉뒿?덈떎.')
-      const response = await getTripDetail(accessToken, tripId)
+      const [response, views] = await Promise.all([
+        getTripDetail(accessToken, tripId),
+        getItineraryPlaceViews(accessToken, tripId),
+      ])
       setTrip(response)
+      setPlaceViews(views)
     } catch (error: unknown) {
       setManualStatus('error')
       setManualMessage(errorMessageFrom(error))
@@ -268,6 +279,7 @@ export function TripDetailPage({
         onManualPromptLoad={handleLoadManualPrompt}
         onManualResponseChange={setManualResponseJson}
         onManualResponseSubmit={handleSubmitManualResponse}
+        placeViews={placeViews}
         trip={trip}
       />
     </main>
@@ -289,8 +301,10 @@ function TripPlanningWorkspace({
   onManualPromptLoad,
   onManualResponseChange,
   onManualResponseSubmit,
+  placeViews,
 }: {
   trip: TripDetail
+  placeViews: ItineraryPlaceView[]
   currentUser: AuthUser | null
   latestGeneration: ItineraryGenerationDetailResponse | null
   manualPrompt: string
@@ -311,7 +325,7 @@ function TripPlanningWorkspace({
   const [selectedPlaceId, setSelectedPlaceId] = useState('')
   const resolvedActiveDay = dayOptions.includes(activeDay) ? activeDay : dayOptions[0] ?? 1
 
-  const allPlaces = useMemo(() => toItineraryPlaces(latestItinerary), [latestItinerary])
+  const allPlaces = useMemo(() => toItineraryPlaces(placeViews), [placeViews])
   const activePlaces = useMemo(() => allPlaces.filter((place) => place.day === resolvedActiveDay), [resolvedActiveDay, allPlaces])
   const selectedPlace = activePlaces.find((place) => place.id === selectedPlaceId) ?? activePlaces[0] ?? null
 
@@ -651,33 +665,31 @@ function MemberAvatar({ member }: { member: TripMember }) {
   return <span className="member-avatar fallback">{member.nickname.slice(0, 1)}</span>
 }
 
-function toItineraryPlaces(itinerary: Itinerary | null): ItineraryPlace[] {
-  if (!itinerary) {
-    return []
-  }
-  const items = itinerary.days.flatMap((day) => (
-    day.items.map((item) => toItineraryPlace(item, day.day))
-  ))
-  return withMapPositions(items)
+function toItineraryPlaces(placeViews: ItineraryPlaceView[]): ItineraryPlace[] {
+  return withMapPositions(placeViews.map(toItineraryPlace))
 }
 
-function toItineraryPlace(item: ItineraryItem, day: number): ItineraryPlace {
+function toItineraryPlace(item: ItineraryPlaceView): ItineraryPlace {
+  const title = item.display.displayName ?? item.display.fallbackMessage ?? '장소 정보를 불러오지 못했습니다'
+  const locationText = item.display.location
+    ? `${item.display.location.latitude.toFixed(5)}, ${item.display.location.longitude.toFixed(5)}`
+    : '위치 정보를 불러오지 못했습니다'
+
   return {
-    id: item.id.toString(),
-    day,
+    id: item.itemId.toString(),
+    day: item.dayNo,
     order: item.sequence,
-    title: item.placeName,
+    title,
     category: '일정',
     time: item.startTime.slice(0, 5),
     duration: formatDuration(item.durationMinutes),
-    memo: item.reason ?? undefined,
     x: 50,
     y: 50,
-    hours: `${item.latitude.toFixed(5)}, ${item.longitude.toFixed(5)}`,
+    hours: locationText,
     parking: '',
     price: '',
-    rating: '저장된 후보 기준',
-    contentSummary: item.reason ?? '저장된 일정 항목입니다.',
+    rating: item.display.googleMapsUri ? 'Google Maps에서 보기' : '조회 시점 표시 정보',
+    contentSummary: item.display.resolved ? '조회 시점에 불러온 장소 정보입니다.' : title,
     photoTip: '',
   }
 }

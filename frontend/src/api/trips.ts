@@ -177,7 +177,6 @@ export type TripPlanningProfile = {
 export type Itinerary = {
   id: number
   generationId: number
-  summary: string | null
   createdAt: string
   days: ItineraryDay[]
 }
@@ -193,12 +192,9 @@ export type ItineraryItem = {
   id: number
   sequence: number
   placeId: string
-  placeName: string
-  latitude: number
-  longitude: number
   startTime: string
   durationMinutes: number
-  reason: string | null
+  createdSource: 'AI_DRAFT' | 'USER_SELECTED' | 'MANUAL_EDIT'
 }
 
 export type ItineraryGenerationCreateResponse = {
@@ -216,21 +212,38 @@ export type ItineraryGenerationDetailResponse = ItineraryGenerationCreateRespons
 }
 
 export type AiItineraryRequest = Record<string, unknown>
-export type AiItineraryResponse = {
+export type GroundedItineraryDraft = {
   generationId: string
-  summary: string
   days: Array<{
     day: number
-    date: string
     items: Array<{
       sequence: number
       placeId: string
-      placeName: string
       startTime: string
       durationMinutes: number
-      reason: string
     }>
   }>
+}
+
+export type ItineraryPlaceView = {
+  itineraryId: number
+  itemId: number
+  dayNo: number
+  sequence: number
+  placeId: string
+  startTime: string
+  durationMinutes: number
+  createdSource: 'AI_DRAFT' | 'USER_SELECTED' | 'MANUAL_EDIT'
+  display: {
+    resolved: boolean
+    displayName: string | null
+    location: {
+      latitude: number
+      longitude: number
+    } | null
+    googleMapsUri: string | null
+    fallbackMessage: string | null
+  }
 }
 
 export function listMyTrips(accessToken: string) {
@@ -250,6 +263,14 @@ export function createTrip(accessToken: string, payload: CreateTripRequest) {
 
 export function getTripDetail(accessToken: string, tripId: string) {
   return request<TripDetail>(`/api/trips/${tripId}`, {
+    method: 'GET',
+    headers: bearerHeaders(accessToken),
+  })
+}
+
+export function getItineraryPlaceViews(accessToken: string, tripId: string, dayNo?: number) {
+  const search = dayNo == null ? '' : `?dayNo=${dayNo}`
+  return request<ItineraryPlaceView[]>(`/api/trips/${tripId}/itinerary-place-views${search}`, {
     method: 'GET',
     headers: bearerHeaders(accessToken),
   })
@@ -295,7 +316,7 @@ export function submitManualResponse(
   accessToken: string,
   tripId: string,
   generationId: string,
-  payload: AiItineraryResponse,
+  payload: GroundedItineraryDraft,
 ) {
   return request<ItineraryGenerationDetailResponse>(`/api/trips/${tripId}/itinerary-generations/${generationId}/manual-response`, {
     method: 'POST',

@@ -19,8 +19,7 @@ public record AiItineraryRequest(
         List<MustVisitPlace> mustVisitPlaces,
         List<String> avoidConditions,
         String freeRequest,
-        List<String> rules,
-        CandidateTable candidateTable
+        List<String> rules
 ) {
 
     public record Destination(
@@ -77,9 +76,4 @@ public record AiItineraryRequest(
     ) {
     }
 
-    public record CandidateTable(
-            List<String> candidateFields,
-            List<List<Object>> candidates
-    ) {
-    }
 }
