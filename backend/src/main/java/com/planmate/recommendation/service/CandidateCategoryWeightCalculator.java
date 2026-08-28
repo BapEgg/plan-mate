@@ -1,7 +1,7 @@
 package com.planmate.recommendation.service;
 
+import com.planmate.recommendation.api.Interest;
 import com.planmate.recommendation.domain.CandidateSearchCategory;
-import com.planmate.trip.domain.TripInterest;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -10,12 +10,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class CandidateCategoryWeightCalculator {
 
-    public Map<CandidateSearchCategory, Integer> calculate(List<TripInterest> interests) {
+    public Map<CandidateSearchCategory, Integer> calculate(List<Interest> interests) {
         EnumMap<CandidateSearchCategory, Integer> weights = new EnumMap<>(CandidateSearchCategory.class);
         weights.put(CandidateSearchCategory.CORE_VISIT, 2);
         weights.put(CandidateSearchCategory.MEAL, 2);
 
-        for (TripInterest interest : interests) {
+        for (Interest interest : interests) {
             switch (interest) {
                 case FOOD -> weights.merge(CandidateSearchCategory.MEAL, 1, Integer::sum);
                 case SIGHTSEEING -> weights.merge(CandidateSearchCategory.CORE_VISIT, 1, Integer::sum);

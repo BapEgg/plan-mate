@@ -1,8 +1,8 @@
 package com.planmate.recommendation.service;
 
+import com.planmate.recommendation.api.Interest;
 import com.planmate.recommendation.domain.CandidateSearchCategory;
 import com.planmate.recommendation.domain.CandidateSearchQuery;
-import com.planmate.trip.domain.TripInterest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -14,18 +14,18 @@ public class CandidateSearchQueryFactory {
     public List<CandidateSearchQuery> create(
             String destinationName,
             Map<CandidateSearchCategory, Integer> weights,
-            List<TripInterest> interests
+            List<Interest> interests
     ) {
         List<CandidateSearchQuery> queries = new ArrayList<>();
         for (CandidateSearchCategory category : weights.keySet()) {
             queries.addAll(baseQueries(destinationName, category));
         }
-        if (interests.contains(TripInterest.FOOD)) {
+        if (interests.contains(Interest.FOOD)) {
             queries.add(new CandidateSearchQuery(CandidateSearchCategory.MEAL, destinationName + " 현지 음식"));
             queries.add(new CandidateSearchQuery(CandidateSearchCategory.MEAL, "local cuisine in " + destinationName));
             queries.add(new CandidateSearchQuery(CandidateSearchCategory.MEAL, "traditional restaurants in " + destinationName));
         }
-        if (interests.contains(TripInterest.SIGHTSEEING)) {
+        if (interests.contains(Interest.SIGHTSEEING)) {
             queries.add(new CandidateSearchQuery(CandidateSearchCategory.CORE_VISIT, destinationName + " 필수 방문 명소"));
             queries.add(new CandidateSearchQuery(CandidateSearchCategory.CORE_VISIT, "must-see landmarks in " + destinationName));
         }

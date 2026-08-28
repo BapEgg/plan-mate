@@ -1,5 +1,6 @@
 package com.planmate.itinerary.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -16,11 +17,24 @@ public record AiItineraryRequest(
         List<String> interests,
         Transportation transportation,
         Accommodation accommodation,
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        DailyWindow dailyWindow,
         List<MustVisitPlace> mustVisitPlaces,
         List<String> avoidConditions,
         String freeRequest,
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        List<Candidate> candidates,
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         List<String> rules
 ) {
+
+    public AiItineraryRequest {
+        interests = copyOrEmpty(interests);
+        mustVisitPlaces = copyOrEmpty(mustVisitPlaces);
+        avoidConditions = copyOrEmpty(avoidConditions);
+        candidates = copyOrEmpty(candidates);
+        rules = copyOrEmpty(rules);
+    }
 
     public record Destination(
             String placeId,
@@ -31,6 +45,10 @@ public record AiItineraryRequest(
             List<String> types,
             String primaryType
     ) {
+
+        public Destination {
+            types = copyOrEmpty(types);
+        }
     }
 
     public record Companion(
@@ -50,12 +68,20 @@ public record AiItineraryRequest(
             String level,
             List<String> includedItems
     ) {
+
+        public Budget {
+            includedItems = copyOrEmpty(includedItems);
+        }
     }
 
     public record Transportation(
             String primaryMode,
             List<String> secondaryModes
     ) {
+
+        public Transportation {
+            secondaryModes = copyOrEmpty(secondaryModes);
+        }
     }
 
     public record Accommodation(
@@ -64,6 +90,12 @@ public record AiItineraryRequest(
             String name,
             LocalTime checkInTime,
             LocalTime checkOutTime
+    ) {
+    }
+
+    public record DailyWindow(
+            LocalTime startTime,
+            LocalTime endTime
     ) {
     }
 
@@ -76,4 +108,26 @@ public record AiItineraryRequest(
     ) {
     }
 
+    public record Candidate(
+            int rank,
+            String placeId,
+            String displayName,
+            String formattedAddress,
+            Double latitude,
+            Double longitude,
+            String primaryType,
+            List<String> types,
+            List<String> openingPeriods,
+            boolean forcedMustVisit
+    ) {
+
+        public Candidate {
+            types = copyOrEmpty(types);
+            openingPeriods = copyOrEmpty(openingPeriods);
+        }
+    }
+
+    private static <T> List<T> copyOrEmpty(List<T> values) {
+        return values == null ? List.of() : List.copyOf(values);
+    }
 }

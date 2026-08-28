@@ -11,4 +11,8 @@ public class ItineraryException extends PlanMateException {
     public ItineraryException(ItineraryErrorCode errorCode, String message) {
         super(errorCode, message);
     }
+
+    public ItineraryException(ItineraryErrorCode errorCode, Throwable cause) {
+        super(errorCode, cause);
+    }
 }

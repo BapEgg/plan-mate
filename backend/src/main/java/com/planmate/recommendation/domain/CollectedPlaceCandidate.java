@@ -1,6 +1,6 @@
 package com.planmate.recommendation.domain;
 
-import com.planmate.place.dto.GeoPoint;
+import com.planmate.place.api.GeoPoint;
 import java.util.List;
 
 public record CollectedPlaceCandidate(
@@ -18,6 +18,12 @@ public record CollectedPlaceCandidate(
         double distanceMeters,
         double score
 ) {
+
+    public CollectedPlaceCandidate {
+        types = types == null ? List.of() : List.copyOf(types);
+        openingPeriods = openingPeriods == null ? List.of() : List.copyOf(openingPeriods);
+        sourceCategories = sourceCategories == null ? List.of() : List.copyOf(sourceCategories);
+    }
 
     public CollectedPlaceCandidate withScore(double score) {
         return new CollectedPlaceCandidate(

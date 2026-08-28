@@ -1,18 +1,15 @@
 package com.planmate.trip.service;
 
-import com.planmate.place.dto.GeoPoint;
-import com.planmate.place.dto.ResolvedDestination;
-import com.planmate.place.service.GooglePlacesService;
-import com.planmate.itinerary.service.ItineraryQueryService;
+import com.planmate.place.api.GeoPoint;
+import com.planmate.place.api.PlaceDetailsResolver;
+import com.planmate.place.api.ResolvedPlace;
+import com.planmate.trip.api.TripDetailTrip;
+import com.planmate.trip.api.TripDetailTripReader;
 import com.planmate.trip.domain.AccommodationMode;
 import com.planmate.trip.domain.MustVisitPlaceSnapshot;
 import com.planmate.trip.domain.ResolvedAccommodation;
 import com.planmate.trip.domain.ResolvedSchedulePreference;
 import com.planmate.trip.dto.TripCreateRequest;
-import com.planmate.trip.dto.TripDestinationResponse;
-import com.planmate.trip.dto.TripDetailResponse;
-import com.planmate.trip.dto.TripMemberResponse;
-import com.planmate.trip.dto.TripPlanningProfileResponse;
 import com.planmate.trip.dto.TripStatus;
 import com.planmate.trip.dto.TripSummaryResponse;
 import com.planmate.trip.entity.TripEntity;
@@ -30,14 +27,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class TripService {
+public class TripService implements TripDetailTripReader {
 
     private final TripRepository tripRepository;
     private final TripMemberRepository tripMemberRepository;
     private final TripPlanningProfileRepository tripPlanningProfileRepository;
     private final TripCreationPersistenceService tripCreationPersistenceService;
-    private final ItineraryQueryService itineraryQueryService;
-    private final GooglePlacesService googlePlacesService;
+    private final PlaceDetailsResolver placeDetailsResolver;
     private final SchedulePreferenceResolver schedulePreferenceResolver;
     private final Clock clock;
 
@@ -46,8 +42,7 @@ public class TripService {
             TripMemberRepository tripMemberRepository,
             TripPlanningProfileRepository tripPlanningProfileRepository,
             TripCreationPersistenceService tripCreationPersistenceService,
-            ItineraryQueryService itineraryQueryService,
-            GooglePlacesService googlePlacesService,
+            PlaceDetailsResolver placeDetailsResolver,
             SchedulePreferenceResolver schedulePreferenceResolver,
             Clock clock
     ) {
@@ -55,15 +50,14 @@ public class TripService {
         this.tripMemberRepository = tripMemberRepository;
         this.tripPlanningProfileRepository = tripPlanningProfileRepository;
         this.tripCreationPersistenceService = tripCreationPersistenceService;
-        this.itineraryQueryService = itineraryQueryService;
-        this.googlePlacesService = googlePlacesService;
+        this.placeDetailsResolver = placeDetailsResolver;
         this.schedulePreferenceResolver = schedulePreferenceResolver;
         this.clock = clock;
     }
 
     public TripSummaryResponse create(Long userId, TripCreateRequest request) {
         String destinationPlaceId = request.destinationPlaceId().trim();
-        ResolvedDestination destination = googlePlacesService.resolveDestination(destinationPlaceId, "ko");
+        ResolvedPlace destination = placeDetailsResolver.resolve(destinationPlaceId, "ko");
         ResolvedAccommodation accommodation = resolveAccommodation(request.accommodation());
         List<MustVisitPlaceSnapshot> mustVisitPlaces = resolveMustVisitPlaces(request.additionalRequest().mustVisitPlaceIds());
         ResolvedSchedulePreference schedulePreference = schedulePreferenceResolver.resolve(request.schedulePreference());
@@ -83,7 +77,7 @@ public class TripService {
         if (request.mode() != AccommodationMode.PLACE_SEARCH) {
             return null;
         }
-        ResolvedDestination place = googlePlacesService.resolveDestination(request.placeId().trim(), "ko");
+        ResolvedPlace place = placeDetailsResolver.resolve(request.placeId().trim(), "ko");
         GeoPoint location = place.location();
         if (location == null) {
             throw new InvalidTripRequestException("선택한 숙소의 위치 정보를 확인할 수 없습니다.");
@@ -104,7 +98,7 @@ public class TripService {
                 .map(String::trim)
                 .filter(placeId -> !placeId.isBlank())
                 .map(placeId -> {
-                    ResolvedDestination place = googlePlacesService.resolveDestination(placeId, "ko");
+                    ResolvedPlace place = placeDetailsResolver.resolve(placeId, "ko");
                     GeoPoint location = place.location();
                     if (location == null) {
                         throw new InvalidTripRequestException("꼭 가보고 싶은 장소의 위치 정보를 확인할 수 없습니다.");
@@ -134,21 +128,22 @@ public class TripService {
     }
 
     @Transactional(readOnly = true)
-    public TripDetailResponse getDetail(Long userId, Long tripId) {
+    @Override
+    public TripDetailTrip getAccessibleTrip(Long userId, Long tripId) {
         TripEntity trip = tripRepository.findAccessibleTrip(tripId, userId)
                 .orElseThrow(TripNotFoundException::new);
         List<TripMemberEntity> members = tripMemberRepository.findByTrip_IdOrderByCreatedAtAsc(trip.getId());
-        List<TripMemberResponse> memberResponses = members.stream()
-                .map(member -> new TripMemberResponse(
+        List<TripDetailTrip.Member> memberResponses = members.stream()
+                .map(member -> new TripDetailTrip.Member(
                         member.getUser().getId(),
                         member.getUser().getNickname(),
                         member.getUser().getProfileImageUrl(),
-                        member.getRole()
+                        member.getRole().name()
                 ))
                 .toList();
 
-        return new TripDetailResponse(
-                trip.getId().toString(),
+        return new TripDetailTrip(
+                trip.getId(),
                 trip.getTitle(),
                 trip.getDestination(),
                 trip.getDestinationPlaceId(),
@@ -158,11 +153,10 @@ public class TripService {
                 members.size(),
                 trip.getCreatedAt(),
                 memberResponses,
-                toDestinationResponse(trip),
+                toDestinationInfo(trip),
                 tripPlanningProfileRepository.findByTrip_Id(trip.getId())
-                        .map(this::toPlanningProfileResponse)
-                        .orElse(null),
-                itineraryQueryService.listTripItineraries(trip.getId())
+                        .map(this::toPlanningProfile)
+                        .orElse(null)
         );
     }
 
@@ -191,8 +185,8 @@ public class TripService {
         return TripStatus.PLANNING;
     }
 
-    private TripDestinationResponse toDestinationResponse(TripEntity trip) {
-        return new TripDestinationResponse(
+    private TripDetailTrip.DestinationInfo toDestinationInfo(TripEntity trip) {
+        return new TripDetailTrip.DestinationInfo(
                 trip.getDestinationPlaceId(),
                 trip.getDestination(),
                 trip.getDestinationFormattedAddress(),
@@ -207,8 +201,8 @@ public class TripService {
         );
     }
 
-    private TripPlanningProfileResponse toPlanningProfileResponse(TripPlanningProfileEntity profile) {
-        return new TripPlanningProfileResponse(
+    private TripDetailTrip.PlanningProfile toPlanningProfile(TripPlanningProfileEntity profile) {
+        return new TripDetailTrip.PlanningProfile(
                 profile.getCompanionCount(),
                 profile.getCompanionType(),
                 profile.isHasChildren(),

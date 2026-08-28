@@ -1,6 +1,6 @@
 package com.planmate.itinerary.dto;
 
-import com.planmate.place.dto.GeoPoint;
+import com.planmate.place.api.GeoPoint;
 
 public record ItineraryPlaceDisplayView(
         boolean resolved,

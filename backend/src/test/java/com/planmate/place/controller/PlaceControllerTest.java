@@ -7,9 +7,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.planmate.auth.security.JwtTokenProvider;
-import com.planmate.place.dto.PlaceAutocompleteItemResponse;
-import com.planmate.place.dto.PlaceAutocompleteResponse;
-import com.planmate.place.service.GooglePlacesService;
+import com.planmate.place.api.PlaceAutocompleteItem;
+import com.planmate.place.api.PlaceAutocompleteQuery;
+import com.planmate.place.api.PlaceAutocompleteResult;
+import com.planmate.place.api.PlaceDetailsResolver;
+import com.planmate.place.api.PlaceDisplayReader;
+import com.planmate.place.api.PlaceTextSearcher;
+import com.planmate.place.api.exception.InvalidPlaceIdException;
+import com.planmate.place.api.exception.PlaceProviderUnavailableException;
 import com.planmate.user.domain.UserRole;
 import com.planmate.user.entity.UserEntity;
 import com.planmate.user.repository.UserRepository;
@@ -40,20 +45,24 @@ class PlaceControllerTest {
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
-    @MockitoBean
-    private GooglePlacesService googlePlacesService;
+    @MockitoBean(extraInterfaces = {
+            PlaceDetailsResolver.class,
+            PlaceDisplayReader.class,
+            PlaceTextSearcher.class
+    })
+    private PlaceAutocompleteQuery placeAutocompleteQuery;
 
     @Test
     void autocompleteReturnsNormalizedPlaces() throws Exception {
         UserEntity user = createUser();
         String accessToken = accessToken(user);
-        given(googlePlacesService.autocomplete(eq("강릉"), eq("ko")))
-                .willReturn(new PlaceAutocompleteResponse(List.of(
-                        new PlaceAutocompleteItemResponse(
+        given(placeAutocompleteQuery.autocomplete(eq("Gangneung"), eq("ko")))
+                .willReturn(new PlaceAutocompleteResult(List.of(
+                        new PlaceAutocompleteItem(
                                 "place-gangneung",
-                                "강릉",
-                                "강원특별자치도, 대한민국",
-                                "강릉, 강원특별자치도, 대한민국",
+                                "Gangneung",
+                                "Gangwon-do, Korea",
+                                "Gangneung, Gangwon-do, Korea",
                                 List.of("locality", "political"),
                                 "CITY"
                         )
@@ -64,16 +73,16 @@ class PlaceControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "query": "강릉",
+                                  "query": "Gangneung",
                                   "languageCode": "ko"
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items.length()").value(1))
                 .andExpect(jsonPath("$.items[0].placeId").value("place-gangneung"))
-                .andExpect(jsonPath("$.items[0].mainText").value("강릉"))
-                .andExpect(jsonPath("$.items[0].secondaryText").value("강원특별자치도, 대한민국"))
-                .andExpect(jsonPath("$.items[0].displayText").value("강릉, 강원특별자치도, 대한민국"))
+                .andExpect(jsonPath("$.items[0].mainText").value("Gangneung"))
+                .andExpect(jsonPath("$.items[0].secondaryText").value("Gangwon-do, Korea"))
+                .andExpect(jsonPath("$.items[0].displayText").value("Gangneung, Gangwon-do, Korea"))
                 .andExpect(jsonPath("$.items[0].types[0]").value("locality"))
                 .andExpect(jsonPath("$.items[0].searchScope").value("CITY"));
     }
@@ -82,13 +91,13 @@ class PlaceControllerTest {
     void autocompletePlaceInDestinationReturnsDestinationBiasedPlaces() throws Exception {
         UserEntity user = createUser();
         String accessToken = accessToken(user);
-        given(googlePlacesService.autocompleteInDestination(eq("후시미이나리"), eq("place-kyoto"), eq("ko")))
-                .willReturn(new PlaceAutocompleteResponse(List.of(
-                        new PlaceAutocompleteItemResponse(
+        given(placeAutocompleteQuery.autocompleteInDestination(eq("Fushimi Inari"), eq("place-kyoto"), eq("ko")))
+                .willReturn(new PlaceAutocompleteResult(List.of(
+                        new PlaceAutocompleteItem(
                                 "place-fushimi-inari",
-                                "후시미이나리 신사",
-                                "교토, 일본",
-                                "후시미이나리 신사, 교토, 일본",
+                                "Fushimi Inari Shrine",
+                                "Kyoto, Japan",
+                                "Fushimi Inari Shrine, Kyoto, Japan",
                                 List.of("tourist_attraction", "point_of_interest", "establishment"),
                                 "PLACE"
                         )
@@ -99,7 +108,7 @@ class PlaceControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "query": "후시미이나리",
+                                  "query": "Fushimi Inari",
                                   "destinationPlaceId": "place-kyoto",
                                   "languageCode": "ko"
                                 }
@@ -107,11 +116,54 @@ class PlaceControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items.length()").value(1))
                 .andExpect(jsonPath("$.items[0].placeId").value("place-fushimi-inari"))
-                .andExpect(jsonPath("$.items[0].mainText").value("후시미이나리 신사"))
-                .andExpect(jsonPath("$.items[0].secondaryText").value("교토, 일본"))
-                .andExpect(jsonPath("$.items[0].displayText").value("후시미이나리 신사, 교토, 일본"))
+                .andExpect(jsonPath("$.items[0].mainText").value("Fushimi Inari Shrine"))
+                .andExpect(jsonPath("$.items[0].secondaryText").value("Kyoto, Japan"))
+                .andExpect(jsonPath("$.items[0].displayText").value("Fushimi Inari Shrine, Kyoto, Japan"))
                 .andExpect(jsonPath("$.items[0].types[0]").value("tourist_attraction"))
                 .andExpect(jsonPath("$.items[0].searchScope").value("PLACE"));
+    }
+
+    @Test
+    void autocompleteReturnsInvalidPlaceIdError() throws Exception {
+        UserEntity user = createUser();
+        String accessToken = accessToken(user);
+        given(placeAutocompleteQuery.autocompleteAccommodation(eq("Hotel"), eq("bad-place"), eq("ko")))
+                .willThrow(new InvalidPlaceIdException());
+
+        mockMvc.perform(post("/api/places/accommodations/autocomplete")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "query": "Hotel",
+                                  "destinationPlaceId": "bad-place",
+                                  "languageCode": "ko"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_PLACE_ID"))
+                .andExpect(jsonPath("$.message").value("Invalid destination place id."));
+    }
+
+    @Test
+    void autocompleteReturnsProviderUnavailableError() throws Exception {
+        UserEntity user = createUser();
+        String accessToken = accessToken(user);
+        given(placeAutocompleteQuery.autocomplete(eq("Gangneung"), eq("ko")))
+                .willThrow(new PlaceProviderUnavailableException());
+
+        mockMvc.perform(post("/api/places/autocomplete")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "query": "Gangneung",
+                                  "languageCode": "ko"
+                                }
+                                """))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("PLACE_PROVIDER_UNAVAILABLE"))
+                .andExpect(jsonPath("$.message").value("External place service is unavailable."));
     }
 
     private UserEntity createUser() {

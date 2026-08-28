@@ -1,8 +1,9 @@
 package com.planmate.itinerary.controller;
 
 import com.planmate.auth.security.AuthenticatedUser;
+import com.planmate.itinerary.api.validation.AiItineraryValidationReport;
+import com.planmate.itinerary.dto.AiItineraryDraft;
 import com.planmate.itinerary.dto.AiItineraryRequest;
-import com.planmate.itinerary.dto.GroundedItineraryDraft;
 import com.planmate.itinerary.dto.ItineraryGenerationCreateResponse;
 import com.planmate.itinerary.dto.ItineraryGenerationDetailResponse;
 import com.planmate.itinerary.service.AiItineraryRequestService;
@@ -89,9 +90,19 @@ public class ManualItineraryGenerationController {
             @AuthenticationPrincipal AuthenticatedUser user,
             @PathVariable Long tripId,
             @PathVariable Long generationId,
-            @Valid @RequestBody GroundedItineraryDraft response
+            @Valid @RequestBody AiItineraryDraft response
     ) {
         manualItineraryResponseService.submit(user.userId(), tripId, generationId, response);
         return generationService.getDetail(user.userId(), tripId, generationId);
+    }
+
+    @PostMapping("/{generationId}/manual-response/validate")
+    public AiItineraryValidationReport validateManualResponse(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @PathVariable Long tripId,
+            @PathVariable Long generationId,
+            @Valid @RequestBody AiItineraryDraft response
+    ) {
+        return manualItineraryResponseService.validate(user.userId(), tripId, generationId, response);
     }
 }

@@ -2,7 +2,6 @@ package com.planmate.trip.controller;
 
 import com.planmate.auth.security.AuthenticatedUser;
 import com.planmate.trip.dto.TripCreateRequest;
-import com.planmate.trip.dto.TripDetailResponse;
 import com.planmate.trip.dto.TripSummaryResponse;
 import com.planmate.trip.service.TripService;
 import jakarta.validation.Valid;
@@ -11,7 +10,6 @@ import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -41,14 +39,6 @@ public class TripController {
     @GetMapping
     public List<TripSummaryResponse> listMine(@AuthenticationPrincipal AuthenticatedUser user) {
         return tripService.listMine(user.userId());
-    }
-
-    @GetMapping("/{tripId}")
-    public TripDetailResponse getDetail(
-            @AuthenticationPrincipal AuthenticatedUser user,
-            @PathVariable Long tripId
-    ) {
-        return tripService.getDetail(user.userId(), tripId);
     }
 
 }

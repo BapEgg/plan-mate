@@ -110,6 +110,12 @@ management:
         include: health,info,prometheus
 
 app:
+  outbox:
+    retention:
+      enabled: ${APP_OUTBOX_RETENTION_ENABLED:true}
+      retention: ${APP_OUTBOX_RETENTION:7d}
+      cleanup-interval: ${APP_OUTBOX_CLEANUP_INTERVAL:1h}
+      batch-size: ${APP_OUTBOX_CLEANUP_BATCH_SIZE:1000}
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:[*],http://127.0.0.1:[*]}
   frontend:
@@ -127,11 +133,17 @@ app:
     places:
       api-key: ${GOOGLE_PLACES_API_KEY:}
       text-search-radius-meters: ${GOOGLE_PLACES_TEXT_SEARCH_RADIUS_METERS:30000}
+    routes:
+      api-key: ${GOOGLE_ROUTES_API_KEY:}
   itinerary:
     manual-handoff-enabled: ${APP_ITINERARY_MANUAL_HANDOFF_ENABLED:false}
     generation-worker:
       enabled: ${APP_ITINERARY_GENERATION_WORKER_ENABLED:true}
       max-attempts: ${APP_ITINERARY_GENERATION_WORKER_MAX_ATTEMPTS:3}
+      processing-lease: ${APP_ITINERARY_GENERATION_WORKER_PROCESSING_LEASE:15m}
+      stale-recovery-enabled: ${APP_ITINERARY_GENERATION_WORKER_STALE_RECOVERY_ENABLED:true}
+      recovery-scan-interval: ${APP_ITINERARY_GENERATION_WORKER_RECOVERY_SCAN_INTERVAL:1m}
+      recovery-batch-size: ${APP_ITINERARY_GENERATION_WORKER_RECOVERY_BATCH_SIZE:50}
       exchange: ${APP_ITINERARY_GENERATION_EXCHANGE:planmate.itinerary}
       queue: ${APP_ITINERARY_GENERATION_QUEUE:planmate.itinerary.generation.requested}
       routing-key: ${APP_ITINERARY_GENERATION_ROUTING_KEY:itinerary.generation.requested}

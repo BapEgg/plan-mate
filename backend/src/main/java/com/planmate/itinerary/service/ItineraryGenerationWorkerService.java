@@ -1,6 +1,5 @@
 package com.planmate.itinerary.service;
 
-import com.planmate.common.exception.PlanMateException;
 import com.planmate.itinerary.config.ItineraryGenerationWorkerProperties;
 import com.planmate.itinerary.messaging.ItineraryGenerationRequestedMessage;
 import com.planmate.itinerary.metrics.ItineraryGenerationWorkerMetrics;
@@ -14,69 +13,83 @@ public class ItineraryGenerationWorkerService {
     private final ItineraryGenerationService generationService;
     private final ItineraryGenerationWorkerProperties properties;
     private final ItineraryGenerationWorkerMetrics metrics;
+    private final WorkerFailureClassifier failureClassifier;
 
     public ItineraryGenerationWorkerService(
             ItineraryGenerationPersistenceService persistenceService,
             ItineraryGenerationService generationService,
             ItineraryGenerationWorkerProperties properties,
-            ItineraryGenerationWorkerMetrics metrics
+            ItineraryGenerationWorkerMetrics metrics,
+            WorkerFailureClassifier failureClassifier
     ) {
         this.persistenceService = persistenceService;
         this.generationService = generationService;
         this.properties = properties;
         this.metrics = metrics;
+        this.failureClassifier = failureClassifier;
     }
 
-    public void process(ItineraryGenerationRequestedMessage message) {
+    public void process(ItineraryGenerationRequestedMessage message, boolean redelivered) {
         Timer.Sample sample = metrics.start();
         String result = ItineraryGenerationWorkerMetrics.RESULT_FAILED;
         try {
             validate(message);
-            boolean shouldProcess = persistenceService.markCollectingIfCreated(
-                    message.userId(),
+            ItineraryGenerationPersistenceService.CollectionClaim claim = persistenceService.claimCollection(
                     message.tripId(),
-                    message.generationId()
+                    message.generationId(),
+                    redelivered,
+                    properties.getProcessingLease()
             );
-            if (!shouldProcess) {
+            if (!claim.claimed()) {
                 result = ItineraryGenerationWorkerMetrics.RESULT_SKIPPED;
                 return;
             }
 
-            collectCandidatesWithRetry(message);
-            result = ItineraryGenerationWorkerMetrics.RESULT_SUCCESS;
+            result = collectCandidatesWithRetry(message, claim.claimVersion())
+                    ? ItineraryGenerationWorkerMetrics.RESULT_SUCCESS
+                    : ItineraryGenerationWorkerMetrics.RESULT_SKIPPED;
         } finally {
             metrics.recordProcessed(result, sample);
         }
     }
 
-    private void collectCandidatesWithRetry(ItineraryGenerationRequestedMessage message) {
+    public void process(ItineraryGenerationRequestedMessage message) {
+        process(message, false);
+    }
+
+    private boolean collectCandidatesWithRetry(ItineraryGenerationRequestedMessage message, long claimVersion) {
         RuntimeException lastFailure = null;
+        WorkerFailureClassifier.WorkerFailure classifiedFailure = null;
         for (int attempt = 1; attempt <= properties.getMaxAttempts(); attempt++) {
             try {
-                generationService.collectCandidates(message.userId(), message.tripId(), message.generationId());
-                return;
+                return generationService.collectCandidates(message.tripId(), message.generationId(), claimVersion);
             } catch (RuntimeException exception) {
                 lastFailure = exception;
+                classifiedFailure = failureClassifier.classify(exception);
+                if (!classifiedFailure.retryable()) {
+                    break;
+                }
                 if (attempt < properties.getMaxAttempts()) {
                     metrics.recordRetry();
                 }
             }
         }
 
-        persistenceService.markFailed(message.generationId(), safeFailureReason(lastFailure));
-        throw lastFailure;
+        boolean failed = persistenceService.markFailed(
+                message.generationId(),
+                claimVersion,
+                classifiedFailure.reason()
+        );
+        if (failed) {
+            throw lastFailure;
+        }
+        return false;
     }
 
     private void validate(ItineraryGenerationRequestedMessage message) {
-        if (message.generationId() == null || message.tripId() == null || message.userId() == null) {
-            throw new IllegalArgumentException("itinerary generation message must include generationId, tripId, and userId");
+        if (message.generationId() == null || message.tripId() == null) {
+            throw new IllegalArgumentException("itinerary generation message must include generationId and tripId");
         }
     }
 
-    private String safeFailureReason(RuntimeException exception) {
-        if (exception instanceof PlanMateException planMateException) {
-            return planMateException.code();
-        }
-        return exception.getClass().getSimpleName();
-    }
 }

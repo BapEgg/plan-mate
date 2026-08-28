@@ -133,6 +133,10 @@ docker compose -f compose.local.yaml down
 docker compose -f compose.local.yaml up -d postgres redis rabbitmq
 ```
 
+## Outbox Retention
+
+`outbox_events`는 Debezium CDC의 원본 row를 기본 7일간 보존한 뒤 `created_at` 순서로 최대 1,000건씩 삭제합니다. 보존 기간, 실행 주기와 batch 크기는 애플리케이션 설정으로 변경할 수 있습니다. Outbox Event Router는 DELETE를 business event로 전달하지 않으며, 애플리케이션 DB에는 `processed`나 `published_at` 같은 전달 완료 상태를 별도로 기록하지 않습니다. Debezium offset과 PostgreSQL replication slot 운영은 이 cleanup과 별도 책임입니다.
+
 ## Monitoring
 
 4차 모니터링 구성은 `monitoring` profile로 분리되어 있습니다. Prometheus는 로컬에서

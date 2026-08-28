@@ -6,9 +6,7 @@ import com.planmate.itinerary.entity.ItineraryDayEntity;
 import com.planmate.itinerary.entity.ItineraryEntity;
 import com.planmate.itinerary.entity.ItineraryItemEntity;
 import com.planmate.itinerary.repository.ItineraryRepository;
-import com.planmate.trip.entity.TripEntity;
-import com.planmate.trip.exception.TripNotFoundException;
-import com.planmate.trip.repository.TripRepository;
+import com.planmate.trip.api.TripAccessChecker;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -18,25 +16,24 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ItineraryPlaceViewService {
 
-    private final TripRepository tripRepository;
+    private final TripAccessChecker tripAccessChecker;
     private final ItineraryRepository itineraryRepository;
     private final PlaceDisplayResolver placeDisplayResolver;
 
     public ItineraryPlaceViewService(
-            TripRepository tripRepository,
+            TripAccessChecker tripAccessChecker,
             ItineraryRepository itineraryRepository,
             PlaceDisplayResolver placeDisplayResolver
     ) {
-        this.tripRepository = tripRepository;
+        this.tripAccessChecker = tripAccessChecker;
         this.itineraryRepository = itineraryRepository;
         this.placeDisplayResolver = placeDisplayResolver;
     }
 
     @Transactional(readOnly = true)
     public List<ItineraryPlaceView> listLatestItineraryPlaceViews(Long userId, Long tripId, Integer dayNo) {
-        TripEntity trip = tripRepository.findAccessibleTrip(tripId, userId)
-                .orElseThrow(TripNotFoundException::new);
-        ItineraryEntity itinerary = itineraryRepository.findFirstByTrip_IdOrderByCreatedAtDesc(trip.getId())
+        tripAccessChecker.checkAccessible(userId, tripId);
+        ItineraryEntity itinerary = itineraryRepository.findFirstByTripIdOrderByCreatedAtDesc(tripId)
                 .orElse(null);
         if (itinerary == null) {
             return List.of();

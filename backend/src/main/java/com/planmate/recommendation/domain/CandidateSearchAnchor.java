@@ -1,8 +1,8 @@
 package com.planmate.recommendation.domain;
 
-import com.planmate.place.dto.GeoPoint;
-import com.planmate.place.dto.GeoViewport;
-import com.planmate.place.dto.PlaceSearchArea;
+import com.planmate.place.api.GeoPoint;
+import com.planmate.place.api.GeoViewport;
+import com.planmate.place.api.PlaceSearchArea;
 
 public record CandidateSearchAnchor(
         SearchAnchorType type,

@@ -1,5 +1,6 @@
 package com.planmate.itinerary.config;
 
+import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -15,6 +16,10 @@ public class ItineraryGenerationWorkerProperties {
     private String deadLetterExchange = "planmate.itinerary.dlx";
     private String deadLetterQueue = "planmate.itinerary.generation.requested.dlq";
     private String deadLetterRoutingKey = "itinerary.generation.requested.dlq";
+    private Duration processingLease = Duration.ofMinutes(15);
+    private boolean staleRecoveryEnabled = true;
+    private Duration recoveryScanInterval = Duration.ofMinutes(1);
+    private int recoveryBatchSize = 50;
 
     public boolean isEnabled() {
         return enabled;
@@ -78,5 +83,43 @@ public class ItineraryGenerationWorkerProperties {
 
     public void setDeadLetterRoutingKey(String deadLetterRoutingKey) {
         this.deadLetterRoutingKey = deadLetterRoutingKey;
+    }
+
+    public Duration getProcessingLease() {
+        return processingLease;
+    }
+
+    public void setProcessingLease(Duration processingLease) {
+        if (processingLease == null || processingLease.isZero() || processingLease.isNegative()) {
+            throw new IllegalArgumentException("processingLease must be positive");
+        }
+        this.processingLease = processingLease;
+    }
+
+    public boolean isStaleRecoveryEnabled() {
+        return staleRecoveryEnabled;
+    }
+
+    public void setStaleRecoveryEnabled(boolean staleRecoveryEnabled) {
+        this.staleRecoveryEnabled = staleRecoveryEnabled;
+    }
+
+    public Duration getRecoveryScanInterval() {
+        return recoveryScanInterval;
+    }
+
+    public void setRecoveryScanInterval(Duration recoveryScanInterval) {
+        if (recoveryScanInterval == null || recoveryScanInterval.isZero() || recoveryScanInterval.isNegative()) {
+            throw new IllegalArgumentException("recoveryScanInterval must be positive");
+        }
+        this.recoveryScanInterval = recoveryScanInterval;
+    }
+
+    public int getRecoveryBatchSize() {
+        return recoveryBatchSize;
+    }
+
+    public void setRecoveryBatchSize(int recoveryBatchSize) {
+        this.recoveryBatchSize = Math.max(1, recoveryBatchSize);
     }
 }

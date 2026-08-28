@@ -1,7 +1,7 @@
 package com.planmate.recommendation.service;
 
-import com.planmate.place.dto.GeoPoint;
-import com.planmate.place.dto.PlaceSearchCandidate;
+import com.planmate.place.api.GeoPoint;
+import com.planmate.place.api.PlaceSearchCandidate;
 import com.planmate.recommendation.domain.CandidateSearchCategory;
 import com.planmate.recommendation.domain.CollectedPlaceCandidate;
 import java.util.ArrayList;

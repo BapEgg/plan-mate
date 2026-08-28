@@ -14,17 +14,32 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.planmate.auth.security.JwtTokenProvider;
-import com.planmate.place.dto.GeoPoint;
-import com.planmate.place.dto.GeoViewport;
-import com.planmate.place.dto.ResolvedDestination;
-import com.planmate.place.service.GooglePlacesService;
+import com.planmate.itinerary.entity.ItineraryDayEntity;
+import com.planmate.itinerary.entity.ItineraryEntity;
+import com.planmate.itinerary.entity.ItineraryGenerationEntity;
+import com.planmate.itinerary.entity.ItineraryItemCreatedSource;
+import com.planmate.itinerary.entity.ItineraryItemEntity;
+import com.planmate.itinerary.repository.ItineraryDayRepository;
+import com.planmate.itinerary.repository.ItineraryGenerationRepository;
+import com.planmate.itinerary.repository.ItineraryItemRepository;
+import com.planmate.itinerary.repository.ItineraryRepository;
+import com.planmate.place.api.GeoPoint;
+import com.planmate.place.api.GeoViewport;
+import com.planmate.place.api.PlaceAutocompleteQuery;
+import com.planmate.place.api.PlaceDetailsResolver;
+import com.planmate.place.api.PlaceDisplayReader;
+import com.planmate.place.api.PlaceTextSearcher;
+import com.planmate.place.api.ResolvedPlace;
 import com.planmate.trip.domain.TripInterest;
+import com.planmate.trip.entity.TripEntity;
 import com.planmate.trip.entity.TripMemberRole;
 import com.planmate.trip.repository.TripMemberRepository;
 import com.planmate.trip.repository.TripPlanningProfileRepository;
+import com.planmate.trip.repository.TripRepository;
 import com.planmate.user.domain.UserRole;
 import com.planmate.user.entity.UserEntity;
 import com.planmate.user.repository.UserRepository;
+import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -63,14 +78,36 @@ class TripControllerTest {
     private TripPlanningProfileRepository tripPlanningProfileRepository;
 
     @Autowired
+    private TripRepository tripRepository;
+
+    @Autowired
+    private ItineraryGenerationRepository itineraryGenerationRepository;
+
+    @Autowired
+    private ItineraryRepository itineraryRepository;
+
+    @Autowired
+    private ItineraryDayRepository itineraryDayRepository;
+
+    @Autowired
+    private ItineraryItemRepository itineraryItemRepository;
+
+    @Autowired
+    private EntityManager entityManager;
+
+    @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
-    @MockitoBean
-    private GooglePlacesService googlePlacesService;
+    @MockitoBean(extraInterfaces = {
+            PlaceAutocompleteQuery.class,
+            PlaceDisplayReader.class,
+            PlaceTextSearcher.class
+    })
+    private PlaceDetailsResolver placeDetailsResolver;
 
     @BeforeEach
     void setUp() {
-        given(googlePlacesService.resolveDestination(anyString(), any()))
+        given(placeDetailsResolver.resolve(anyString(), any()))
                 .willAnswer(invocation -> resolvedDestination(invocation.getArgument(0)));
     }
 
@@ -183,7 +220,7 @@ class TripControllerTest {
 
     @Test
     void createTripRejectsAccommodationWithoutLocation() throws Exception {
-        given(googlePlacesService.resolveDestination(eq("no-location-place"), any()))
+        given(placeDetailsResolver.resolve(eq("no-location-place"), any()))
                 .willReturn(resolvedDestinationWithoutLocation("no-location-place"));
         UserEntity user = createUser();
         String accessToken = accessToken(user);
@@ -333,6 +370,53 @@ class TripControllerTest {
     }
 
     @Test
+    void getDetailReturnsLatestItineraryOnly() throws Exception {
+        UserEntity user = createUser();
+        String accessToken = accessToken(user);
+        String tripId = createTrip(
+                accessToken,
+                "Latest itinerary trip",
+                "Tokyo",
+                LocalDate.now().plusDays(3),
+                LocalDate.now().plusDays(5)
+        );
+        TripEntity trip = tripRepository.findById(Long.valueOf(tripId)).orElseThrow();
+        ItineraryEntity oldItinerary = createItinerary(trip, Instant.parse("2026-08-01T00:00:00Z"), "old-place");
+        ItineraryEntity latestItinerary = createItinerary(trip, Instant.parse("2026-08-02T00:00:00Z"), "new-place");
+        Long latestItineraryId = latestItinerary.getId();
+        Long latestGenerationId = latestItinerary.getGeneration().getId();
+
+        assertThat(itineraryRepository.findByTripIdOrderByCreatedAtDesc(Long.valueOf(tripId)))
+                .extracting(ItineraryEntity::getId)
+                .containsExactly(latestItineraryId, oldItinerary.getId());
+        assertThat(itineraryRepository.findFirstByTripIdOrderByCreatedAtDesc(Long.valueOf(tripId)))
+                .isPresent()
+                .get()
+                .extracting(ItineraryEntity::getId)
+                .isEqualTo(latestItineraryId);
+        assertThat(itineraryGenerationRepository.findFirstByTripIdOrderByCreatedAtDesc(Long.valueOf(tripId)))
+                .isPresent()
+                .get()
+                .extracting(ItineraryGenerationEntity::getId)
+                .isEqualTo(latestGenerationId);
+
+        entityManager.flush();
+        entityManager.clear();
+
+        mockMvc.perform(get("/api/trips/{tripId}", tripId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.itineraries.length()").value(1))
+                .andExpect(jsonPath("$.itineraries[0].id").value(latestItineraryId.intValue()))
+                .andExpect(jsonPath("$.itineraries[0].generationId").value(latestGenerationId.intValue()))
+                .andExpect(jsonPath("$.itineraries[0].days.length()").value(1))
+                .andExpect(jsonPath("$.itineraries[0].days[0].day").value(1))
+                .andExpect(jsonPath("$.itineraries[0].days[0].items.length()").value(1))
+                .andExpect(jsonPath("$.itineraries[0].days[0].items[0].placeId").value("new-place"))
+                .andExpect(jsonPath("$.itineraries[0].days[0].items[0].createdSource").value("MANUAL_EDIT"));
+    }
+
+    @Test
     void getDetailReturnsNotFoundForNonMember() throws Exception {
         UserEntity owner = createUser();
         UserEntity other = createUser();
@@ -384,6 +468,30 @@ class TripControllerTest {
 
         JsonNode response = objectMapper.readTree(result.getResponse().getContentAsString());
         return response.get("id").asText();
+    }
+
+    private ItineraryEntity createItinerary(TripEntity trip, Instant createdAt, String placeId) {
+        ItineraryGenerationEntity generation = itineraryGenerationRepository.save(
+                ItineraryGenerationEntity.create(trip.getId(), "test", createdAt)
+        );
+        generation.markCollecting(createdAt);
+        generation.markReady(createdAt);
+        generation.markCompleted(createdAt);
+        ItineraryEntity itinerary = itineraryRepository.save(
+                ItineraryEntity.create(generation, createdAt)
+        );
+        ItineraryDayEntity day = itineraryDayRepository.save(
+                ItineraryDayEntity.create(itinerary, 1, trip.getStartDate())
+        );
+        itineraryItemRepository.save(ItineraryItemEntity.create(
+                day,
+                1,
+                placeId,
+                LocalTime.of(9, 0),
+                60,
+                ItineraryItemCreatedSource.MANUAL_EDIT
+        ));
+        return itinerary;
     }
 
     private String tripRequestJson(
@@ -486,8 +594,8 @@ class TripControllerTest {
                 """.formatted(startValue, endValue);
     }
 
-    private ResolvedDestination resolvedDestination(String placeId) {
-        return new ResolvedDestination(
+    private ResolvedPlace resolvedDestination(String placeId) {
+        return new ResolvedPlace(
                 placeId,
                 "Resolved " + placeId,
                 "Resolved address",
@@ -498,8 +606,8 @@ class TripControllerTest {
         );
     }
 
-    private ResolvedDestination resolvedDestinationWithoutLocation(String placeId) {
-        return new ResolvedDestination(
+    private ResolvedPlace resolvedDestinationWithoutLocation(String placeId) {
+        return new ResolvedPlace(
                 placeId,
                 "Resolved " + placeId,
                 "Resolved address",

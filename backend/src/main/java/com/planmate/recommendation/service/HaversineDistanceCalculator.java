@@ -1,6 +1,6 @@
 package com.planmate.recommendation.service;
 
-import com.planmate.place.dto.GeoPoint;
+import com.planmate.place.api.GeoPoint;
 import org.springframework.stereotype.Component;
 
 @Component

@@ -1,31 +1,23 @@
 package com.planmate.recommendation.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import com.planmate.place.dto.GeoPoint;
-import com.planmate.place.dto.GeoViewport;
-import com.planmate.place.dto.PlaceSearchCandidate;
-import com.planmate.place.dto.PlaceTextSearchRequest;
-import com.planmate.place.dto.PlaceTextSearchResponse;
-import com.planmate.place.dto.ResolvedDestination;
-import com.planmate.place.service.GooglePlacesService;
-import com.planmate.recommendation.domain.CollectedPlaceCandidate;
+import com.planmate.place.api.GeoPoint;
+import com.planmate.place.api.PlaceSearchCandidate;
+import com.planmate.place.api.PlaceTextSearchQuery;
+import com.planmate.place.api.PlaceTextSearchResult;
+import com.planmate.place.api.PlaceTextSearcher;
+import com.planmate.recommendation.api.CandidateRecommendationRequest;
+import com.planmate.recommendation.api.Interest;
+import com.planmate.recommendation.api.RecommendedPlaceCandidate;
 import com.planmate.recommendation.domain.PlaceTypePolicy;
 import com.planmate.recommendation.domain.PlaceTypePolicyRule;
-import com.planmate.trip.domain.AccommodationMode;
-import com.planmate.trip.domain.MustVisitPlaceSnapshot;
-import com.planmate.trip.domain.ResolvedAccommodation;
-import com.planmate.trip.domain.ResolvedSchedulePreference;
-import com.planmate.trip.dto.TripCreateRequest;
-import com.planmate.trip.entity.TripPlanningProfileEntity;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -34,92 +26,111 @@ import org.junit.jupiter.api.Test;
 class PlaceCandidateCollectionServiceTest {
 
     @Test
-    void undecidedAccommodationUsesDestinationSearchArea() {
-        GooglePlacesService googlePlacesService = mock(GooglePlacesService.class);
-        List<PlaceTextSearchRequest> requests = new ArrayList<>();
-        given(googlePlacesService.searchText(any()))
+    void missingAccommodationUsesDestinationSearchArea() {
+        PlaceTextSearcher placeTextSearcher = mock(PlaceTextSearcher.class);
+        List<PlaceTextSearchQuery> requests = new ArrayList<>();
+        given(placeTextSearcher.searchText(any()))
                 .willAnswer(invocation -> {
-                    PlaceTextSearchRequest request = invocation.getArgument(0);
+                    PlaceTextSearchQuery request = invocation.getArgument(0);
                     requests.add(request);
-                    return new PlaceTextSearchResponse(List.of(), null);
+                    return new PlaceTextSearchResult(List.of(), null);
                 });
-        PlaceCandidateCollectionService service = service(googlePlacesService);
-        ResolvedDestination destination = destination();
+        PlaceCandidateCollectionService service = service(placeTextSearcher);
 
-        service.collect(destination, profile(AccommodationMode.UNDECIDED, null));
+        service.recommend(request(null, List.of(), List.of(Interest.FOOD)));
 
         assertThat(requests).isNotEmpty();
-        assertThat(requests.getFirst().searchArea().center()).isEqualTo(destination.location());
-        assertThat(requests.getFirst().searchArea().viewport()).isEqualTo(destination.viewport());
+        assertThat(requests.getFirst().searchArea().center()).isEqualTo(new GeoPoint(35.0116, 135.7681));
+        assertThat(requests.getFirst().searchArea().viewport()).isNotNull();
     }
 
     @Test
     void selectedAccommodationUsesAccommodationCircleButDestinationQuery() {
-        GooglePlacesService googlePlacesService = mock(GooglePlacesService.class);
-        List<PlaceTextSearchRequest> requests = new ArrayList<>();
-        given(googlePlacesService.searchText(any()))
+        PlaceTextSearcher placeTextSearcher = mock(PlaceTextSearcher.class);
+        List<PlaceTextSearchQuery> requests = new ArrayList<>();
+        given(placeTextSearcher.searchText(any()))
                 .willAnswer(invocation -> {
-                    PlaceTextSearchRequest request = invocation.getArgument(0);
+                    PlaceTextSearchQuery request = invocation.getArgument(0);
                     requests.add(request);
-                    return new PlaceTextSearchResponse(List.of(
+                    return new PlaceTextSearchResult(List.of(
                             candidate("candidate-1", new GeoPoint(33.5902, 130.4206))
                     ), null);
                 });
-        PlaceCandidateCollectionService service = service(googlePlacesService);
+        PlaceCandidateCollectionService service = service(placeTextSearcher);
 
-        List<CollectedPlaceCandidate> candidates = service.collect(
-                destination(),
-                profile(AccommodationMode.PLACE_SEARCH, new ResolvedAccommodation(
-                        "accommodation-place",
-                        "Dormy Inn",
-                        "address",
-                        33.5902,
-                        130.4206,
-                        List.of("lodging"),
-                        "lodging"
-                ))
-        );
+        List<RecommendedPlaceCandidate> candidates = service.recommend(request(
+                new CandidateRecommendationRequest.Accommodation(
+                        new CandidateRecommendationRequest.Location(33.5902, 130.4206)
+                ),
+                List.of(),
+                List.of(Interest.FOOD)
+        ));
 
         assertThat(requests).isNotEmpty();
         assertThat(requests.getFirst().textQuery()).contains("Kyoto");
         assertThat(requests.getFirst().searchArea().center()).isEqualTo(new GeoPoint(33.5902, 130.4206));
         assertThat(requests.getFirst().searchArea().viewport()).isNull();
         assertThat(candidates).hasSize(1);
+        assertThat(candidates.getFirst().rank()).isEqualTo(1);
         assertThat(candidates.getFirst().distanceMeters()).isEqualTo(0.0);
     }
 
     @Test
     void mustVisitPlacesAreForcedToCandidateFront() {
-        GooglePlacesService googlePlacesService = mock(GooglePlacesService.class);
-        given(googlePlacesService.searchText(any()))
-                .willReturn(new PlaceTextSearchResponse(List.of(
+        PlaceTextSearcher placeTextSearcher = mock(PlaceTextSearcher.class);
+        given(placeTextSearcher.searchText(any()))
+                .willReturn(new PlaceTextSearchResult(List.of(
                         candidate("searched-place", new GeoPoint(35.0116, 135.7681))
                 ), null));
-        PlaceCandidateCollectionService service = service(googlePlacesService);
+        PlaceCandidateCollectionService service = service(placeTextSearcher);
 
-        List<CollectedPlaceCandidate> candidates = service.collect(
-                destination(),
-                profile(AccommodationMode.UNDECIDED, null, List.of(new MustVisitPlaceSnapshot(
+        List<RecommendedPlaceCandidate> candidates = service.recommend(request(
+                null,
+                List.of(new CandidateRecommendationRequest.MustVisitPlace(
                         "must-place",
                         "Must Temple",
                         "Kyoto, Japan",
-                        35.0,
-                        135.0,
-                        List.of("tourist_attraction"),
-                        "tourist_attraction"
-                )))
-        );
+                        new CandidateRecommendationRequest.Location(35.0, 135.0),
+                        "tourist_attraction",
+                        List.of("tourist_attraction")
+                )),
+                List.of(Interest.FOOD)
+        ));
 
-        assertThat(candidates).extracting(CollectedPlaceCandidate::placeId).contains("must-place");
+        assertThat(candidates).extracting(RecommendedPlaceCandidate::placeId).contains("must-place");
         assertThat(candidates.getFirst().placeId()).isEqualTo("must-place");
-        assertThat(candidates.getFirst().sourceCategories()).contains(com.planmate.recommendation.domain.CandidateSearchCategory.MUST_VISIT);
+        assertThat(candidates.getFirst().rank()).isEqualTo(1);
+        assertThat(candidates.getFirst().forcedMustVisit()).isTrue();
+        assertThat(candidates.getFirst().sourceCategories()).contains("MUST_VISIT");
+    }
+
+    @Test
+    void unresolvedMustVisitPlaceIsExcluded() {
+        PlaceTextSearcher placeTextSearcher = mock(PlaceTextSearcher.class);
+        given(placeTextSearcher.searchText(any())).willReturn(new PlaceTextSearchResult(List.of(), null));
+        PlaceCandidateCollectionService service = service(placeTextSearcher);
+
+        List<RecommendedPlaceCandidate> candidates = service.recommend(request(
+                null,
+                List.of(new CandidateRecommendationRequest.MustVisitPlace(
+                        "must-place",
+                        "Must Temple",
+                        "Kyoto, Japan",
+                        null,
+                        "tourist_attraction",
+                        List.of("tourist_attraction")
+                )),
+                List.of(Interest.FOOD)
+        ));
+
+        assertThat(candidates).isEmpty();
     }
 
     @Test
     void blockedTypePolicyExcludesCandidatesAndLoadsPoliciesOnce() {
-        GooglePlacesService googlePlacesService = mock(GooglePlacesService.class);
-        given(googlePlacesService.searchText(any()))
-                .willReturn(new PlaceTextSearchResponse(List.of(
+        PlaceTextSearcher placeTextSearcher = mock(PlaceTextSearcher.class);
+        given(placeTextSearcher.searchText(any()))
+                .willReturn(new PlaceTextSearchResult(List.of(
                         candidate(
                                 "blocked-place",
                                 new GeoPoint(35.0116, 135.7681),
@@ -144,31 +155,48 @@ class PlaceCandidateCollectionServiceTest {
                                 "blocked for test"
                         )
                 ));
-        PlaceCandidateCollectionService service = service(googlePlacesService, placeTypePolicyService);
+        PlaceCandidateCollectionService service = service(placeTextSearcher, placeTypePolicyService);
 
-        List<CollectedPlaceCandidate> candidates = service.collect(
-                destination(),
-                profile(AccommodationMode.UNDECIDED, null)
-        );
+        List<RecommendedPlaceCandidate> candidates = service.recommend(request(null, List.of(), List.of(Interest.FOOD)));
 
-        assertThat(candidates).extracting(CollectedPlaceCandidate::placeId)
+        assertThat(candidates).extracting(RecommendedPlaceCandidate::placeId)
                 .contains("allowed-place")
                 .doesNotContain("blocked-place");
         verify(placeTypePolicyService, times(1)).loadEnabledPoliciesByTypeName();
     }
 
-    private PlaceCandidateCollectionService service(GooglePlacesService googlePlacesService) {
+    @Test
+    void responseRanksFinalOrderFromOne() {
+        PlaceTextSearcher placeTextSearcher = mock(PlaceTextSearcher.class);
+        given(placeTextSearcher.searchText(any()))
+                .willReturn(new PlaceTextSearchResult(List.of(
+                        candidate("place-1", new GeoPoint(35.0116, 135.7681)),
+                        candidate("place-2", new GeoPoint(35.0117, 135.7682))
+                ), null));
+        PlaceCandidateCollectionService service = service(placeTextSearcher);
+
+        List<RecommendedPlaceCandidate> candidates = service.recommend(request(null, List.of(), List.of(Interest.FOOD)));
+
+        assertThat(candidates).isNotEmpty();
+        assertThat(candidates)
+                .extracting(RecommendedPlaceCandidate::rank)
+                .containsExactlyElementsOf(java.util.stream.IntStream.rangeClosed(1, candidates.size()).boxed().toList());
+        assertThatThrownBy(() -> candidates.add(candidates.getFirst()))
+                .isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    private PlaceCandidateCollectionService service(PlaceTextSearcher placeTextSearcher) {
         PlaceTypePolicyService placeTypePolicyService = mock(PlaceTypePolicyService.class);
         given(placeTypePolicyService.loadEnabledPoliciesByTypeName()).willReturn(Map.of());
-        return service(googlePlacesService, placeTypePolicyService);
+        return service(placeTextSearcher, placeTypePolicyService);
     }
 
     private PlaceCandidateCollectionService service(
-            GooglePlacesService googlePlacesService,
+            PlaceTextSearcher placeTextSearcher,
             PlaceTypePolicyService placeTypePolicyService
     ) {
         return new PlaceCandidateCollectionService(
-                googlePlacesService,
+                placeTextSearcher,
                 new CandidateCategoryWeightCalculator(),
                 new CandidateSearchQueryFactory(),
                 new HaversineDistanceCalculator(),
@@ -184,56 +212,27 @@ class PlaceCandidateCollectionServiceTest {
         );
     }
 
-    private ResolvedDestination destination() {
-        return new ResolvedDestination(
-                "destination-place",
+    private CandidateRecommendationRequest request(
+            CandidateRecommendationRequest.Accommodation accommodation,
+            List<CandidateRecommendationRequest.MustVisitPlace> mustVisitPlaces,
+            List<Interest> interests
+    ) {
+        return new CandidateRecommendationRequest(
+                destination(),
+                interests,
+                accommodation,
+                mustVisitPlaces
+        );
+    }
+
+    private CandidateRecommendationRequest.Destination destination() {
+        return new CandidateRecommendationRequest.Destination(
                 "Kyoto",
-                "Kyoto, Japan",
-                new GeoPoint(35.0116, 135.7681),
-                new GeoViewport(new GeoPoint(34.8, 135.5), new GeoPoint(35.2, 136.0)),
-                List.of("locality"),
-                "locality"
-        );
-    }
-
-    private TripPlanningProfileEntity profile(
-            AccommodationMode accommodationMode,
-            ResolvedAccommodation accommodation
-    ) {
-        return profile(accommodationMode, accommodation, List.of());
-    }
-
-    private TripPlanningProfileEntity profile(
-            AccommodationMode accommodationMode,
-            ResolvedAccommodation accommodation,
-            List<MustVisitPlaceSnapshot> mustVisitPlaces
-    ) {
-        return TripPlanningProfileEntity.create(
-                null,
-                request(accommodationMode),
-                accommodation,
-                mustVisitPlaces,
-                new ResolvedSchedulePreference(LocalTime.of(8, 0), LocalTime.of(20, 0)),
-                Instant.now()
-        );
-    }
-
-    private TripCreateRequest request(AccommodationMode accommodationMode) {
-        TripCreateRequest.AccommodationRequest accommodation = accommodationMode == AccommodationMode.UNDECIDED
-                ? new TripCreateRequest.AccommodationRequest(AccommodationMode.UNDECIDED, com.planmate.trip.domain.AccommodationArea.TRANSIT, null, null, null)
-                : new TripCreateRequest.AccommodationRequest(AccommodationMode.PLACE_SEARCH, null, "accommodation-place", null, null);
-        return new TripCreateRequest(
-                "Trip",
-                "destination-place",
-                LocalDate.of(2026, 10, 1),
-                LocalDate.of(2026, 10, 3),
-                new TripCreateRequest.CompanionRequest(2, com.planmate.trip.domain.CompanionType.FRIENDS, false, 0, null, false, 0),
-                new TripCreateRequest.BudgetRequest(com.planmate.trip.domain.CurrencyCode.KRW, null, com.planmate.trip.domain.BudgetLevel.BALANCED, List.of()),
-                new TripCreateRequest.PreferenceRequest(com.planmate.trip.domain.TravelPace.BALANCED, List.of(com.planmate.trip.domain.TripInterest.FOOD)),
-                new TripCreateRequest.TransportationRequest(com.planmate.trip.domain.TransportMode.PUBLIC_TRANSIT, List.of()),
-                accommodation,
-                new TripCreateRequest.SchedulePreferenceRequest(null, null),
-                new TripCreateRequest.AdditionalRequest(List.of(), List.of(), null)
+                new CandidateRecommendationRequest.Location(35.0116, 135.7681),
+                new CandidateRecommendationRequest.Viewport(
+                        new CandidateRecommendationRequest.Location(34.8, 135.5),
+                        new CandidateRecommendationRequest.Location(35.2, 136.0)
+                )
         );
     }
 

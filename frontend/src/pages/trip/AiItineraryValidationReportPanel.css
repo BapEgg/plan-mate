@@ -1,0 +1,70 @@
+.ai-validation-report {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.ai-validation-empty,
+.ai-validation-group {
+  border: 1px solid rgba(42, 49, 67, 0.14);
+  border-radius: 6px;
+  padding: 12px;
+  text-align: left;
+}
+
+.ai-validation-empty {
+  background: rgba(28, 117, 93, 0.08);
+  color: #17614f;
+  font-size: 0.9rem;
+}
+
+.ai-validation-group {
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.ai-validation-group.error {
+  border-color: rgba(204, 57, 57, 0.3);
+}
+
+.ai-validation-group.warning {
+  border-color: rgba(184, 119, 28, 0.34);
+}
+
+.ai-validation-group.info {
+  border-color: rgba(45, 96, 166, 0.28);
+}
+
+.ai-validation-group > strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+}
+
+.ai-validation-group ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-validation-group li {
+  display: grid;
+  gap: 4px;
+}
+
+.ai-validation-group span {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.ai-validation-group small,
+.ai-validation-related li {
+  color: #5d6678;
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.ai-validation-related {
+  padding-left: 10px !important;
+}

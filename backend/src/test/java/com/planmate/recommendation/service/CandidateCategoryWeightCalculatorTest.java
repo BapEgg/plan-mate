@@ -2,8 +2,8 @@ package com.planmate.recommendation.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.planmate.recommendation.api.Interest;
 import com.planmate.recommendation.domain.CandidateSearchCategory;
-import com.planmate.trip.domain.TripInterest;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -15,11 +15,11 @@ class CandidateCategoryWeightCalculatorTest {
     @Test
     void foodIncreasesMealWeightWithoutFoodBucket() {
         Map<CandidateSearchCategory, Integer> weights = calculator.calculate(List.of(
-                TripInterest.FOOD,
-                TripInterest.CAFE,
-                TripInterest.CULTURE,
-                TripInterest.NATURE,
-                TripInterest.SHOPPING
+                Interest.FOOD,
+                Interest.CAFE,
+                Interest.CULTURE,
+                Interest.NATURE,
+                Interest.SHOPPING
         ));
 
         assertThat(weights).containsEntry(CandidateSearchCategory.CORE_VISIT, 2);
@@ -33,7 +33,7 @@ class CandidateCategoryWeightCalculatorTest {
 
     @Test
     void sightseeingIncreasesCoreVisitWeightWithoutDuplicateBucket() {
-        Map<CandidateSearchCategory, Integer> weights = calculator.calculate(List.of(TripInterest.SIGHTSEEING));
+        Map<CandidateSearchCategory, Integer> weights = calculator.calculate(List.of(Interest.SIGHTSEEING));
 
         assertThat(weights).containsEntry(CandidateSearchCategory.CORE_VISIT, 3);
         assertThat(weights).containsEntry(CandidateSearchCategory.MEAL, 2);

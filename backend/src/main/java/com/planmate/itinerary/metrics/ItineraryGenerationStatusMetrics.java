@@ -1,7 +1,8 @@
 package com.planmate.itinerary.metrics;
 
-import com.planmate.itinerary.entity.ItineraryGenerationStatus;
+import com.planmate.itinerary.api.ItineraryGenerationStatus;
 import com.planmate.itinerary.repository.ItineraryGenerationRepository;
+import com.planmate.itinerary.config.ItineraryGenerationWorkerProperties;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.MeterBinder;
@@ -14,17 +15,19 @@ import org.springframework.stereotype.Component;
 public class ItineraryGenerationStatusMetrics implements MeterBinder {
 
     private static final Duration CREATED_STALE_THRESHOLD = Duration.ofMinutes(5);
-    private static final Duration COLLECTING_STALE_THRESHOLD = Duration.ofMinutes(15);
 
     private final ItineraryGenerationRepository generationRepository;
     private final Clock clock;
+    private final Duration collectingStaleThreshold;
 
     public ItineraryGenerationStatusMetrics(
             ItineraryGenerationRepository generationRepository,
-            Clock clock
+            Clock clock,
+            ItineraryGenerationWorkerProperties workerProperties
     ) {
         this.generationRepository = generationRepository;
         this.clock = clock;
+        this.collectingStaleThreshold = workerProperties.getProcessingLease();
     }
 
     @Override
@@ -42,10 +45,10 @@ public class ItineraryGenerationStatusMetrics implements MeterBinder {
                 .tag("threshold", "5m")
                 .register(registry);
         Gauge.builder("planmate.itinerary.generation.stale",
-                        () -> countStale(ItineraryGenerationStatus.COLLECTING_CANDIDATES, COLLECTING_STALE_THRESHOLD))
+                        () -> countStale(ItineraryGenerationStatus.COLLECTING_CANDIDATES, collectingStaleThreshold))
                 .description("Itinerary generation count that stayed in a processing status longer than expected.")
                 .tag("status", ItineraryGenerationStatus.COLLECTING_CANDIDATES.name())
-                .tag("threshold", "15m")
+                .tag("threshold", collectingStaleThreshold.toString())
                 .register(registry);
     }
 

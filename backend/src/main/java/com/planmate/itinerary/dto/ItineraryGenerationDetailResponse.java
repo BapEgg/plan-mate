@@ -1,6 +1,6 @@
 package com.planmate.itinerary.dto;
 
-import com.planmate.itinerary.entity.ItineraryGenerationStatus;
+import com.planmate.itinerary.api.ItineraryGenerationStatus;
 import java.time.Instant;
 
 public record ItineraryGenerationDetailResponse(

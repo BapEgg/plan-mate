@@ -12,10 +12,13 @@ import {
   getManualPrompt,
   getTripDetail,
   submitManualResponse,
+  validateManualResponse,
 } from '../../api/trips'
-import type { CreateTripRequest, GroundedItineraryDraft, ItineraryGenerationCreateResponse, ItineraryGenerationDetailResponse } from '../../api/trips'
+import type { AiItineraryDraft, CreateTripRequest, ItineraryGenerationCreateResponse, ItineraryGenerationDetailResponse } from '../../api/trips'
+import type { AiItineraryValidationReport } from '../../api/itineraryValidation'
 import { connectTripRealtimeEvents, ITINERARY_GENERATION_STATUS_CHANGED } from '../../api/realtime'
 import type { ItineraryGenerationStatusChangedPayload } from '../../api/realtime'
+import { AiItineraryValidationReportPanel } from './AiItineraryValidationReportPanel'
 import coupleMascotUrl from '../../assets/mascots/couple.png'
 import coworkersMascotUrl from '../../assets/mascots/coworkers.png'
 import familyMascotUrl from '../../assets/mascots/family.png'
@@ -269,6 +272,7 @@ export function TripCreatePage({
   const [manualResponseJson, setManualResponseJson] = useState('')
   const [manualStatus, setManualStatus] = useState<AsyncStatus>('idle')
   const [manualMessage, setManualMessage] = useState('')
+  const [manualValidationReport, setManualValidationReport] = useState<AiItineraryValidationReport | null>(null)
   const [searchError, setSearchError] = useState('')
   const [formError, setFormError] = useState('')
   const [submitError, setSubmitError] = useState('')
@@ -1053,6 +1057,7 @@ export function TripCreatePage({
     setManualResponseJson('')
     setManualStatus('idle')
     setManualMessage('')
+    setManualValidationReport(null)
     completedNavigationScheduledRef.current = false
     setStepDirection('forward')
     setInfoStep('GENERATING')
@@ -1110,15 +1115,51 @@ export function TripCreatePage({
     }
   }
 
+  async function handleValidateManualResponse() {
+    if (!createdTripId || !itineraryGeneration) {
+      return
+    }
+    let parsed: AiItineraryDraft
+    try {
+      parsed = JSON.parse(manualResponseJson) as AiItineraryDraft
+    } catch {
+      setManualStatus('error')
+      setManualMessage('ChatGPT response JSON is invalid.')
+      setManualValidationReport(null)
+      return
+    }
+
+    setManualStatus('loading')
+    setManualMessage('')
+    try {
+      const report = await validateManualResponse(accessToken, createdTripId, itineraryGeneration.generationId, parsed)
+      setManualValidationReport(report)
+      setManualStatus(report.errors.length > 0 ? 'error' : 'success')
+      setManualMessage(validationReportMessage(report))
+    } catch (error: unknown) {
+      setManualStatus('error')
+      setManualMessage(toUserMessage(error))
+      if (error instanceof ApiError && error.validationReport) {
+        setManualValidationReport(error.validationReport)
+      }
+    }
+  }
+
+  function handleManualResponseChange(value: string) {
+    setManualResponseJson(value)
+    setManualValidationReport(null)
+  }
+
   async function handleSubmitManualResponse() {
     if (!createdTripId || !itineraryGeneration) {
       return
     }
-    let parsed: GroundedItineraryDraft
+    let parsed: AiItineraryDraft
     try {
-      parsed = JSON.parse(manualResponseJson) as GroundedItineraryDraft
+      parsed = JSON.parse(manualResponseJson) as AiItineraryDraft
     } catch {
       setManualStatus('error')
+      setManualValidationReport(null)
       setManualMessage('ChatGPT 응답 JSON 형식이 올바르지 않습니다.')
       return
     }
@@ -1128,6 +1169,7 @@ export function TripCreatePage({
     try {
       const result = await submitManualResponse(accessToken, createdTripId, itineraryGeneration.generationId, parsed)
       await applyGenerationDetail(result)
+      setManualValidationReport(null)
       return
       setItineraryGeneration({
         generationId: result.generationId,
@@ -1140,6 +1182,9 @@ export function TripCreatePage({
     } catch (error: unknown) {
       setManualStatus('error')
       setManualMessage(toUserMessage(error))
+      if (error instanceof ApiError && error.validationReport) {
+        setManualValidationReport(error.validationReport)
+      }
     }
   }
 
@@ -1239,6 +1284,7 @@ export function TripCreatePage({
           generation={itineraryGeneration}
           manualMessage={manualMessage}
           manualPrompt={manualPrompt}
+          manualValidationReport={manualValidationReport}
           manualResponseJson={manualResponseJson}
           manualStatus={manualStatus}
           onBack={handleBackToDestinationStep}
@@ -1248,8 +1294,9 @@ export function TripCreatePage({
           onInfoNext={handleInfoNext}
           onInfoEditStep={handleInfoEditStep}
           onManualPromptLoad={handleLoadManualPrompt}
-          onManualResponseChange={setManualResponseJson}
+          onManualResponseChange={handleManualResponseChange}
           onManualResponseSubmit={handleSubmitManualResponse}
+          onManualResponseValidate={handleValidateManualResponse}
           onOpenCreatedTrip={onCreatedTrip}
           onEndDateChange={(value) => {
             setEndDate(value)
@@ -1759,6 +1806,7 @@ function TripConditionStep({
   generation,
   manualMessage,
   manualPrompt,
+  manualValidationReport,
   manualResponseJson,
   manualStatus,
   onBack,
@@ -1770,6 +1818,7 @@ function TripConditionStep({
   onManualPromptLoad,
   onManualResponseChange,
   onManualResponseSubmit,
+  onManualResponseValidate,
   onOpenCreatedTrip,
   onEndDateChange,
   onStartDateChange,
@@ -1868,6 +1917,7 @@ function TripConditionStep({
   generation: TrackedItineraryGeneration | null
   manualMessage: string
   manualPrompt: string
+  manualValidationReport: AiItineraryValidationReport | null
   manualResponseJson: string
   manualStatus: AsyncStatus
   onBack: () => void
@@ -1879,6 +1929,7 @@ function TripConditionStep({
   onManualPromptLoad: () => void
   onManualResponseChange: (value: string) => void
   onManualResponseSubmit: () => void
+  onManualResponseValidate: () => void
   onOpenCreatedTrip: (tripId: string) => void
   onEndDateChange: (value: string) => void
   onStartDateChange: (value: string) => void
@@ -1968,6 +2019,7 @@ function TripConditionStep({
           generation={generation}
           manualMessage={manualMessage}
           manualPrompt={manualPrompt}
+          manualValidationReport={manualValidationReport}
           manualResponseJson={manualResponseJson}
           manualStatus={manualStatus}
           onAiRequestLoad={onAiRequestLoad}
@@ -1976,6 +2028,7 @@ function TripConditionStep({
           onManualPromptLoad={onManualPromptLoad}
           onManualResponseChange={onManualResponseChange}
           onManualResponseSubmit={onManualResponseSubmit}
+          onManualResponseValidate={onManualResponseValidate}
           submitError={submitError}
           submitStatus={submitStatus}
           title={title}
@@ -3328,6 +3381,7 @@ function GeneratingTripPanel({
   generation,
   manualMessage,
   manualPrompt,
+  manualValidationReport,
   manualResponseJson,
   manualStatus,
   onAiRequestLoad,
@@ -3336,6 +3390,7 @@ function GeneratingTripPanel({
   onManualPromptLoad,
   onManualResponseChange,
   onManualResponseSubmit,
+  onManualResponseValidate,
   submitError,
   submitStatus,
   title,
@@ -3347,6 +3402,7 @@ function GeneratingTripPanel({
   generation: TrackedItineraryGeneration | null
   manualMessage: string
   manualPrompt: string
+  manualValidationReport: AiItineraryValidationReport | null
   manualResponseJson: string
   manualStatus: AsyncStatus
   onAiRequestLoad: () => void
@@ -3355,6 +3411,7 @@ function GeneratingTripPanel({
   onManualPromptLoad: () => void
   onManualResponseChange: (value: string) => void
   onManualResponseSubmit: () => void
+  onManualResponseValidate: () => void
   submitError: string
   submitStatus: AsyncStatus
   title: string
@@ -3433,6 +3490,13 @@ function GeneratingTripPanel({
               <strong>ChatGPT response JSON</strong>
               <button
                 type="button"
+                onClick={onManualResponseValidate}
+                disabled={manualStatus === 'loading' || !isManualHandoffReady || !manualResponseJson.trim()}
+              >
+                Validate response
+              </button>
+              <button
+                type="button"
                 onClick={onManualResponseSubmit}
                 disabled={manualStatus === 'loading' || !manualResponseJson.trim()}
               >
@@ -3444,6 +3508,7 @@ function GeneratingTripPanel({
               value={manualResponseJson}
               onChange={(event) => onManualResponseChange(event.target.value)}
             />
+            <AiItineraryValidationReportPanel report={manualValidationReport} />
           </div>
         </section>
       )}
@@ -3906,6 +3971,16 @@ function toSearchUserMessage(error: unknown) {
     return '로그인이 만료되었습니다. 다시 로그인하세요.'
   }
   return '장소 검색 서비스를 일시적으로 사용할 수 없어요. 잠시 후 다시 시도해 주세요.'
+}
+
+function validationReportMessage(report: AiItineraryValidationReport) {
+  if (report.errors.length > 0) {
+    return `Validation found ${report.errors.length} error(s).`
+  }
+  if (report.warnings.length > 0 || report.unverifiedConditions.length > 0) {
+    return `Validation passed with ${report.warnings.length} warning(s) and ${report.unverifiedConditions.length} unverified condition(s).`
+  }
+  return 'Validation passed.'
 }
 
 function toUserMessage(error: unknown) {

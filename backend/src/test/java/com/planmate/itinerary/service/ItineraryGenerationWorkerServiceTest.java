@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
@@ -14,6 +15,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import com.planmate.itinerary.config.ItineraryGenerationWorkerProperties;
 import com.planmate.itinerary.messaging.ItineraryGenerationRequestedMessage;
 import com.planmate.itinerary.metrics.ItineraryGenerationWorkerMetrics;
+import com.planmate.place.api.exception.PlaceProviderUnavailableException;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,20 +45,23 @@ class ItineraryGenerationWorkerServiceTest {
                 persistenceService,
                 generationService,
                 properties,
-                new ItineraryGenerationWorkerMetrics(meterRegistry)
+                new ItineraryGenerationWorkerMetrics(meterRegistry),
+                new WorkerFailureClassifier()
         );
     }
 
     @Test
     void processCollectsCandidatesWhenGenerationIsCreated() {
         ItineraryGenerationRequestedMessage message = new ItineraryGenerationRequestedMessage(123L, 45L, 7L);
-        given(persistenceService.markCollectingIfCreated(7L, 45L, 123L)).willReturn(true);
+        given(persistenceService.claimCollection(45L, 123L, false, properties.getProcessingLease()))
+                .willReturn(new ItineraryGenerationPersistenceService.CollectionClaim(true, 1L));
+        given(generationService.collectCandidates(45L, 123L, 1L)).willReturn(true);
 
-        workerService.process(message);
+        workerService.process(message, false);
 
-        verify(persistenceService).markCollectingIfCreated(7L, 45L, 123L);
-        verify(generationService).collectCandidates(7L, 45L, 123L);
-        verify(persistenceService, never()).markFailed(anyLong(), anyString());
+        verify(persistenceService).claimCollection(45L, 123L, false, properties.getProcessingLease());
+        verify(generationService).collectCandidates(45L, 123L, 1L);
+        verify(persistenceService, never()).markFailed(anyLong(), anyLong(), anyString());
         assertProcessedCount("success", 1.0);
         assertDurationCount("success", 1L);
     }
@@ -64,11 +69,12 @@ class ItineraryGenerationWorkerServiceTest {
     @Test
     void processIgnoresAlreadyHandledGeneration() {
         ItineraryGenerationRequestedMessage message = new ItineraryGenerationRequestedMessage(123L, 45L, 7L);
-        given(persistenceService.markCollectingIfCreated(7L, 45L, 123L)).willReturn(false);
+        given(persistenceService.claimCollection(45L, 123L, false, properties.getProcessingLease()))
+                .willReturn(new ItineraryGenerationPersistenceService.CollectionClaim(false, 0L));
 
         workerService.process(message);
 
-        verify(persistenceService).markCollectingIfCreated(7L, 45L, 123L);
+        verify(persistenceService).claimCollection(45L, 123L, false, properties.getProcessingLease());
         verifyNoInteractions(generationService);
         assertProcessedCount("skipped", 1.0);
         assertDurationCount("skipped", 1L);
@@ -77,15 +83,17 @@ class ItineraryGenerationWorkerServiceTest {
     @Test
     void processRetriesAndMarksFailedWhenCandidateCollectionKeepsFailing() {
         ItineraryGenerationRequestedMessage message = new ItineraryGenerationRequestedMessage(123L, 45L, 7L);
-        RuntimeException failure = new IllegalStateException("google places unavailable");
-        given(persistenceService.markCollectingIfCreated(7L, 45L, 123L)).willReturn(true);
-        doThrow(failure).when(generationService).collectCandidates(7L, 45L, 123L);
+        RuntimeException failure = new PlaceProviderUnavailableException();
+        given(persistenceService.claimCollection(45L, 123L, false, properties.getProcessingLease()))
+                .willReturn(new ItineraryGenerationPersistenceService.CollectionClaim(true, 4L));
+        doThrow(failure).when(generationService).collectCandidates(45L, 123L, 4L);
+        given(persistenceService.markFailed(123L, 4L, "PLACE_PROVIDER_UNAVAILABLE")).willReturn(true);
 
         assertThatThrownBy(() -> workerService.process(message))
                 .isSameAs(failure);
 
-        verify(generationService, times(2)).collectCandidates(7L, 45L, 123L);
-        verify(persistenceService).markFailed(123L, "IllegalStateException");
+        verify(generationService, times(2)).collectCandidates(45L, 123L, 4L);
+        verify(persistenceService).markFailed(123L, 4L, "PLACE_PROVIDER_UNAVAILABLE");
         assertProcessedCount("failed", 1.0);
         assertDurationCount("failed", 1L);
         assertRetryCount(1.0);
@@ -93,15 +101,60 @@ class ItineraryGenerationWorkerServiceTest {
 
     @Test
     void processRejectsInvalidMessage() {
-        ItineraryGenerationRequestedMessage message = new ItineraryGenerationRequestedMessage(null, 45L, 7L);
+        ItineraryGenerationRequestedMessage message = new ItineraryGenerationRequestedMessage(null, 45L, null);
 
         assertThatThrownBy(() -> workerService.process(message))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("itinerary generation message must include generationId, tripId, and userId");
+                .hasMessage("itinerary generation message must include generationId and tripId");
 
         verifyNoInteractions(persistenceService, generationService);
         assertProcessedCount("failed", 1.0);
         assertDurationCount("failed", 1L);
+    }
+
+    @Test
+    void nonRetryableFailureMarksFailedAfterFirstAttempt() {
+        ItineraryGenerationRequestedMessage message = new ItineraryGenerationRequestedMessage(123L, 45L, 7L);
+        RuntimeException failure = new IllegalStateException("invalid internal candidate data");
+        given(persistenceService.claimCollection(45L, 123L, false, properties.getProcessingLease()))
+                .willReturn(new ItineraryGenerationPersistenceService.CollectionClaim(true, 4L));
+        doThrow(failure).when(generationService).collectCandidates(45L, 123L, 4L);
+        given(persistenceService.markFailed(123L, 4L, "WORKER_PROCESSING_FAILED")).willReturn(true);
+
+        assertThatThrownBy(() -> workerService.process(message))
+                .isSameAs(failure);
+
+        verify(generationService).collectCandidates(45L, 123L, 4L);
+        verify(persistenceService).markFailed(123L, 4L, "WORKER_PROCESSING_FAILED");
+        assertThat(meterRegistry.find("planmate.itinerary.generation.worker.retry").counter()).isNull();
+    }
+
+    @Test
+    void staleClaimFailureIsIgnoredWithoutExceptionPropagation() {
+        ItineraryGenerationRequestedMessage message = new ItineraryGenerationRequestedMessage(123L, 45L, null);
+        RuntimeException failure = new PlaceProviderUnavailableException();
+        given(persistenceService.claimCollection(45L, 123L, true, properties.getProcessingLease()))
+                .willReturn(new ItineraryGenerationPersistenceService.CollectionClaim(true, 2L));
+        doThrow(failure).when(generationService).collectCandidates(45L, 123L, 2L);
+        given(persistenceService.markFailed(123L, 2L, "PLACE_PROVIDER_UNAVAILABLE")).willReturn(false);
+
+        workerService.process(message, true);
+
+        verify(generationService, times(2)).collectCandidates(45L, 123L, 2L);
+        assertProcessedCount("skipped", 1.0);
+    }
+
+    @Test
+    void staleClaimSuccessReturnsNormallyWithoutReadyTransition() {
+        ItineraryGenerationRequestedMessage message = new ItineraryGenerationRequestedMessage(123L, 45L, null);
+        given(persistenceService.claimCollection(45L, 123L, true, properties.getProcessingLease()))
+                .willReturn(new ItineraryGenerationPersistenceService.CollectionClaim(true, 2L));
+        given(generationService.collectCandidates(45L, 123L, 2L)).willReturn(false);
+
+        workerService.process(message, true);
+
+        verify(persistenceService, never()).markFailed(anyLong(), anyLong(), anyString());
+        assertProcessedCount("skipped", 1.0);
     }
 
     private void assertProcessedCount(String result, double count) {

@@ -1,8 +1,8 @@
 package com.planmate.trip.service;
 
-import com.planmate.place.dto.GeoPoint;
-import com.planmate.place.dto.GeoViewport;
-import com.planmate.place.dto.ResolvedDestination;
+import com.planmate.place.api.GeoPoint;
+import com.planmate.place.api.GeoViewport;
+import com.planmate.place.api.ResolvedPlace;
 import com.planmate.trip.domain.MustVisitPlaceSnapshot;
 import com.planmate.trip.domain.ResolvedAccommodation;
 import com.planmate.trip.domain.ResolvedSchedulePreference;
@@ -49,7 +49,7 @@ public class TripCreationPersistenceService {
     public TripEntity create(
             Long userId,
             TripCreateRequest request,
-            ResolvedDestination destination,
+            ResolvedPlace destination,
             ResolvedAccommodation accommodation,
             List<MustVisitPlaceSnapshot> mustVisitPlaces,
             ResolvedSchedulePreference schedulePreference

@@ -1,6 +1,6 @@
 package com.planmate.trip.service;
 
-import com.planmate.itinerary.config.ItineraryScheduleProperties;
+import com.planmate.trip.config.TripScheduleProperties;
 import com.planmate.trip.domain.ResolvedSchedulePreference;
 import com.planmate.trip.dto.TripCreateRequest;
 import com.planmate.trip.exception.InvalidTripRequestException;
@@ -10,9 +10,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class SchedulePreferenceResolver {
 
-    private final ItineraryScheduleProperties properties;
+    private final TripScheduleProperties properties;
 
-    public SchedulePreferenceResolver(ItineraryScheduleProperties properties) {
+    public SchedulePreferenceResolver(TripScheduleProperties properties) {
         this.properties = properties;
     }
 

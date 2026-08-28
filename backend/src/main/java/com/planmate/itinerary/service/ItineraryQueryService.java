@@ -1,19 +1,18 @@
 package com.planmate.itinerary.service;
 
-import com.planmate.itinerary.dto.ItineraryDayResponse;
-import com.planmate.itinerary.dto.ItineraryItemResponse;
-import com.planmate.itinerary.dto.ItineraryResponse;
+import com.planmate.itinerary.api.ItineraryReadModel;
+import com.planmate.itinerary.api.LatestItineraryReader;
 import com.planmate.itinerary.entity.ItineraryDayEntity;
 import com.planmate.itinerary.entity.ItineraryEntity;
 import com.planmate.itinerary.entity.ItineraryItemEntity;
 import com.planmate.itinerary.repository.ItineraryRepository;
 import java.util.Comparator;
-import java.util.List;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class ItineraryQueryService {
+public class ItineraryQueryService implements LatestItineraryReader {
 
     private final ItineraryRepository itineraryRepository;
 
@@ -21,46 +20,45 @@ public class ItineraryQueryService {
         this.itineraryRepository = itineraryRepository;
     }
 
+    @Override
     @Transactional(readOnly = true)
-    public List<ItineraryResponse> listTripItineraries(Long tripId) {
-        return itineraryRepository.findByTrip_IdOrderByCreatedAtDesc(tripId)
-                .stream()
-                .map(this::toResponse)
-                .toList();
+    public Optional<ItineraryReadModel> findLatestByTripId(Long tripId) {
+        return itineraryRepository.findFirstByTripIdOrderByCreatedAtDesc(tripId)
+                .map(this::toReadModel);
     }
 
-    private ItineraryResponse toResponse(ItineraryEntity itinerary) {
-        return new ItineraryResponse(
+    private ItineraryReadModel toReadModel(ItineraryEntity itinerary) {
+        return new ItineraryReadModel(
                 itinerary.getId(),
                 itinerary.getGeneration().getId(),
                 itinerary.getCreatedAt(),
                 itinerary.getDays().stream()
                         .sorted(Comparator.comparingInt(ItineraryDayEntity::getDay))
-                        .map(this::toDayResponse)
+                        .map(this::toDayReadModel)
                         .toList()
         );
     }
 
-    private ItineraryDayResponse toDayResponse(ItineraryDayEntity day) {
-        return new ItineraryDayResponse(
+    private ItineraryReadModel.Day toDayReadModel(ItineraryDayEntity day) {
+        return new ItineraryReadModel.Day(
                 day.getId(),
                 day.getDay(),
                 day.getDate(),
                 day.getItems().stream()
                         .sorted(Comparator.comparingInt(ItineraryItemEntity::getSequence))
-                        .map(this::toItemResponse)
+                        .map(this::toItemReadModel)
                         .toList()
         );
     }
 
-    private ItineraryItemResponse toItemResponse(ItineraryItemEntity item) {
-        return new ItineraryItemResponse(
+    private ItineraryReadModel.Item toItemReadModel(ItineraryItemEntity item) {
+        return new ItineraryReadModel.Item(
                 item.getId(),
                 item.getSequence(),
                 item.getPlaceId(),
                 item.getStartTime(),
                 item.getDurationMinutes(),
-                item.getCreatedSource()
+                item.getCreatedSource().name()
         );
     }
 }

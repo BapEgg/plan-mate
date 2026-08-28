@@ -1,10 +1,10 @@
 package com.planmate.itinerary.service;
 
 import com.planmate.itinerary.dto.ItineraryPlaceDisplayView;
-import com.planmate.place.dto.PlaceDisplay;
-import com.planmate.place.exception.InvalidPlaceIdException;
-import com.planmate.place.exception.PlaceProviderUnavailableException;
-import com.planmate.place.service.GooglePlacesService;
+import com.planmate.place.api.PlaceDisplay;
+import com.planmate.place.api.PlaceDisplayReader;
+import com.planmate.place.api.exception.InvalidPlaceIdException;
+import com.planmate.place.api.exception.PlaceProviderUnavailableException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,10 +14,10 @@ import org.springframework.util.StringUtils;
 @Component
 public class PlaceDisplayResolver {
 
-    private final GooglePlacesService googlePlacesService;
+    private final PlaceDisplayReader placeDisplayReader;
 
-    public PlaceDisplayResolver(GooglePlacesService googlePlacesService) {
-        this.googlePlacesService = googlePlacesService;
+    public PlaceDisplayResolver(PlaceDisplayReader placeDisplayReader) {
+        this.placeDisplayReader = placeDisplayReader;
     }
 
     public Map<String, ItineraryPlaceDisplayView> resolveListViews(List<String> placeIds) {
@@ -33,7 +33,7 @@ public class PlaceDisplayResolver {
 
     private ItineraryPlaceDisplayView resolveListView(String placeId) {
         try {
-            PlaceDisplay display = googlePlacesService.resolvePlaceDisplay(placeId, "ko");
+            PlaceDisplay display = placeDisplayReader.readDisplay(placeId, "ko");
             return ItineraryPlaceDisplayView.resolved(
                     display.displayName(),
                     display.location(),

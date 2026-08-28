@@ -1,12 +1,11 @@
 import { bearerHeaders, request, requestText } from './client'
+import type { AiItineraryValidationReport } from './itineraryValidation'
 
 export type TripStatus = 'PLANNING' | 'UPCOMING' | 'COMPLETED'
 export type GenerationStatus =
   | 'CREATED'
   | 'COLLECTING_CANDIDATES'
   | 'READY_FOR_PLANNING'
-  | 'PLANNING'
-  | 'VALIDATING'
   | 'COMPLETED'
   | 'FAILED'
 
@@ -212,7 +211,7 @@ export type ItineraryGenerationDetailResponse = ItineraryGenerationCreateRespons
 }
 
 export type AiItineraryRequest = Record<string, unknown>
-export type GroundedItineraryDraft = {
+export type AiItineraryDraft = {
   generationId: string
   days: Array<{
     day: number
@@ -316,9 +315,22 @@ export function submitManualResponse(
   accessToken: string,
   tripId: string,
   generationId: string,
-  payload: GroundedItineraryDraft,
+  payload: AiItineraryDraft,
 ) {
   return request<ItineraryGenerationDetailResponse>(`/api/trips/${tripId}/itinerary-generations/${generationId}/manual-response`, {
+    method: 'POST',
+    headers: bearerHeaders(accessToken),
+    body: JSON.stringify(payload),
+  })
+}
+
+export function validateManualResponse(
+  accessToken: string,
+  tripId: string,
+  generationId: string,
+  payload: AiItineraryDraft,
+) {
+  return request<AiItineraryValidationReport>(`/api/trips/${tripId}/itinerary-generations/${generationId}/manual-response/validate`, {
     method: 'POST',
     headers: bearerHeaders(accessToken),
     body: JSON.stringify(payload),

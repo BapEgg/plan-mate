@@ -1,12 +1,17 @@
+import { parseAiItineraryValidationReport } from './itineraryValidation'
+import type { AiItineraryValidationReport } from './itineraryValidation'
+
 export class ApiError extends Error {
   readonly status: number
   readonly code?: string
+  readonly validationReport?: AiItineraryValidationReport
 
-  constructor(status: number, message: string, code?: string) {
+  constructor(status: number, message: string, code?: string, validationReport?: AiItineraryValidationReport) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.code = code
+    this.validationReport = validationReport
   }
 }
 
@@ -59,8 +64,9 @@ export function bearerHeaders(accessToken: string) {
 async function toApiError(response: Response): Promise<ApiError> {
   try {
     const body = await response.json()
-    return new ApiError(response.status, body.message ?? '요청 처리에 실패했습니다.', body.code)
+    const validationReport = parseAiItineraryValidationReport(body.validationReport)
+    return new ApiError(response.status, body.message ?? 'Request failed.', body.code, validationReport)
   } catch {
-    return new ApiError(response.status, '요청 처리에 실패했습니다.')
+    return new ApiError(response.status, 'Request failed.')
   }
 }

@@ -1,14 +1,10 @@
 package com.planmate.itinerary.service;
 
+import com.planmate.itinerary.domain.GenerationCandidateSnapshot;
+import com.planmate.itinerary.domain.GenerationInputSnapshot;
 import com.planmate.itinerary.dto.AiItineraryRequest;
-import com.planmate.itinerary.entity.ItineraryGenerationEntity;
-import com.planmate.trip.domain.AvoidCondition;
-import com.planmate.trip.domain.BudgetItem;
-import com.planmate.trip.domain.MustVisitPlaceSnapshot;
-import com.planmate.trip.domain.TransportMode;
-import com.planmate.trip.domain.TripInterest;
-import com.planmate.trip.entity.TripEntity;
-import com.planmate.trip.entity.TripPlanningProfileEntity;
+import com.planmate.itinerary.exception.ItineraryErrorCode;
+import com.planmate.itinerary.exception.ItineraryException;
 import java.util.List;
 import org.springframework.stereotype.Component;
 
@@ -16,94 +12,162 @@ import org.springframework.stereotype.Component;
 public class AiItineraryRequestFactory {
 
     public AiItineraryRequest create(
-            ItineraryGenerationEntity generation,
-            TripPlanningProfileEntity profile
+            String promptVersion,
+            Long generationId,
+            GenerationInputSnapshot snapshot,
+            List<GenerationCandidateSnapshot> candidates
     ) {
-        TripEntity trip = generation.getTrip();
+        return switch (promptVersion) {
+            case ItineraryPromptService.VERSION_V1 -> createV1(generationId, snapshot);
+            case ItineraryPromptService.VERSION_V2 -> createV2(generationId, snapshot, candidates);
+            default -> throw new ItineraryException(ItineraryErrorCode.UNSUPPORTED_PROMPT_VERSION);
+        };
+    }
+
+    private AiItineraryRequest createV1(
+            Long generationId,
+            GenerationInputSnapshot snapshot
+    ) {
         return new AiItineraryRequest(
-                generation.getId().toString(),
-                trip.getId().toString(),
-                destination(trip),
-                trip.getStartDate(),
-                trip.getEndDate(),
-                companion(profile),
-                budget(profile),
-                profile.getTravelPace().name(),
-                profile.getInterests().stream().map(TripInterest::name).toList(),
-                transportation(profile),
-                accommodation(profile),
-                mustVisitPlaces(profile),
-                profile.getAvoidConditions().stream().map(AvoidCondition::name).toList(),
-                profile.getFreeRequest(),
+                generationId.toString(),
+                snapshot.tripId().toString(),
+                destination(snapshot.destination()),
+                snapshot.startDate(),
+                snapshot.endDate(),
+                companion(snapshot.companion()),
+                budget(snapshot.budget()),
+                snapshot.preference().travelPace(),
+                snapshot.preference().interests(),
+                transportation(snapshot.transportation()),
+                accommodation(snapshot.accommodation()),
+                null,
+                mustVisitPlaces(snapshot),
+                snapshot.avoidConditions(),
+                snapshot.freeRequest(),
+                List.of(),
                 planningRules()
         );
     }
 
-    private AiItineraryRequest.Destination destination(TripEntity trip) {
+    private AiItineraryRequest createV2(
+            Long generationId,
+            GenerationInputSnapshot snapshot,
+            List<GenerationCandidateSnapshot> candidates
+    ) {
+        List<GenerationCandidateSnapshot> safeCandidates = candidates == null
+                ? List.of()
+                : List.copyOf(candidates);
+        if (safeCandidates.isEmpty()) {
+            throw new ItineraryException(ItineraryErrorCode.GENERATION_CANDIDATES_NOT_FOUND);
+        }
+        return new AiItineraryRequest(
+                generationId.toString(),
+                snapshot.tripId().toString(),
+                destination(snapshot.destination()),
+                snapshot.startDate(),
+                snapshot.endDate(),
+                companion(snapshot.companion()),
+                budget(snapshot.budget()),
+                snapshot.preference().travelPace(),
+                snapshot.preference().interests(),
+                transportation(snapshot.transportation()),
+                accommodation(snapshot.accommodation()),
+                new AiItineraryRequest.DailyWindow(snapshot.dailyStartTime(), snapshot.dailyEndTime()),
+                mustVisitPlaces(snapshot),
+                snapshot.avoidConditions(),
+                snapshot.freeRequest(),
+                candidateRequests(safeCandidates),
+                List.of()
+        );
+    }
+
+    private AiItineraryRequest.Destination destination(GenerationInputSnapshot.Destination destination) {
         return new AiItineraryRequest.Destination(
-                trip.getDestinationPlaceId(),
-                trip.getDestination(),
-                trip.getDestinationFormattedAddress(),
-                trip.getDestinationLatitude(),
-                trip.getDestinationLongitude(),
-                trip.getDestinationTypes(),
-                trip.getDestinationPrimaryType()
+                destination.placeId(),
+                destination.displayName(),
+                destination.formattedAddress(),
+                destination.latitude(),
+                destination.longitude(),
+                destination.types(),
+                destination.primaryType()
         );
     }
 
-    private AiItineraryRequest.Companion companion(TripPlanningProfileEntity profile) {
+    private AiItineraryRequest.Companion companion(GenerationInputSnapshot.Companion companion) {
         return new AiItineraryRequest.Companion(
-                profile.getCompanionCount(),
-                profile.getCompanionType().name(),
-                profile.isHasChildren(),
-                profile.getChildCount(),
-                profile.getChildAgeGroup() == null ? null : profile.getChildAgeGroup().name(),
-                profile.isHasSeniors(),
-                profile.getSeniorCount()
+                companion.companionCount(),
+                companion.companionType(),
+                companion.hasChildren(),
+                companion.childCount(),
+                companion.childAgeGroup(),
+                companion.hasSeniors(),
+                companion.seniorCount()
         );
     }
 
-    private AiItineraryRequest.Budget budget(TripPlanningProfileEntity profile) {
+    private AiItineraryRequest.Budget budget(GenerationInputSnapshot.Budget budget) {
         return new AiItineraryRequest.Budget(
-                profile.getCurrencyCode().name(),
-                profile.getBudgetAmount(),
-                profile.getBudgetLevel().name(),
-                profile.getIncludedBudgetItems().stream().map(BudgetItem::name).toList()
+                budget.currencyCode(),
+                budget.amount(),
+                budget.level(),
+                budget.includedItems()
         );
     }
 
-    private AiItineraryRequest.Transportation transportation(TripPlanningProfileEntity profile) {
+    private AiItineraryRequest.Transportation transportation(GenerationInputSnapshot.Transportation transportation) {
         return new AiItineraryRequest.Transportation(
-                profile.getPrimaryTransportMode().name(),
-                profile.getSecondaryTransportModes().stream().map(TransportMode::name).toList()
+                transportation.primaryMode(),
+                transportation.secondaryModes()
         );
     }
 
-    private AiItineraryRequest.Accommodation accommodation(TripPlanningProfileEntity profile) {
+    private AiItineraryRequest.Accommodation accommodation(GenerationInputSnapshot.Accommodation accommodation) {
         return new AiItineraryRequest.Accommodation(
-                profile.getAccommodationMode().name(),
-                profile.getAccommodationArea() == null ? null : profile.getAccommodationArea().name(),
-                profile.getAccommodationName(),
-                profile.getCheckInTime(),
-                profile.getCheckOutTime()
+                accommodation.accommodationMode(),
+                accommodation.preferredArea(),
+                accommodation.name(),
+                accommodation.checkInTime(),
+                accommodation.checkOutTime()
         );
     }
 
-    private List<AiItineraryRequest.MustVisitPlace> mustVisitPlaces(TripPlanningProfileEntity profile) {
-        return profile.getMustVisitPlaces()
+    private List<AiItineraryRequest.MustVisitPlace> mustVisitPlaces(GenerationInputSnapshot snapshot) {
+        return snapshot.mustVisitPlaces()
                 .stream()
-                .filter(MustVisitPlaceSnapshot::isResolved)
+                .filter(GenerationInputSnapshot.MustVisitPlace::isResolved)
                 .map(this::mustVisitPlace)
                 .toList();
     }
 
-    private AiItineraryRequest.MustVisitPlace mustVisitPlace(MustVisitPlaceSnapshot place) {
+    private AiItineraryRequest.MustVisitPlace mustVisitPlace(GenerationInputSnapshot.MustVisitPlace place) {
         return new AiItineraryRequest.MustVisitPlace(
                 place.placeId(),
                 place.name(),
                 place.formattedAddress(),
                 place.latitude(),
                 place.longitude()
+        );
+    }
+
+    private List<AiItineraryRequest.Candidate> candidateRequests(List<GenerationCandidateSnapshot> candidates) {
+        return candidates.stream()
+                .map(this::candidateRequest)
+                .toList();
+    }
+
+    private AiItineraryRequest.Candidate candidateRequest(GenerationCandidateSnapshot candidate) {
+        GenerationCandidateSnapshot.Location location = candidate.location();
+        return new AiItineraryRequest.Candidate(
+                candidate.rank(),
+                candidate.placeId(),
+                candidate.displayName(),
+                candidate.formattedAddress(),
+                location == null ? null : location.latitude(),
+                location == null ? null : location.longitude(),
+                candidate.primaryType(),
+                candidate.types(),
+                candidate.openingPeriods(),
+                candidate.forcedMustVisit()
         );
     }
 

@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { AuthUser } from '../../api/auth'
 import { ApiError } from '../../api/client'
-import { getAiRequest, getItineraryPlaceViews, getLatestItineraryGeneration, getManualPrompt, getTripDetail, submitManualResponse } from '../../api/trips'
-import type { GroundedItineraryDraft, ItineraryPlaceView, ItineraryGenerationDetailResponse, TripDetail, TripMember, TripPlanningProfile } from '../../api/trips'
+import { getAiRequest, getItineraryPlaceViews, getLatestItineraryGeneration, getManualPrompt, getTripDetail, submitManualResponse, validateManualResponse } from '../../api/trips'
+import type { AiItineraryDraft, ItineraryPlaceView, ItineraryGenerationDetailResponse, TripDetail, TripMember, TripPlanningProfile } from '../../api/trips'
+import type { AiItineraryValidationReport } from '../../api/itineraryValidation'
 import { connectTripRealtimeEvents, ITINERARY_GENERATION_STATUS_CHANGED } from '../../api/realtime'
+import { AiItineraryValidationReportPanel } from './AiItineraryValidationReportPanel'
 import './TripDetailPage.css'
 
 type TripDetailPageProps = {
@@ -52,6 +54,7 @@ export function TripDetailPage({
   const [manualResponseJson, setManualResponseJson] = useState('')
   const [manualStatus, setManualStatus] = useState<AsyncStatus>('idle')
   const [manualMessage, setManualMessage] = useState('')
+  const [manualValidationReport, setManualValidationReport] = useState<AiItineraryValidationReport | null>(null)
 
   useEffect(() => {
     let active = true
@@ -189,6 +192,9 @@ export function TripDetailPage({
     } catch (error: unknown) {
       setManualStatus('error')
       setManualMessage(errorMessageFrom(error))
+      if (error instanceof ApiError && error.validationReport) {
+        setManualValidationReport(error.validationReport)
+      }
     }
   }
 
@@ -209,15 +215,46 @@ export function TripDetailPage({
     }
   }
 
+  async function handleValidateManualResponse() {
+    if (!latestGeneration || latestGeneration.status !== 'READY_FOR_PLANNING') {
+      return
+    }
+    let parsed: AiItineraryDraft
+    try {
+      parsed = JSON.parse(manualResponseJson) as AiItineraryDraft
+    } catch {
+      setManualStatus('error')
+      setManualMessage('ChatGPT response JSON is invalid.')
+      setManualValidationReport(null)
+      return
+    }
+
+    setManualStatus('loading')
+    setManualMessage('')
+    try {
+      const report = await validateManualResponse(accessToken, tripId, latestGeneration.generationId, parsed)
+      setManualValidationReport(report)
+      setManualStatus(report.errors.length > 0 ? 'error' : 'success')
+      setManualMessage(validationReportMessage(report))
+    } catch (error: unknown) {
+      setManualStatus('error')
+      setManualMessage(errorMessageFrom(error))
+      if (error instanceof ApiError && error.validationReport) {
+        setManualValidationReport(error.validationReport)
+      }
+    }
+  }
+
   async function handleSubmitManualResponse() {
     if (!latestGeneration || latestGeneration.status !== 'READY_FOR_PLANNING') {
       return
     }
-    let parsed: GroundedItineraryDraft
+    let parsed: AiItineraryDraft
     try {
-      parsed = JSON.parse(manualResponseJson) as GroundedItineraryDraft
+      parsed = JSON.parse(manualResponseJson) as AiItineraryDraft
     } catch {
       setManualStatus('error')
+      setManualValidationReport(null)
       setManualMessage('ChatGPT ?묐떟 JSON ?뺤떇???щ컮瑜댁? ?딆뒿?덈떎.')
       return
     }
@@ -228,6 +265,7 @@ export function TripDetailPage({
       const generation = await submitManualResponse(accessToken, tripId, latestGeneration.generationId, parsed)
       setLatestGeneration(generation)
       setManualStatus('success')
+      setManualValidationReport(null)
       setManualMessage('?쇱젙????λ릺?덉뒿?덈떎.')
       const [response, views] = await Promise.all([
         getTripDetail(accessToken, tripId),
@@ -238,7 +276,15 @@ export function TripDetailPage({
     } catch (error: unknown) {
       setManualStatus('error')
       setManualMessage(errorMessageFrom(error))
+      if (error instanceof ApiError && error.validationReport) {
+        setManualValidationReport(error.validationReport)
+      }
     }
+  }
+
+  function handleManualResponseChange(value: string) {
+    setManualResponseJson(value)
+    setManualValidationReport(null)
   }
 
   if (status === 'loading' || status === 'idle') {
@@ -275,9 +321,11 @@ export function TripDetailPage({
         manualResponseJson={manualResponseJson}
         manualStatus={manualStatus}
         manualMessage={manualMessage}
+        manualValidationReport={manualValidationReport}
         onAiRequestLoad={handleLoadAiRequest}
         onManualPromptLoad={handleLoadManualPrompt}
-        onManualResponseChange={setManualResponseJson}
+        onManualResponseChange={handleManualResponseChange}
+        onManualResponseValidate={handleValidateManualResponse}
         onManualResponseSubmit={handleSubmitManualResponse}
         placeViews={placeViews}
         trip={trip}
@@ -295,11 +343,13 @@ function TripPlanningWorkspace({
   manualResponseJson,
   manualStatus,
   manualMessage,
+  manualValidationReport,
   onBackToMain,
   onLogout,
   onAiRequestLoad,
   onManualPromptLoad,
   onManualResponseChange,
+  onManualResponseValidate,
   onManualResponseSubmit,
   placeViews,
 }: {
@@ -312,11 +362,13 @@ function TripPlanningWorkspace({
   manualResponseJson: string
   manualStatus: AsyncStatus
   manualMessage: string
+  manualValidationReport: AiItineraryValidationReport | null
   onBackToMain: () => void
   onLogout: () => void
   onAiRequestLoad: () => void
   onManualPromptLoad: () => void
   onManualResponseChange: (value: string) => void
+  onManualResponseValidate: () => void
   onManualResponseSubmit: () => void
 }) {
   const latestItinerary = trip.itineraries[0] ?? null
@@ -367,9 +419,11 @@ function TripPlanningWorkspace({
             manualPrompt={manualPrompt}
             manualResponseJson={manualResponseJson}
             manualStatus={manualStatus}
+            manualValidationReport={manualValidationReport}
             onAiRequestLoad={onAiRequestLoad}
             onManualPromptLoad={onManualPromptLoad}
             onManualResponseChange={onManualResponseChange}
+            onManualResponseValidate={onManualResponseValidate}
             onManualResponseSubmit={onManualResponseSubmit}
           />
           <h2>저장된 일정이 아직 없습니다.</h2>
@@ -387,9 +441,11 @@ function TripGenerationRecoveryPanel({
   manualPrompt,
   manualResponseJson,
   manualStatus,
+  manualValidationReport,
   onAiRequestLoad,
   onManualPromptLoad,
   onManualResponseChange,
+  onManualResponseValidate,
   onManualResponseSubmit,
 }: {
   aiRequestJson: string
@@ -398,9 +454,11 @@ function TripGenerationRecoveryPanel({
   manualPrompt: string
   manualResponseJson: string
   manualStatus: AsyncStatus
+  manualValidationReport: AiItineraryValidationReport | null
   onAiRequestLoad: () => void
   onManualPromptLoad: () => void
   onManualResponseChange: (value: string) => void
+  onManualResponseValidate: () => void
   onManualResponseSubmit: () => void
 }) {
   if (!generation) {
@@ -437,6 +495,15 @@ function TripGenerationRecoveryPanel({
         value={manualResponseJson}
         onChange={(event) => onManualResponseChange(event.target.value)}
       />
+      <AiItineraryValidationReportPanel report={manualValidationReport} />
+      <button
+        className="trip-generation-submit"
+        type="button"
+        onClick={onManualResponseValidate}
+        disabled={!isReady || manualStatus === 'loading' || !manualResponseJson.trim()}
+      >
+        Validate response
+      </button>
       <button
         className="trip-generation-submit"
         type="button"
@@ -739,6 +806,17 @@ function accommodationAreaLabel(value: TripPlanningProfile['accommodationArea'])
     default:
       return '선호 숙소 지역 없음'
   }
+}
+
+function validationReportMessage(report: AiItineraryValidationReport) {
+  if (report.errors.length > 0) {
+    return `${report.errors.length} validation error(s) found.`
+  }
+  const advisoryCount = report.warnings.length + report.unverifiedConditions.length
+  if (advisoryCount > 0) {
+    return `${advisoryCount} advisory validation item(s) found.`
+  }
+  return 'Validation passed.'
 }
 
 function errorMessageFrom(error: unknown) {

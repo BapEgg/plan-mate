@@ -2,8 +2,8 @@ package com.planmate.recommendation.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.planmate.place.dto.GeoPoint;
-import com.planmate.place.dto.PlaceSearchCandidate;
+import com.planmate.place.api.GeoPoint;
+import com.planmate.place.api.PlaceSearchCandidate;
 import com.planmate.recommendation.domain.CandidateSearchCategory;
 import com.planmate.recommendation.domain.CollectedPlaceCandidate;
 import com.planmate.recommendation.service.PlaceCandidateAccumulator.CategorizedPlaceSearchCandidate;
