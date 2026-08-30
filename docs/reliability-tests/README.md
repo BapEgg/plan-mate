@@ -16,4 +16,4 @@ Preflight에서 중단됐거나 관측 순서를 고치는 과정에서 생성�
 
 공개 Run에는 결과 재검증에 필요한 구조화 데이터와 이미지를 보존한다. 로컬 계정·장비 정보가 포함된 PowerShell transcript(`commands.log`), PID, Debezium Offset 원본과 실행 중간 `runtime` 파일은 공개하지 않는다. Worker/Debezium 로그는 비밀값과 로컬 식별자를 검사한 공식 Run 파일만 보존한다.
 
-누적 결과와 포트폴리오 작성 규칙은 [장애주입테스트-결과보고-포트폴리오-반영가이드](../장애주입테스트-결과보고-포트폴리오-반영가이드.md)를 따른다.
+각 실험의 재현 절차, 측정값과 PASS 근거는 해당 Run의 `README.md`와 `result.json`에서 확인할 수 있다.
