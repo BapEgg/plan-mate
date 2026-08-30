@@ -25,3 +25,9 @@ backend/compose.override.yml
 # Local AI context files
 ai/
 AGENTS.md
+
+# Local reliability-test runtime artifacts
+docs/reliability-tests/runtime/
+docs/reliability-tests/runs/**/commands.log
+docs/reliability-tests/runs/**/*.pid
+docs/reliability-tests/runs/**/*.dat

@@ -20,6 +20,8 @@ public class ItineraryGenerationWorkerProperties {
     private boolean staleRecoveryEnabled = true;
     private Duration recoveryScanInterval = Duration.ofMinutes(1);
     private int recoveryBatchSize = 50;
+    private Duration reliabilityAfterDeliveryBeforeClaimDelay = Duration.ZERO;
+    private Duration reliabilityAfterCommitBeforeAckDelay = Duration.ZERO;
 
     public boolean isEnabled() {
         return enabled;
@@ -121,5 +123,27 @@ public class ItineraryGenerationWorkerProperties {
 
     public void setRecoveryBatchSize(int recoveryBatchSize) {
         this.recoveryBatchSize = Math.max(1, recoveryBatchSize);
+    }
+
+    public Duration getReliabilityAfterDeliveryBeforeClaimDelay() {
+        return reliabilityAfterDeliveryBeforeClaimDelay;
+    }
+
+    public void setReliabilityAfterDeliveryBeforeClaimDelay(Duration delay) {
+        if (delay == null || delay.isNegative()) {
+            throw new IllegalArgumentException("reliabilityAfterDeliveryBeforeClaimDelay must not be negative");
+        }
+        this.reliabilityAfterDeliveryBeforeClaimDelay = delay;
+    }
+
+    public Duration getReliabilityAfterCommitBeforeAckDelay() {
+        return reliabilityAfterCommitBeforeAckDelay;
+    }
+
+    public void setReliabilityAfterCommitBeforeAckDelay(Duration delay) {
+        if (delay == null || delay.isNegative()) {
+            throw new IllegalArgumentException("reliabilityAfterCommitBeforeAckDelay must not be negative");
+        }
+        this.reliabilityAfterCommitBeforeAckDelay = delay;
     }
 }

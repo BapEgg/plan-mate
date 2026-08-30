@@ -1,0 +1,237 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "gridPos": { "h": 5, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "# 실험 7 · 메시지 전달 후 DB 선점 전 Worker 종료 — **PASS**\n\n**검증 질문:** RabbitMQ가 메시지를 Worker에 전달했지만 DB 작업을 시작하기 전에 Worker가 종료되면, 미처리 메시지가 사라지지 않고 다른 Worker에 다시 전달되는가?  \n**한 문장 결론:** 종료 직전 전달 1·DB 선점 0 → Queue 재적재 10 → 재전달 1·최초 선점 10 → 완료 10/10 · 유실 0 · 중복 0",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "실험 요약",
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "API는 요청을 계속 보관했다. 장애 대상인 Worker A만 정상→중단으로 바뀌고 Worker B가 다시 정상 상태를 만들었다.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "fillOpacity": 85, "lineWidth": 0 },
+          "mappings": [
+            {
+              "options": {
+                "0": { "color": "red", "index": 0, "text": "중단" },
+                "1": { "color": "green", "index": 1, "text": "정상" }
+              },
+              "type": "value"
+            }
+          ],
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 15, "w": 14, "x": 0, "y": 5 },
+      "id": 2,
+      "options": {
+        "alignValue": "center",
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "mergeValues": true,
+        "rowHeight": 0.8,
+        "showValue": "auto",
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        { "expr": "up{job=\"planmate-backend\"}", "legendFormat": "API 서버 · 정상 유지", "refId": "A" },
+        { "expr": "up{job=\"planmate-worker\"}", "legendFormat": "Worker · A 종료 후 B 복구", "refId": "B" }
+      ],
+      "title": "① 장애 범위 · API 정상, Worker A만 종료",
+      "type": "state-timeline"
+    },
+    {
+      "gridPos": { "h": 15, "w": 10, "x": 14, "y": 5 },
+      "id": 3,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "## 실제 실험 타임라인 (KST)\n\n| 시각 | 누구나 이해할 수 있는 사건 |\n| --- | --- |\n| 00:30:09 | 새 Generation 10건 요청 |\n| 00:30:09 | Worker A가 1건 수신, DB 선점 전 일시정지 |\n| 00:30:14 | Worker A 강제 종료 |\n| 00:30:19 | 미확인 1건 반환, Queue 대기 10건 |\n| 00:30:27 | Prometheus가 Worker 중단 확인, Worker B 시작 |\n| 00:30:38 | 1건 재전달, 최초 DB 선점 시작 |\n| 00:30:41 | 10건 모두 후보 수집 완료 |\n| 00:30:44 | Queue 0 · 유실 0 · 중복 0 · PASS |\n\n**장애 핵심:** 메시지는 Worker A 메모리까지 왔지만 DB 작업은 시작되지 않았다. ACK도 없었으므로 RabbitMQ가 메시지를 다시 대기열에 넣었다.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "관측 시각과 장애 의미",
+      "type": "text"
+    },
+    {
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 20 },
+      "id": 4,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "| Worker A 종료 직전 판정 항목 | 기대 | 실제 | 의미 |\n| --- | ---: | ---: | --- |\n| RabbitMQ 최초 전달 | 1건 | **1건** | 메시지가 Worker에 도착함 |\n| Queue ready / unacked | 9 / 1건 | **9 / 1건** | 1건은 ACK를 기다리는 중 |\n| DB 전달 대기(CREATED) | 10건 | **10건** | 아직 어떤 요청도 DB 작업을 시작하지 않음 |\n| DB 선점(claim) | 0건 | **0건** | 종료 위치가 claim보다 앞임을 증명 |\n| 후보 수집 중 / 완료 | 0 / 0건 | **0 / 0건** | 업무 결과가 전혀 반영되지 않음 |\n| Candidate Row | 0행 | **0행** | 중간 결과도 없음 |\n\n**왜 이 패널이 필요한가?** Worker가 꺼졌다는 사실만으로는 어느 처리 단계에서 꺼졌는지 알 수 없다. 이 숫자들이 함께 1번 메시지가 ‘전달은 됐지만 DB 처리 전’에 멈췄음을 증명한다.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "② 종료 직전 · 전달 1, DB 선점 0",
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Worker A가 종료되자 ACK를 받지 못한 1건이 반환되어, 이미 대기하던 9건과 합쳐 Queue ready가 10건이 됐다.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Queue 대기 건수",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 18,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 3,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 13, "w": 14, "x": 0, "y": 32 },
+      "id": 5,
+      "options": {
+        "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        { "expr": "rabbitmq_queue_messages_ready{queue=\"planmate.itinerary.generation.requested\"}", "legendFormat": "Worker 종료 후 다시 대기 · 최대 10건", "refId": "A" }
+      ],
+      "title": "③ 재큐잉 · 처리 전 1건을 Queue로 반환",
+      "type": "timeseries"
+    },
+    {
+      "gridPos": { "h": 13, "w": 10, "x": 14, "y": 32 },
+      "id": 6,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "| 재큐잉 판정 항목 | 종료 직전 | 종료 후 | 판정 |\n| --- | ---: | ---: | :---: |\n| Queue ready | **9건** | **10건** | PASS |\n| Queue unacked | **1건** | **0건** | PASS |\n| 미처리 메시지 반환 | - | **1건** | PASS |\n| 반환 감지 시간 | - | **4.563초** | 측정 |\n| 최종 재전달 증가 | - | **1건** | PASS |\n\n**그래프와 숫자가 다른 이유:** `unacked=1`은 약 5초만 유지돼 Prometheus의 15초 수집 사이에 지나갔다. 그래서 이 짧은 값은 RabbitMQ Management API 원본 스냅샷으로 증명하고, Grafana에는 수집된 `ready=10`을 보여준다.  \n**증거:** `rabbitmq-snapshots.json`, `timeline.csv`",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "③ 재큐잉 · 기대값과 실제값",
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Worker B는 반환된 1건을 재전달로 받았고, DB 선점이 한 번도 없었던 10건을 모두 최초 선점으로 처리했다. SKIP은 0건이다.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Worker B 누적 건수",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 14,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 3,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 13, "w": 14, "x": 0, "y": 45 },
+      "id": 7,
+      "options": {
+        "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        { "expr": "sum(planmate_itinerary_generation_worker_delivery_total{job=\"planmate-worker\",redelivered=\"true\"}) or vector(0)", "legendFormat": "RabbitMQ 재전달 · 1건", "refId": "A" },
+        { "expr": "sum(planmate_itinerary_generation_worker_claim_total{job=\"planmate-worker\",type=\"initial\"}) or vector(0)", "legendFormat": "DB 최초 선점 · 10건", "refId": "B" },
+        { "expr": "sum(planmate_itinerary_generation_worker_processed_total{job=\"planmate-worker\",result=\"success\"}) or vector(0)", "legendFormat": "Worker 처리 성공 · 10건", "refId": "C" },
+        { "expr": "sum(planmate_itinerary_generation_worker_processed_total{job=\"planmate-worker\",result=\"skipped\"}) or vector(0)", "legendFormat": "이미 처리되어 건너뜀 · 0건", "refId": "D" }
+      ],
+      "title": "④ 재기동 처리 · 재전달 1, 최초 선점 10, 성공 10",
+      "type": "timeseries"
+    },
+    {
+      "gridPos": { "h": 13, "w": 10, "x": 14, "y": 45 },
+      "id": 8,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "| Worker B 복구 판정 | 기대 | 실제 |\n| --- | ---: | ---: |\n| RabbitMQ publish | 10건 | **10건** |\n| 전체 deliver | 11건 | **11건** |\n| 처리 완료 ACK | 10건 | **10건** |\n| redelivery | 1건 | **1건** |\n| DB 최초 선점 | 10건 | **10건** |\n| 이미 처리되어 SKIP | 0건 | **0건** |\n| Worker Health 복구 | 측정 | **11.955초** |\n| 10건 전체 처리 | 측정 | **14.074초** |\n\n`deliver=11`은 중복 저장이 아니라 최초 전달 10회에 반환 메시지의 재전달 1회가 더해진 값이다. 결과 저장과 ACK는 Generation마다 한 번씩, 총 10번만 일어났다.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "④ 재기동 후 · 기대값과 실제값",
+      "type": "text"
+    },
+    {
+      "gridPos": { "h": 13, "w": 24, "x": 0, "y": 58 },
+      "id": 9,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "**DB·RabbitMQ·Worker 로그 교차검증**\n\n| 교차검증 항목 | 실제 | 판정 |\n| --- | ---: | :---: |\n| 후보 수집 완료 / 실패 | **10 / 0건** | PASS |\n| Candidate / 장소 중복 / 순위 중복 | **1,200 / 0 / 0행** | PASS |\n| 종료 대상 Generation 후보 | **120행, 1세트** | PASS |\n| publish / deliver / ACK / redelivery | **10 / 11 / 10 / 1건** | PASS |\n| 이벤트 유실 | **0건** | PASS |\n| 운영 DLQ | **167 → 167, 증가 0건** | PASS |\n| Main Queue ready / unacked | **0 / 0건** | PASS |\n| 자동 검사 | **20개 중 20개 통과** | PASS |\n\n**결론:** DB 작업 전에 Worker가 종료돼도 ACK되지 않은 메시지는 RabbitMQ로 반환됐다. Worker B가 그 1건을 다시 받아 10건 모두를 처음부터 한 번씩 처리했으며 결과 유실과 중복 저장은 없었다.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "⑤ 최종 판정 · 완료 10, 유실 0, 중복 0",
+      "type": "text"
+    },
+    {
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 71 },
+      "id": 10,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "## 처음 보는 사람을 위한 읽는 순서\n\n| 순서 | 질문 | 이 화면의 답 |\n| ---: | --- | --- |\n| ① | 무엇이 고장 났나? | API와 RabbitMQ는 정상, 메시지를 받은 Worker A만 종료 |\n| ② | 정말 DB 처리 전이었나? | 전달 1건이지만 claim·Candidate·완료는 모두 0 |\n| ③ | 처리 전 메시지는 어디로 갔나? | unacked 1건이 반환되어 Queue ready 9→10 |\n| ④ | 재기동 후 누가 처리했나? | Worker B가 재전달 1건을 받고 최초 선점 10건 처리 |\n| ⑤ | 최종 데이터가 정확한가? | 완료 10, 후보 1,200, 유실 0, 중복 0 |\n\n`unacked`는 Worker가 받았지만 아직 완료 확인(ACK)을 보내지 않은 메시지, `claim`은 Worker가 DB에서 이 일을 자신이 처리하겠다고 선점한 기록이다. Debezium은 DB 이벤트를 RabbitMQ까지 운반하고, 이 실험의 재전달 안전성은 RabbitMQ ACK와 Worker의 DB 상태·제약이 함께 만든다.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "용어와 읽는 순서",
+      "type": "text"
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 41,
+  "tags": ["planmate", "reliability", "portfolio", "rabbitmq", "worker", "claim", "experiment-07"],
+  "templating": { "list": [] },
+  "time": {
+    "from": "2026-08-28T15:30:15.000Z",
+    "to": "2026-08-28T15:30:54.000Z"
+  },
+  "timepicker": {},
+  "timezone": "Asia/Seoul",
+  "title": "PlanMate 장애실험 07 · 전달 후 DB 선점 전 Worker 종료",
+  "uid": "planmate-reliability-exp-07",
+  "version": 1,
+  "weekStart": ""
+}

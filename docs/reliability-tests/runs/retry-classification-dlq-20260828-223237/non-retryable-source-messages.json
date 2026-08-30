@@ -1,0 +1,222 @@
+[
+  {
+    "payload_bytes": 46,
+    "redelivered": true,
+    "exchange": "planmate.itinerary",
+    "routing_key": "itinerary.generation.requested",
+    "message_count": 9,
+    "properties": {
+      "delivery_mode": 2,
+      "headers": {
+        "__debezium.context.connectorLogicalName": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"planmate\"}",
+        "__debezium.context.connectorName": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"postgresql\"}",
+        "__debezium.context.runId": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"01a0477e-880e-79be-9dcd-d4f6c8bac7a0\"}",
+        "__debezium.context.taskId": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"0\"}",
+        "aggregateType": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"ITINERARY_GENERATION\"}",
+        "eventType": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"ITINERARY_GENERATION_REQUESTED\"}",
+        "id": "{\"schema\":{\"type\":\"string\",\"optional\":false,\"name\":\"io.debezium.data.Uuid\",\"version\":1},\"payload\":\"80de566c-c252-42c0-8b26-ed255aab6201\"}",
+        "traceparent": "00-d0663f69ae458df3c7feb4cf88883cdc-746cfbb4bd61b6bf-01"
+      }
+    },
+    "payload": "{\"tripId\":1303,\"userId\":1,\"generationId\":1186}",
+    "payload_encoding": "string"
+  },
+  {
+    "payload_bytes": 46,
+    "redelivered": true,
+    "exchange": "planmate.itinerary",
+    "routing_key": "itinerary.generation.requested",
+    "message_count": 8,
+    "properties": {
+      "delivery_mode": 2,
+      "headers": {
+        "__debezium.context.connectorLogicalName": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"planmate\"}",
+        "__debezium.context.connectorName": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"postgresql\"}",
+        "__debezium.context.runId": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"01a0477e-880e-79be-9dcd-d4f6c8bac7a0\"}",
+        "__debezium.context.taskId": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"0\"}",
+        "aggregateType": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"ITINERARY_GENERATION\"}",
+        "eventType": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"ITINERARY_GENERATION_REQUESTED\"}",
+        "id": "{\"schema\":{\"type\":\"string\",\"optional\":false,\"name\":\"io.debezium.data.Uuid\",\"version\":1},\"payload\":\"8d4371c6-a7b7-48e8-bd83-d816ba8f18c0\"}",
+        "traceparent": "00-77599ccaf2631e961f14f7e0c23c2213-71c88370ff8b3db6-01"
+      }
+    },
+    "payload": "{\"tripId\":1304,\"userId\":1,\"generationId\":1187}",
+    "payload_encoding": "string"
+  },
+  {
+    "payload_bytes": 46,
+    "redelivered": true,
+    "exchange": "planmate.itinerary",
+    "routing_key": "itinerary.generation.requested",
+    "message_count": 7,
+    "properties": {
+      "delivery_mode": 2,
+      "headers": {
+        "__debezium.context.connectorLogicalName": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"planmate\"}",
+        "__debezium.context.connectorName": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"postgresql\"}",
+        "__debezium.context.runId": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"01a0477e-880e-79be-9dcd-d4f6c8bac7a0\"}",
+        "__debezium.context.taskId": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"0\"}",
+        "aggregateType": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"ITINERARY_GENERATION\"}",
+        "eventType": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"ITINERARY_GENERATION_REQUESTED\"}",
+        "id": "{\"schema\":{\"type\":\"string\",\"optional\":false,\"name\":\"io.debezium.data.Uuid\",\"version\":1},\"payload\":\"a274c5f4-e9aa-4317-ab3e-435b5c30a18f\"}",
+        "traceparent": "00-d4e7c6458a4623819e1a02b12af84e18-96c84c26e9c90d3b-01"
+      }
+    },
+    "payload": "{\"tripId\":1305,\"userId\":1,\"generationId\":1188}",
+    "payload_encoding": "string"
+  },
+  {
+    "payload_bytes": 46,
+    "redelivered": true,
+    "exchange": "planmate.itinerary",
+    "routing_key": "itinerary.generation.requested",
+    "message_count": 6,
+    "properties": {
+      "delivery_mode": 2,
+      "headers": {
+        "__debezium.context.connectorLogicalName": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"planmate\"}",
+        "__debezium.context.connectorName": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"postgresql\"}",
+        "__debezium.context.runId": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"01a0477e-880e-79be-9dcd-d4f6c8bac7a0\"}",
+        "__debezium.context.taskId": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"0\"}",
+        "aggregateType": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"ITINERARY_GENERATION\"}",
+        "eventType": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"ITINERARY_GENERATION_REQUESTED\"}",
+        "id": "{\"schema\":{\"type\":\"string\",\"optional\":false,\"name\":\"io.debezium.data.Uuid\",\"version\":1},\"payload\":\"6a6efbbf-3803-46c1-939e-0e6eebb9ccb5\"}",
+        "traceparent": "00-7c1647874ff9a9d81db2be01502a73d5-648f4a0dd11e6a2b-01"
+      }
+    },
+    "payload": "{\"tripId\":1306,\"userId\":1,\"generationId\":1189}",
+    "payload_encoding": "string"
+  },
+  {
+    "payload_bytes": 46,
+    "redelivered": true,
+    "exchange": "planmate.itinerary",
+    "routing_key": "itinerary.generation.requested",
+    "message_count": 5,
+    "properties": {
+      "delivery_mode": 2,
+      "headers": {
+        "__debezium.context.connectorLogicalName": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"planmate\"}",
+        "__debezium.context.connectorName": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"postgresql\"}",
+        "__debezium.context.runId": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"01a0477e-880e-79be-9dcd-d4f6c8bac7a0\"}",
+        "__debezium.context.taskId": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"0\"}",
+        "aggregateType": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"ITINERARY_GENERATION\"}",
+        "eventType": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"ITINERARY_GENERATION_REQUESTED\"}",
+        "id": "{\"schema\":{\"type\":\"string\",\"optional\":false,\"name\":\"io.debezium.data.Uuid\",\"version\":1},\"payload\":\"573e1585-fdf5-46a9-91d7-97212d431343\"}",
+        "traceparent": "00-a1b4019b29b7e0ebff642106f76715d0-8430a44d81e3beeb-01"
+      }
+    },
+    "payload": "{\"tripId\":1307,\"userId\":1,\"generationId\":1190}",
+    "payload_encoding": "string"
+  },
+  {
+    "payload_bytes": 46,
+    "redelivered": true,
+    "exchange": "planmate.itinerary",
+    "routing_key": "itinerary.generation.requested",
+    "message_count": 4,
+    "properties": {
+      "delivery_mode": 2,
+      "headers": {
+        "__debezium.context.connectorLogicalName": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"planmate\"}",
+        "__debezium.context.connectorName": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"postgresql\"}",
+        "__debezium.context.runId": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"01a0477e-880e-79be-9dcd-d4f6c8bac7a0\"}",
+        "__debezium.context.taskId": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"0\"}",
+        "aggregateType": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"ITINERARY_GENERATION\"}",
+        "eventType": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"ITINERARY_GENERATION_REQUESTED\"}",
+        "id": "{\"schema\":{\"type\":\"string\",\"optional\":false,\"name\":\"io.debezium.data.Uuid\",\"version\":1},\"payload\":\"c713c517-28ac-44af-b446-acc4d095fbdb\"}",
+        "traceparent": "00-9adbf67c1f70dde5e2de49e591a4cf2b-448f9d89a43c1f3a-01"
+      }
+    },
+    "payload": "{\"tripId\":1308,\"userId\":1,\"generationId\":1191}",
+    "payload_encoding": "string"
+  },
+  {
+    "payload_bytes": 46,
+    "redelivered": true,
+    "exchange": "planmate.itinerary",
+    "routing_key": "itinerary.generation.requested",
+    "message_count": 3,
+    "properties": {
+      "delivery_mode": 2,
+      "headers": {
+        "__debezium.context.connectorLogicalName": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"planmate\"}",
+        "__debezium.context.connectorName": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"postgresql\"}",
+        "__debezium.context.runId": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"01a0477e-880e-79be-9dcd-d4f6c8bac7a0\"}",
+        "__debezium.context.taskId": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"0\"}",
+        "aggregateType": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"ITINERARY_GENERATION\"}",
+        "eventType": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"ITINERARY_GENERATION_REQUESTED\"}",
+        "id": "{\"schema\":{\"type\":\"string\",\"optional\":false,\"name\":\"io.debezium.data.Uuid\",\"version\":1},\"payload\":\"739ddf0e-427e-4c52-a26e-12070e06c654\"}",
+        "traceparent": "00-54174d5db0045e4a468a36c7ae5d3f75-46699577b29eecec-01"
+      }
+    },
+    "payload": "{\"tripId\":1309,\"userId\":1,\"generationId\":1192}",
+    "payload_encoding": "string"
+  },
+  {
+    "payload_bytes": 46,
+    "redelivered": true,
+    "exchange": "planmate.itinerary",
+    "routing_key": "itinerary.generation.requested",
+    "message_count": 2,
+    "properties": {
+      "delivery_mode": 2,
+      "headers": {
+        "__debezium.context.connectorLogicalName": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"planmate\"}",
+        "__debezium.context.connectorName": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"postgresql\"}",
+        "__debezium.context.runId": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"01a0477e-880e-79be-9dcd-d4f6c8bac7a0\"}",
+        "__debezium.context.taskId": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"0\"}",
+        "aggregateType": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"ITINERARY_GENERATION\"}",
+        "eventType": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"ITINERARY_GENERATION_REQUESTED\"}",
+        "id": "{\"schema\":{\"type\":\"string\",\"optional\":false,\"name\":\"io.debezium.data.Uuid\",\"version\":1},\"payload\":\"72051204-7eec-4f6e-ae72-11c07e5130cc\"}",
+        "traceparent": "00-e7e785aae91ed492d9e39347ddd12370-8633a33d9f5a5734-01"
+      }
+    },
+    "payload": "{\"tripId\":1310,\"userId\":1,\"generationId\":1193}",
+    "payload_encoding": "string"
+  },
+  {
+    "payload_bytes": 46,
+    "redelivered": true,
+    "exchange": "planmate.itinerary",
+    "routing_key": "itinerary.generation.requested",
+    "message_count": 1,
+    "properties": {
+      "delivery_mode": 2,
+      "headers": {
+        "__debezium.context.connectorLogicalName": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"planmate\"}",
+        "__debezium.context.connectorName": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"postgresql\"}",
+        "__debezium.context.runId": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"01a0477e-880e-79be-9dcd-d4f6c8bac7a0\"}",
+        "__debezium.context.taskId": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"0\"}",
+        "aggregateType": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"ITINERARY_GENERATION\"}",
+        "eventType": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"ITINERARY_GENERATION_REQUESTED\"}",
+        "id": "{\"schema\":{\"type\":\"string\",\"optional\":false,\"name\":\"io.debezium.data.Uuid\",\"version\":1},\"payload\":\"144aa899-4d3f-41f4-97bc-69f987ab5707\"}",
+        "traceparent": "00-0cac83ca180d5868a630e95a08b9c5e8-44eef29325ab6024-01"
+      }
+    },
+    "payload": "{\"tripId\":1311,\"userId\":1,\"generationId\":1194}",
+    "payload_encoding": "string"
+  },
+  {
+    "payload_bytes": 46,
+    "redelivered": true,
+    "exchange": "planmate.itinerary",
+    "routing_key": "itinerary.generation.requested",
+    "message_count": 0,
+    "properties": {
+      "delivery_mode": 2,
+      "headers": {
+        "__debezium.context.connectorLogicalName": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"planmate\"}",
+        "__debezium.context.connectorName": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"postgresql\"}",
+        "__debezium.context.runId": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"01a0477e-880e-79be-9dcd-d4f6c8bac7a0\"}",
+        "__debezium.context.taskId": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"0\"}",
+        "aggregateType": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"ITINERARY_GENERATION\"}",
+        "eventType": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"ITINERARY_GENERATION_REQUESTED\"}",
+        "id": "{\"schema\":{\"type\":\"string\",\"optional\":false,\"name\":\"io.debezium.data.Uuid\",\"version\":1},\"payload\":\"81a060fe-3f6b-4315-bb10-ea47b0914c6f\"}",
+        "traceparent": "00-a058f457ccd8acb9f46fcdd17fc39c1b-508195854daa2d70-01"
+      }
+    },
+    "payload": "{\"tripId\":1312,\"userId\":1,\"generationId\":1195}",
+    "payload_encoding": "string"
+  }
+]

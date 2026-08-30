@@ -1,0 +1,98 @@
+{
+  "before": {
+    "name": "planmate.itinerary.generation.requested",
+    "capturedAt": "2026-08-28T08:30:41.6402496Z",
+    "ready": 0,
+    "unacked": 0,
+    "total": 0,
+    "consumers": 1,
+    "publish": 14,
+    "deliver": 14,
+    "ack": 1,
+    "redeliver": 0
+  },
+  "during": {
+    "name": "planmate.itinerary.generation.requested",
+    "capturedAt": "2026-08-28T08:31:00.5981378Z",
+    "ready": 0,
+    "unacked": 0,
+    "total": 0,
+    "consumers": 1,
+    "publish": 14,
+    "deliver": 14,
+    "ack": 1,
+    "redeliver": 0
+  },
+  "afterReadyImmediate": {
+    "name": "planmate.itinerary.generation.requested",
+    "capturedAt": "2026-08-28T08:31:38.4279078Z",
+    "ready": 0,
+    "unacked": 3,
+    "total": 3,
+    "consumers": 1,
+    "publish": 24,
+    "deliver": 24,
+    "ack": 9,
+    "redeliver": 0
+  },
+  "afterSettlement": {
+    "name": "planmate.itinerary.generation.requested",
+    "capturedAt": "2026-08-28T08:31:59.2188874Z",
+    "ready": 0,
+    "unacked": 0,
+    "total": 0,
+    "consumers": 1,
+    "publish": 24,
+    "deliver": 24,
+    "ack": 11,
+    "redeliver": 0
+  },
+  "dlqBefore": {
+    "name": "planmate.itinerary.generation.requested.dlq",
+    "capturedAt": "2026-08-28T08:30:41.6579410Z",
+    "ready": 167,
+    "unacked": 0,
+    "total": 167,
+    "consumers": 0,
+    "publish": 0,
+    "deliver": 0,
+    "ack": 0,
+    "redeliver": 0
+  },
+  "dlqDuring": {
+    "name": "planmate.itinerary.generation.requested.dlq",
+    "capturedAt": "2026-08-28T08:31:00.6029527Z",
+    "ready": 167,
+    "unacked": 0,
+    "total": 167,
+    "consumers": 0,
+    "publish": 0,
+    "deliver": 0,
+    "ack": 0,
+    "redeliver": 0
+  },
+  "dlqAfter": {
+    "name": "planmate.itinerary.generation.requested.dlq",
+    "capturedAt": "2026-08-28T08:31:38.4317025Z",
+    "ready": 167,
+    "unacked": 0,
+    "total": 167,
+    "consumers": 0,
+    "publish": 0,
+    "deliver": 0,
+    "ack": 0,
+    "redeliver": 0
+  },
+  "dlqAfterSettlement": {
+    "name": "planmate.itinerary.generation.requested.dlq",
+    "capturedAt": "2026-08-28T08:31:59.2276516Z",
+    "ready": 167,
+    "unacked": 0,
+    "total": 167,
+    "consumers": 0,
+    "publish": 0,
+    "deliver": 0,
+    "ack": 0,
+    "redeliver": 0
+  }
+}

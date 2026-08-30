@@ -1,0 +1,44 @@
+{
+  "before": {
+    "capturedAt": "2026-08-28T23:32:34.960893+09:00",
+    "currentWalLsn": "0/2D94B48",
+    "slotName": "planmate_outbox_slot",
+    "restartLsn": "0/2B433C8",
+    "confirmedFlushLsn": "0/2C8EF68",
+    "active": true
+  },
+  "during": {
+    "capturedAt": "2026-08-28T23:33:00.288617+09:00",
+    "currentWalLsn": "0/2DA4900",
+    "slotName": "planmate_outbox_slot",
+    "restartLsn": "0/2B433C8",
+    "confirmedFlushLsn": "0/2C8EF68",
+    "active": false
+  },
+  "after": {
+    "capturedAt": "2026-08-28T23:33:20.590823+09:00",
+    "currentWalLsn": "0/2E8DB50",
+    "slotName": "planmate_outbox_slot",
+    "restartLsn": "0/2C8FF98",
+    "confirmedFlushLsn": "0/2DA3E90",
+    "active": true
+  },
+  "offsetBefore": {
+    "capturedAt": "2026-08-28T14:32:34.6914029Z",
+    "sha256": "dc84237450a5191c87b0596a4ba64d381f51ca32847629fc0658016adff60897",
+    "modifiedEpoch": 1787927267,
+    "bytes": 269
+  },
+  "offsetDuring": {
+    "capturedAt": "2026-08-28T14:33:00.0153987Z",
+    "sha256": "dc84237450a5191c87b0596a4ba64d381f51ca32847629fc0658016adff60897",
+    "modifiedEpoch": 1787927267,
+    "bytes": 269
+  },
+  "offsetAfter": {
+    "capturedAt": "2026-08-28T14:33:20.3480760Z",
+    "sha256": "1b37b2e6b7f15e644597191d33140699ea0a6717713ff4db861e4c24a795bda2",
+    "modifiedEpoch": 1787927593,
+    "bytes": 269
+  }
+}

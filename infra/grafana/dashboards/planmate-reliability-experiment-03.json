@@ -1,0 +1,278 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "# 실험 3/5 · CDC Offset 불일치 탐지와 과거 이벤트 재전달 — **PASS**\n\n**검증 질문:** DB의 replication slot보다 Debezium Offset가 오래되면 유실 위험을 차단하고, 복구 과정에서 같은 이벤트가 다시 와도 중복 저장을 막는가?  \n**한 문장 결론:** 오래된 Offset를 **7.637초** 만에 차단 → 최신 Offset로 **7.393초** 만에 복구 → 과거 이벤트 10건 재전달을 모두 SKIP → **READY 10/10 · 유실 0 · 후보 중복 0**",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "실험 요약",
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "기존 PlanMate 구성은 정상 상태를 유지하고, 오래된 Offset를 주입한 실험용 CDC Detector만 중단된 뒤 최신 Offset 복원으로 다시 정상화됐는지 보여준다. 1은 정상, 0은 중단이다.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 85,
+            "lineWidth": 0
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "red",
+                  "index": 0,
+                  "text": "중단"
+                },
+                "1": {
+                  "color": "green",
+                  "index": 1,
+                  "text": "정상"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 14,
+        "x": 0,
+        "y": 4
+      },
+      "id": 2,
+      "options": {
+        "alignValue": "center",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "mergeValues": true,
+        "rowHeight": 0.75,
+        "showValue": "auto",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "up{job=\"planmate-backend\"}",
+          "legendFormat": "PlanMate API · 정상 유지",
+          "refId": "A"
+        },
+        {
+          "expr": "up{job=\"rabbitmq\"}",
+          "legendFormat": "RabbitMQ · 정상 유지",
+          "refId": "B"
+        },
+        {
+          "expr": "up{job=\"debezium\"}",
+          "legendFormat": "운영 Debezium · 정상 유지",
+          "refId": "C"
+        },
+        {
+          "expr": "up{job=\"debezium-exp3-detect\"}",
+          "legendFormat": "실험 CDC Detector · 불일치 차단 후 복구",
+          "refId": "D"
+        }
+      ],
+      "title": "① 장애 범위 · 실험 CDC만 DOWN → UP",
+      "type": "state-timeline"
+    },
+    {
+      "gridPos": {
+        "h": 12,
+        "w": 10,
+        "x": 14,
+        "y": 4
+      },
+      "id": 3,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "## 실제 실험 타임라인 (KST)\n\n| 시각 | 관측 사건 |\n| --- | --- |\n| 22:06:22 | 실험 CDC 정상 연결 |\n| 22:06:30 | Offset 체크포인트 1 저장 |\n| 22:06:50 | Slot이 더 앞선 체크포인트 2 저장 |\n| 22:06:50 | 과거 Offset 1을 강제로 복원 |\n| 22:06:58 | 실제 불일치 오류 · Health DOWN |\n| 22:07:51 | 최신 Offset 복원 · Health UP |\n| 22:08:09 | 검증용 과거 이벤트 10건 준비 |\n| 22:08:36 | 재전달 10건 모두 SKIP 완료 |",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "관측 시각",
+      "type": "text"
+    },
+    {
+      "gridPos": {
+        "h": 13,
+        "w": 14,
+        "x": 0,
+        "y": 16
+      },
+      "id": 4,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "**Replication slot**은 PostgreSQL이 ‘여기까지 CDC가 읽었다’고 기억하는 책갈피이고, **Offset**은 Debezium이 ‘여기까지 처리했다’고 기억하는 책갈피입니다.\n\n| 단계 | Debezium Offset | PostgreSQL slot | 판정 |\n| --- | --- | --- | --- |\n| 체크포인트 1 | `0/19409D0` | `0/19409D0` | 일치 · 정상 |\n| 체크포인트 2 | `0/1940B90` | `0/1940B90` | 일치 · 정상 |\n| 장애 주입 | `0/19409D0` (과거) | `0/1940B90` (최신) | **불일치 · 실행 차단** |\n| 복구 | `0/1940B90` | `0/1940B90` | **일치 · 재기동** |\n\n`과거 Offset < 최신 slot` → 이미 사라진 변경 구간을 억지로 읽지 않고 `Last recorded offset is no longer available` 오류로 멈춤 → 최신 체크포인트를 확인해 복원",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "② Slot/Offset 불일치 탐지와 복구",
+      "type": "text"
+    },
+    {
+      "gridPos": {
+        "h": 13,
+        "w": 10,
+        "x": 14,
+        "y": 16
+      },
+      "id": 5,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "| 판정 항목 | 기대 | 실제 |\n| --- | ---: | ---: |\n| 오래된 Offset 탐지 | 차단 | **차단** |\n| 불일치 시 Health | DOWN | **DOWN** |\n| 최신 Offset 복원 | UP | **UP** |\n| 과거 이벤트 재전달 | 10건 | **10건** |\n| 같은 Generation 확인 | 10건 | **10건** |\n| Worker 멱등 SKIP | 10건 | **10건** |\n| READY 상태 유지 | 10/10 | **10/10** |\n| 후보 행 유지 | 1,200 | **1,200** |\n| 이벤트 유실 / 후보 중복 | 0 / 0 | **0 / 0** |\n| DLQ 증가 | 0건 | **0건** |\n\n**최종 판정: PASS**",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "③ 기대값과 실제값",
+      "type": "text"
+    },
+    {
+      "gridPos": {
+        "h": 11,
+        "w": 14,
+        "x": 0,
+        "y": 29
+      },
+      "id": 6,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "| 관측값 | 실험 전 | 재전달 후 | 변화 |\n| --- | ---: | ---: | ---: |\n| 같은 Generation ID 집합 | 10건 | 10건 | **완전 일치** |\n| RabbitMQ publish / deliver / ACK | 0 / 0 / 0 | 10 / 10 / 10 | **전달 완료** |\n| Worker가 이미 처리됨으로 판단 | 0건 | 10건 | **SKIP 10** |\n| READY_FOR_PLANNING | 10건 | 10건 | **상태 퇴행 0** |\n| Place Candidate | 1,200행 | 1,200행 | **추가 저장 0** |\n| DLQ | 167건 | 167건 | **증가 0** |\n\n새 slot과 `snapshot.mode=initial`로 과거 Outbox 이벤트 10건을 다시 발행했습니다. Worker는 DB의 최종 상태를 먼저 확인해 이미 READY인 10건을 전부 건너뛰었습니다.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "④ 과거 이벤트 10건 재전달 · SKIP 10",
+      "type": "text"
+    },
+    {
+      "gridPos": {
+        "h": 11,
+        "w": 10,
+        "x": 14,
+        "y": 29
+      },
+      "id": 7,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "## 왜 PASS인가\n\n1. **조용한 유실을 막음**  \n   Debezium이 읽을 수 없는 과거 위치를 발견하고 자동으로 멈췄습니다.\n\n2. **검증된 위치로만 복구**  \n   임의로 slot을 되돌리지 않고 최신 Offset 체크포인트를 복원했습니다.\n\n3. **재전달을 허용해도 안전**  \n   Worker가 Generation의 현재 상태를 확인해 이미 끝난 작업은 SKIP했습니다.\n\n4. **서로 다른 증거가 같은 결론**  \n   Debezium 로그, slot LSN, RabbitMQ 카운터, Worker metric, DB 행 수를 교차 확인했습니다.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "복구 원리",
+      "type": "text"
+    },
+    {
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 40
+      },
+      "id": 8,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "## 처음 보는 사람을 위한 설명\n\n| 용어 | 쉬운 뜻 | 이 실험에서 확인한 것 |\n| --- | --- | --- |\n| CDC | DB 변경을 다른 시스템으로 전달하는 기능 | Outbox 변경을 RabbitMQ로 전달 |\n| Replication slot | PostgreSQL 쪽 읽기 책갈피 | 최신 위치 `0/1940B90` 유지 |\n| Offset | Debezium 쪽 처리 책갈피 | 과거 위치 복원 시 불일치 감지 |\n| Snapshot replay | 현재 테이블을 다시 읽어 과거 이벤트를 재발행 | 같은 10건을 의도적으로 다시 전달 |\n| 멱등성 | 같은 요청을 여러 번 받아도 결과는 한 번 처리한 것과 같음 | SKIP 10 · 후보 추가 0 · READY 유지 |\n\n**읽는 순서:** ① 무엇만 고장났는지 → ② 왜 안전하게 멈췄는지 → ③ 기대와 실제가 같은지 → ④ 중복 재전달에도 DB 결과가 그대로인지",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "용어와 읽는 순서",
+      "type": "text"
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 41,
+  "tags": [
+    "planmate",
+    "reliability",
+    "cdc",
+    "debezium",
+    "experiment-03"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "2026-08-28T13:06:36Z",
+    "to": "2026-08-28T13:08:12Z"
+  },
+  "timepicker": {},
+  "timezone": "Asia/Seoul",
+  "title": "PlanMate 장애실험 03 · CDC Offset 불일치와 과거 이벤트 재전달",
+  "uid": "planmate-reliability-exp-03",
+  "version": 1,
+  "weekStart": ""
+}

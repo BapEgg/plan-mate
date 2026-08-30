@@ -1,0 +1,270 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::               (v3.5.14)
+
+2026-08-28T23:32:16.948+09:00  INFO 4308 --- [planmate-backend] [           main] com.planmate.PlanMateApplication         : Starting PlanMateApplication v0.0.1-SNAPSHOT using Java 21.0.11 with PID 4308 (<WORKSPACE>\backend\build\libs\backend-0.0.1-SNAPSHOT.jar started by <LOCAL_USER> in <WORKSPACE>)
+2026-08-28T23:32:16.953+09:00  INFO 4308 --- [planmate-backend] [           main] com.planmate.PlanMateApplication         : No active profile set, falling back to 1 default profile: "default"
+2026-08-28T23:32:19.143+09:00  INFO 4308 --- [planmate-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-08-28T23:32:19.146+09:00  INFO 4308 --- [planmate-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-08-28T23:32:19.453+09:00  INFO 4308 --- [planmate-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 292 ms. Found 16 JPA repository interfaces.
+2026-08-28T23:32:19.489+09:00  INFO 4308 --- [planmate-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-08-28T23:32:19.492+09:00  INFO 4308 --- [planmate-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-08-28T23:32:19.530+09:00  INFO 4308 --- [planmate-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.planmate.auth.repository.AuthEmailLogRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-08-28T23:32:19.531+09:00  INFO 4308 --- [planmate-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.planmate.auth.repository.AuthEmailTokenRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-08-28T23:32:19.532+09:00  INFO 4308 --- [planmate-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.planmate.auth.repository.LocalCredentialRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-08-28T23:32:19.532+09:00  INFO 4308 --- [planmate-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.planmate.auth.repository.OauthAccountRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-08-28T23:32:19.533+09:00  INFO 4308 --- [planmate-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.planmate.common.outbox.OutboxEventRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-08-28T23:32:19.535+09:00  INFO 4308 --- [planmate-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.planmate.itinerary.repository.GenerationCandidateSnapshotRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-08-28T23:32:19.535+09:00  INFO 4308 --- [planmate-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.planmate.itinerary.repository.ItineraryDayRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-08-28T23:32:19.536+09:00  INFO 4308 --- [planmate-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.planmate.itinerary.repository.ItineraryGenerationInputRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-08-28T23:32:19.536+09:00  INFO 4308 --- [planmate-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.planmate.itinerary.repository.ItineraryGenerationRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-08-28T23:32:19.537+09:00  INFO 4308 --- [planmate-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.planmate.itinerary.repository.ItineraryItemRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-08-28T23:32:19.538+09:00  INFO 4308 --- [planmate-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.planmate.itinerary.repository.ItineraryRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-08-28T23:32:19.539+09:00  INFO 4308 --- [planmate-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.planmate.recommendation.repository.PlaceTypePolicyRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-08-28T23:32:19.540+09:00  INFO 4308 --- [planmate-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.planmate.trip.repository.TripMemberRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-08-28T23:32:19.542+09:00  INFO 4308 --- [planmate-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.planmate.trip.repository.TripPlanningProfileRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-08-28T23:32:19.546+09:00  INFO 4308 --- [planmate-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.planmate.trip.repository.TripRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-08-28T23:32:19.548+09:00  INFO 4308 --- [planmate-backend] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.planmate.user.repository.UserRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-08-28T23:32:19.549+09:00  INFO 4308 --- [planmate-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 31 ms. Found 0 Redis repository interfaces.
+2026-08-28T23:32:21.108+09:00  INFO 4308 --- [planmate-backend] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8081 (http)
+2026-08-28T23:32:21.132+09:00  INFO 4308 --- [planmate-backend] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-08-28T23:32:21.134+09:00  INFO 4308 --- [planmate-backend] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.54]
+2026-08-28T23:32:21.195+09:00  INFO 4308 --- [planmate-backend] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-08-28T23:32:21.196+09:00  INFO 4308 --- [planmate-backend] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 4169 ms
+2026-08-28T23:32:21.679+09:00  INFO 4308 --- [planmate-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-08-28T23:32:21.860+09:00  INFO 4308 --- [planmate-backend] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@4cded2cd
+2026-08-28T23:32:21.862+09:00  INFO 4308 --- [planmate-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-08-28T23:32:21.902+09:00  INFO 4308 --- [planmate-backend] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:15432/planmate (PostgreSQL 17.10)
+2026-08-28T23:32:21.977+09:00  INFO 4308 --- [planmate-backend] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 21 migrations (execution time 00:00.045s)
+2026-08-28T23:32:22.014+09:00  INFO 4308 --- [planmate-backend] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 21
+2026-08-28T23:32:22.021+09:00  INFO 4308 --- [planmate-backend] [           main] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+2026-08-28T23:32:22.127+09:00  INFO 4308 --- [planmate-backend] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-08-28T23:32:22.185+09:00  INFO 4308 --- [planmate-backend] [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.49.Final
+2026-08-28T23:32:22.230+09:00  INFO 4308 --- [planmate-backend] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-08-28T23:32:22.506+09:00  INFO 4308 --- [planmate-backend] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-08-28T23:32:22.587+09:00  INFO 4308 --- [planmate-backend] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 17.10
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-08-28T23:32:23.806+09:00  INFO 4308 --- [planmate-backend] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-08-28T23:32:23.865+09:00  INFO 4308 --- [planmate-backend] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-08-28T23:32:24.883+09:00  INFO 4308 --- [planmate-backend] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-08-28T23:32:27.083+09:00  WARN 4308 --- [planmate-backend] [           main] o.s.w.s.resource.ResourceHandlerUtils    : Appended trailing slash to static resource location: file:///<WORKSPACE>/uploads/profile-images/
+2026-08-28T23:32:27.261+09:00  INFO 4308 --- [planmate-backend] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 3 endpoints beneath base path '/actuator'
+2026-08-28T23:32:27.894+09:00  INFO 4308 --- [planmate-backend] [           main] o.s.m.s.b.SimpleBrokerMessageHandler     : Starting...
+2026-08-28T23:32:27.896+09:00  INFO 4308 --- [planmate-backend] [           main] o.s.m.s.b.SimpleBrokerMessageHandler     : BrokerAvailabilityEvent[available=true, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@46883090]]
+2026-08-28T23:32:27.897+09:00  INFO 4308 --- [planmate-backend] [           main] o.s.m.s.b.SimpleBrokerMessageHandler     : Started.
+2026-08-28T23:32:27.907+09:00  INFO 4308 --- [planmate-backend] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8081 (http) with context path '/'
+2026-08-28T23:32:27.909+09:00  INFO 4308 --- [planmate-backend] [           main] o.s.a.r.c.CachingConnectionFactory       : Attempting to connect to: [localhost:5672]
+2026-08-28T23:32:27.954+09:00  INFO 4308 --- [planmate-backend] [           main] o.s.a.r.c.CachingConnectionFactory       : Created new connection: rabbitConnectionFactory#1db33525:0/SimpleConnection@4c1d530d [delegate=amqp://planmate@127.0.0.1:5672/, localPort=4817]
+2026-08-28T23:32:28.027+09:00  INFO 4308 --- [planmate-backend] [           main] com.planmate.PlanMateApplication         : Started PlanMateApplication in 12.044 seconds (process running for 12.895)
+2026-08-28T23:32:28.149+09:00  INFO 4308 --- [planmate-backend] [MessageBroker-1] c.p.c.outbox.OutboxRetentionScheduler    : Outbox retention cleanup completed: cutoff=2026-08-21T14:32:28.033457400Z, deletedCount=0
+2026-08-28T23:32:28.278+09:00  INFO 4308 --- [planmate-backend] [nio-8081-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-08-28T23:32:28.279+09:00  INFO 4308 --- [planmate-backend] [nio-8081-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-08-28T23:32:28.281+09:00  INFO 4308 --- [planmate-backend] [nio-8081-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+2026-08-28T23:32:36.079+09:00  WARN 4308 --- [planmate-backend] [ntContainer#0-1] o.s.a.r.l.SimpleMessageListenerContainer : Consumer raised exception, processing can restart if the connection factory supports it
+
+com.rabbitmq.client.ShutdownSignalException: connection error; protocol method: #method<connection.close>(reply-code=320, reply-text=CONNECTION_FORCED - broker forced connection closure with reason 'shutdown', class-id=0, method-id=0)
+	at com.rabbitmq.client.impl.AMQConnection.startShutdown(AMQConnection.java:1007) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.AMQConnection.shutdown(AMQConnection.java:997) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.AMQConnection.handleConnectionClose(AMQConnection.java:935) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.AMQConnection.processControlCommand(AMQConnection.java:890) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.AMQConnection$1.processAsync(AMQConnection.java:275) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.AMQChannel.handleCompleteInboundCommand(AMQChannel.java:193) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.AMQChannel.handleFrame(AMQChannel.java:125) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.AMQConnection.readFrame(AMQConnection.java:741) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.AMQConnection.access$400(AMQConnection.java:48) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.AMQConnection$MainLoop.run(AMQConnection.java:688) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2026-08-28T23:32:36.087+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-1] o.s.a.r.l.SimpleMessageListenerContainer : Restarting Consumer@89ebacd: tags=[[amq.ctag-vNI3_8jlM_IHPDYwLDOsJA]], channel=Cached Rabbit Channel: AMQChannel(amqp://planmate@127.0.0.1:5672/,1), conn: Proxy@6098a311 Shared Rabbit Connection: SimpleConnection@4c1d530d [delegate=amqp://planmate@127.0.0.1:5672/, localPort=4817], acknowledgeMode=AUTO local queue size=0
+2026-08-28T23:32:36.089+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-2] o.s.a.r.c.CachingConnectionFactory       : Attempting to connect to: [localhost:5672]
+2026-08-28T23:32:36.097+09:00 ERROR 4308 --- [planmate-backend] [ntContainer#0-2] o.s.a.r.l.SimpleMessageListenerContainer : Failed to check/redeclare auto-delete queue(s).
+
+org.springframework.amqp.AmqpIOException: java.io.IOException
+	at org.springframework.amqp.rabbit.support.RabbitExceptionTranslator.convertRabbitAccessException(RabbitExceptionTranslator.java:70) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.connection.AbstractConnectionFactory.createBareConnection(AbstractConnectionFactory.java:632) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.connection.CachingConnectionFactory.createConnection(CachingConnectionFactory.java:729) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.connection.ConnectionFactoryUtils.createConnection(ConnectionFactoryUtils.java:257) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.core.RabbitTemplate.doExecute(RabbitTemplate.java:2261) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.core.RabbitTemplate.execute(RabbitTemplate.java:2234) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.core.RabbitTemplate.execute(RabbitTemplate.java:2214) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.core.RabbitAdmin.getQueueInfo(RabbitAdmin.java:467) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.core.RabbitAdmin.getQueueProperties(RabbitAdmin.java:451) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.listener.AbstractMessageListenerContainer.attemptDeclarations(AbstractMessageListenerContainer.java:1972) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.listener.AbstractMessageListenerContainer.redeclareElementsIfNecessary(AbstractMessageListenerContainer.java:1936) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer$AsyncMessageProcessingConsumer.initialize(SimpleMessageListenerContainer.java:1489) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer$AsyncMessageProcessingConsumer.run(SimpleMessageListenerContainer.java:1328) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+Caused by: java.io.IOException
+	at com.rabbitmq.client.impl.AMQChannel.wrap(AMQChannel.java:140) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.AMQChannel.wrap(AMQChannel.java:136) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.AMQConnection.start(AMQConnection.java:406) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.ConnectionFactory.newConnection(ConnectionFactory.java:1251) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.ConnectionFactory.newConnection(ConnectionFactory.java:1198) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at org.springframework.amqp.rabbit.connection.AbstractConnectionFactory.connectAddresses(AbstractConnectionFactory.java:678) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.connection.AbstractConnectionFactory.connect(AbstractConnectionFactory.java:647) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.connection.AbstractConnectionFactory.createBareConnection(AbstractConnectionFactory.java:593) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	... 12 common frames omitted
+Caused by: com.rabbitmq.client.ShutdownSignalException: connection error
+	at com.rabbitmq.utility.ValueOrException.getValue(ValueOrException.java:66) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.utility.BlockingValueOrException.uninterruptibleGetValue(BlockingValueOrException.java:36) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.AMQChannel$BlockingRpcContinuation.getReply(AMQChannel.java:552) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.AMQConnection.start(AMQConnection.java:336) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	... 17 common frames omitted
+Caused by: java.io.EOFException
+	at java.base/java.io.DataInputStream.readUnsignedByte(DataInputStream.java:297) ~[na:na]
+	at com.rabbitmq.client.impl.Frame.readFrom(Frame.java:91) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.SocketFrameHandler.readFrame(SocketFrameHandler.java:199) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.AMQConnection$MainLoop.run(AMQConnection.java:687) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	... 1 common frames omitted
+
+2026-08-28T23:32:36.098+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-2] o.s.a.r.c.CachingConnectionFactory       : Attempting to connect to: [localhost:5672]
+2026-08-28T23:32:41.283+09:00  WARN 4308 --- [planmate-backend] [ntContainer#0-2] o.s.a.r.l.SimpleMessageListenerContainer : Consumer raised exception, processing can restart if the connection factory supports it
+
+org.springframework.amqp.AmqpIOException: java.io.IOException
+	at org.springframework.amqp.rabbit.support.RabbitExceptionTranslator.convertRabbitAccessException(RabbitExceptionTranslator.java:70) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.connection.AbstractConnectionFactory.createBareConnection(AbstractConnectionFactory.java:632) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.connection.CachingConnectionFactory.createConnection(CachingConnectionFactory.java:729) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.connection.ConnectionFactoryUtils.createConnection(ConnectionFactoryUtils.java:257) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.connection.ConnectionFactoryUtils$RabbitResourceFactory.createConnection(ConnectionFactoryUtils.java:345) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.connection.ConnectionFactoryUtils.doGetTransactionalResourceHolder(ConnectionFactoryUtils.java:140) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.connection.ConnectionFactoryUtils.getTransactionalResourceHolder(ConnectionFactoryUtils.java:102) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.connection.ConnectionFactoryUtils.getTransactionalResourceHolder(ConnectionFactoryUtils.java:85) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.listener.BlockingQueueConsumer.start(BlockingQueueConsumer.java:625) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer$AsyncMessageProcessingConsumer.initialize(SimpleMessageListenerContainer.java:1490) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer$AsyncMessageProcessingConsumer.run(SimpleMessageListenerContainer.java:1328) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+Caused by: java.io.IOException
+	at com.rabbitmq.client.impl.AMQChannel.wrap(AMQChannel.java:140) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.AMQChannel.wrap(AMQChannel.java:136) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.AMQConnection.start(AMQConnection.java:406) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.ConnectionFactory.newConnection(ConnectionFactory.java:1251) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.ConnectionFactory.newConnection(ConnectionFactory.java:1198) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at org.springframework.amqp.rabbit.connection.AbstractConnectionFactory.connectAddresses(AbstractConnectionFactory.java:678) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.connection.AbstractConnectionFactory.connect(AbstractConnectionFactory.java:647) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.connection.AbstractConnectionFactory.createBareConnection(AbstractConnectionFactory.java:593) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	... 10 common frames omitted
+Caused by: com.rabbitmq.client.ShutdownSignalException: connection error
+	at com.rabbitmq.utility.ValueOrException.getValue(ValueOrException.java:66) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.utility.BlockingValueOrException.uninterruptibleGetValue(BlockingValueOrException.java:36) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.AMQChannel$BlockingRpcContinuation.getReply(AMQChannel.java:552) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.AMQConnection.start(AMQConnection.java:336) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	... 15 common frames omitted
+Caused by: java.io.EOFException
+	at java.base/java.io.DataInputStream.readUnsignedByte(DataInputStream.java:297) ~[na:na]
+	at com.rabbitmq.client.impl.Frame.readFrom(Frame.java:91) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.SocketFrameHandler.readFrame(SocketFrameHandler.java:199) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.AMQConnection$MainLoop.run(AMQConnection.java:687) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	... 1 common frames omitted
+
+2026-08-28T23:32:41.284+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-2] o.s.a.r.l.SimpleMessageListenerContainer : Restarting Consumer@72dcc296: tags=[[]], channel=null, acknowledgeMode=AUTO local queue size=0
+2026-08-28T23:32:41.285+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-3] o.s.a.r.c.CachingConnectionFactory       : Attempting to connect to: [localhost:5672]
+2026-08-28T23:32:41.287+09:00 ERROR 4308 --- [planmate-backend] [ntContainer#0-3] o.s.a.r.l.SimpleMessageListenerContainer : Failed to check/redeclare auto-delete queue(s).
+2026-08-28T23:32:41.287+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-3] o.s.a.r.c.CachingConnectionFactory       : Attempting to connect to: [localhost:5672]
+2026-08-28T23:32:46.451+09:00  WARN 4308 --- [planmate-backend] [ntContainer#0-3] o.s.a.r.l.SimpleMessageListenerContainer : Consumer raised exception, processing can restart if the connection factory supports it. Exception summary: org.springframework.amqp.AmqpConnectException: java.net.ConnectException: Connection refused: getsockopt
+2026-08-28T23:32:46.451+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-3] o.s.a.r.l.SimpleMessageListenerContainer : Restarting Consumer@2e0862fd: tags=[[]], channel=null, acknowledgeMode=AUTO local queue size=0
+2026-08-28T23:32:46.453+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-4] o.s.a.r.c.CachingConnectionFactory       : Attempting to connect to: [localhost:5672]
+2026-08-28T23:32:46.454+09:00 ERROR 4308 --- [planmate-backend] [ntContainer#0-4] o.s.a.r.l.SimpleMessageListenerContainer : Failed to check/redeclare auto-delete queue(s).
+2026-08-28T23:32:46.454+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-4] o.s.a.r.c.CachingConnectionFactory       : Attempting to connect to: [localhost:5672]
+2026-08-28T23:32:51.589+09:00  WARN 4308 --- [planmate-backend] [ntContainer#0-4] o.s.a.r.l.SimpleMessageListenerContainer : Consumer raised exception, processing can restart if the connection factory supports it. Exception summary: org.springframework.amqp.AmqpConnectException: java.net.ConnectException: Connection refused: getsockopt
+2026-08-28T23:32:51.589+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-4] o.s.a.r.l.SimpleMessageListenerContainer : Restarting Consumer@5bca8634: tags=[[]], channel=null, acknowledgeMode=AUTO local queue size=0
+2026-08-28T23:32:51.591+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-5] o.s.a.r.c.CachingConnectionFactory       : Attempting to connect to: [localhost:5672]
+2026-08-28T23:32:51.592+09:00 ERROR 4308 --- [planmate-backend] [ntContainer#0-5] o.s.a.r.l.SimpleMessageListenerContainer : Failed to check/redeclare auto-delete queue(s).
+2026-08-28T23:32:51.592+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-5] o.s.a.r.c.CachingConnectionFactory       : Attempting to connect to: [localhost:5672]
+2026-08-28T23:32:56.739+09:00  WARN 4308 --- [planmate-backend] [ntContainer#0-5] o.s.a.r.l.SimpleMessageListenerContainer : Consumer raised exception, processing can restart if the connection factory supports it. Exception summary: org.springframework.amqp.AmqpConnectException: java.net.ConnectException: Connection refused: getsockopt
+2026-08-28T23:32:56.739+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-5] o.s.a.r.l.SimpleMessageListenerContainer : Restarting Consumer@4ee6723: tags=[[]], channel=null, acknowledgeMode=AUTO local queue size=0
+2026-08-28T23:32:56.741+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-6] o.s.a.r.c.CachingConnectionFactory       : Attempting to connect to: [localhost:5672]
+2026-08-28T23:32:56.743+09:00 ERROR 4308 --- [planmate-backend] [ntContainer#0-6] o.s.a.r.l.SimpleMessageListenerContainer : Failed to check/redeclare auto-delete queue(s).
+2026-08-28T23:32:56.743+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-6] o.s.a.r.c.CachingConnectionFactory       : Attempting to connect to: [localhost:5672]
+2026-08-28T23:33:01.890+09:00  WARN 4308 --- [planmate-backend] [ntContainer#0-6] o.s.a.r.l.SimpleMessageListenerContainer : Consumer raised exception, processing can restart if the connection factory supports it. Exception summary: org.springframework.amqp.AmqpConnectException: java.net.ConnectException: Connection refused: getsockopt
+2026-08-28T23:33:01.890+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-6] o.s.a.r.l.SimpleMessageListenerContainer : Restarting Consumer@1afb69b4: tags=[[]], channel=null, acknowledgeMode=AUTO local queue size=0
+2026-08-28T23:33:01.891+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-7] o.s.a.r.c.CachingConnectionFactory       : Attempting to connect to: [localhost:5672]
+2026-08-28T23:33:01.893+09:00 ERROR 4308 --- [planmate-backend] [ntContainer#0-7] o.s.a.r.l.SimpleMessageListenerContainer : Failed to check/redeclare auto-delete queue(s).
+2026-08-28T23:33:01.893+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-7] o.s.a.r.c.CachingConnectionFactory       : Attempting to connect to: [localhost:5672]
+2026-08-28T23:33:07.058+09:00  WARN 4308 --- [planmate-backend] [ntContainer#0-7] o.s.a.r.l.SimpleMessageListenerContainer : Consumer raised exception, processing can restart if the connection factory supports it. Exception summary: org.springframework.amqp.AmqpConnectException: java.net.ConnectException: Connection refused: getsockopt
+2026-08-28T23:33:07.058+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-7] o.s.a.r.l.SimpleMessageListenerContainer : Restarting Consumer@55f8009b: tags=[[]], channel=null, acknowledgeMode=AUTO local queue size=0
+2026-08-28T23:33:07.060+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-8] o.s.a.r.c.CachingConnectionFactory       : Attempting to connect to: [localhost:5672]
+2026-08-28T23:33:07.066+09:00 ERROR 4308 --- [planmate-backend] [ntContainer#0-8] o.s.a.r.l.SimpleMessageListenerContainer : Failed to check/redeclare auto-delete queue(s).
+2026-08-28T23:33:07.067+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-8] o.s.a.r.c.CachingConnectionFactory       : Attempting to connect to: [localhost:5672]
+2026-08-28T23:33:12.191+09:00  WARN 4308 --- [planmate-backend] [ntContainer#0-8] o.s.a.r.l.SimpleMessageListenerContainer : Consumer raised exception, processing can restart if the connection factory supports it
+
+org.springframework.amqp.AmqpIOException: java.io.IOException
+	at org.springframework.amqp.rabbit.support.RabbitExceptionTranslator.convertRabbitAccessException(RabbitExceptionTranslator.java:70) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.connection.AbstractConnectionFactory.createBareConnection(AbstractConnectionFactory.java:632) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.connection.CachingConnectionFactory.createConnection(CachingConnectionFactory.java:729) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.connection.ConnectionFactoryUtils.createConnection(ConnectionFactoryUtils.java:257) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.connection.ConnectionFactoryUtils$RabbitResourceFactory.createConnection(ConnectionFactoryUtils.java:345) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.connection.ConnectionFactoryUtils.doGetTransactionalResourceHolder(ConnectionFactoryUtils.java:140) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.connection.ConnectionFactoryUtils.getTransactionalResourceHolder(ConnectionFactoryUtils.java:102) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.connection.ConnectionFactoryUtils.getTransactionalResourceHolder(ConnectionFactoryUtils.java:85) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.listener.BlockingQueueConsumer.start(BlockingQueueConsumer.java:625) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer$AsyncMessageProcessingConsumer.initialize(SimpleMessageListenerContainer.java:1490) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer$AsyncMessageProcessingConsumer.run(SimpleMessageListenerContainer.java:1328) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+Caused by: java.io.IOException
+	at com.rabbitmq.client.impl.AMQChannel.wrap(AMQChannel.java:140) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.AMQChannel.wrap(AMQChannel.java:136) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.AMQConnection.start(AMQConnection.java:406) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.ConnectionFactory.newConnection(ConnectionFactory.java:1251) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.ConnectionFactory.newConnection(ConnectionFactory.java:1198) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at org.springframework.amqp.rabbit.connection.AbstractConnectionFactory.connectAddresses(AbstractConnectionFactory.java:678) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.connection.AbstractConnectionFactory.connect(AbstractConnectionFactory.java:647) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	at org.springframework.amqp.rabbit.connection.AbstractConnectionFactory.createBareConnection(AbstractConnectionFactory.java:593) ~[spring-rabbit-3.2.10.jar!/:3.2.10]
+	... 10 common frames omitted
+Caused by: com.rabbitmq.client.ShutdownSignalException: connection error
+	at com.rabbitmq.utility.ValueOrException.getValue(ValueOrException.java:66) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.utility.BlockingValueOrException.uninterruptibleGetValue(BlockingValueOrException.java:36) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.AMQChannel$BlockingRpcContinuation.getReply(AMQChannel.java:552) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.AMQConnection.start(AMQConnection.java:336) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	... 15 common frames omitted
+Caused by: java.io.EOFException
+	at java.base/java.io.DataInputStream.readUnsignedByte(DataInputStream.java:297) ~[na:na]
+	at com.rabbitmq.client.impl.Frame.readFrom(Frame.java:91) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.SocketFrameHandler.readFrame(SocketFrameHandler.java:199) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	at com.rabbitmq.client.impl.AMQConnection$MainLoop.run(AMQConnection.java:687) ~[amqp-client-5.25.0.jar!/:5.25.0]
+	... 1 common frames omitted
+
+2026-08-28T23:33:12.193+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-8] o.s.a.r.l.SimpleMessageListenerContainer : Restarting Consumer@28ac24d1: tags=[[]], channel=null, acknowledgeMode=AUTO local queue size=0
+2026-08-28T23:33:12.194+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] o.s.a.r.c.CachingConnectionFactory       : Attempting to connect to: [localhost:5672]
+2026-08-28T23:33:12.201+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] o.s.a.r.c.CachingConnectionFactory       : Created new connection: rabbitConnectionFactory#1db33525:15/SimpleConnection@351b99b6 [delegate=amqp://planmate@127.0.0.1:5672/, localPort=13439]
+2026-08-28T23:33:13.338+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] i.m.ItineraryGenerationRequestedListener : Itinerary generation delivery received: generationId=1216, tripId=1323, redelivered=false
+2026-08-28T23:33:13.398+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] c.p.i.s.ItineraryGenerationWorkerService : Itinerary generation collection claim acquired: generationId=1216, tripId=1323, claimVersion=1, claimType=initial, redelivered=false
+2026-08-28T23:33:13.635+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] i.m.ItineraryGenerationRequestedListener : Itinerary generation listener returning for ACK: generationId=1216, tripId=1323, redelivered=false
+2026-08-28T23:33:13.639+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] i.m.ItineraryGenerationRequestedListener : Itinerary generation delivery received: generationId=1217, tripId=1324, redelivered=false
+2026-08-28T23:33:13.647+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] c.p.i.s.ItineraryGenerationWorkerService : Itinerary generation collection claim acquired: generationId=1217, tripId=1324, claimVersion=1, claimType=initial, redelivered=false
+2026-08-28T23:33:13.806+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] i.m.ItineraryGenerationRequestedListener : Itinerary generation listener returning for ACK: generationId=1217, tripId=1324, redelivered=false
+2026-08-28T23:33:13.808+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] i.m.ItineraryGenerationRequestedListener : Itinerary generation delivery received: generationId=1218, tripId=1325, redelivered=false
+2026-08-28T23:33:13.816+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] c.p.i.s.ItineraryGenerationWorkerService : Itinerary generation collection claim acquired: generationId=1218, tripId=1325, claimVersion=1, claimType=initial, redelivered=false
+2026-08-28T23:33:13.955+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] i.m.ItineraryGenerationRequestedListener : Itinerary generation listener returning for ACK: generationId=1218, tripId=1325, redelivered=false
+2026-08-28T23:33:13.958+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] i.m.ItineraryGenerationRequestedListener : Itinerary generation delivery received: generationId=1219, tripId=1326, redelivered=false
+2026-08-28T23:33:13.964+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] c.p.i.s.ItineraryGenerationWorkerService : Itinerary generation collection claim acquired: generationId=1219, tripId=1326, claimVersion=1, claimType=initial, redelivered=false
+2026-08-28T23:33:14.087+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] i.m.ItineraryGenerationRequestedListener : Itinerary generation listener returning for ACK: generationId=1219, tripId=1326, redelivered=false
+2026-08-28T23:33:14.090+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] i.m.ItineraryGenerationRequestedListener : Itinerary generation delivery received: generationId=1220, tripId=1327, redelivered=false
+2026-08-28T23:33:14.095+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] c.p.i.s.ItineraryGenerationWorkerService : Itinerary generation collection claim acquired: generationId=1220, tripId=1327, claimVersion=1, claimType=initial, redelivered=false
+2026-08-28T23:33:14.209+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] i.m.ItineraryGenerationRequestedListener : Itinerary generation listener returning for ACK: generationId=1220, tripId=1327, redelivered=false
+2026-08-28T23:33:14.211+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] i.m.ItineraryGenerationRequestedListener : Itinerary generation delivery received: generationId=1221, tripId=1328, redelivered=false
+2026-08-28T23:33:14.217+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] c.p.i.s.ItineraryGenerationWorkerService : Itinerary generation collection claim acquired: generationId=1221, tripId=1328, claimVersion=1, claimType=initial, redelivered=false
+2026-08-28T23:33:14.340+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] i.m.ItineraryGenerationRequestedListener : Itinerary generation listener returning for ACK: generationId=1221, tripId=1328, redelivered=false
+2026-08-28T23:33:14.345+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] i.m.ItineraryGenerationRequestedListener : Itinerary generation delivery received: generationId=1222, tripId=1329, redelivered=false
+2026-08-28T23:33:14.356+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] c.p.i.s.ItineraryGenerationWorkerService : Itinerary generation collection claim acquired: generationId=1222, tripId=1329, claimVersion=1, claimType=initial, redelivered=false
+2026-08-28T23:33:14.481+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] i.m.ItineraryGenerationRequestedListener : Itinerary generation listener returning for ACK: generationId=1222, tripId=1329, redelivered=false
+2026-08-28T23:33:14.484+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] i.m.ItineraryGenerationRequestedListener : Itinerary generation delivery received: generationId=1223, tripId=1330, redelivered=false
+2026-08-28T23:33:14.491+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] c.p.i.s.ItineraryGenerationWorkerService : Itinerary generation collection claim acquired: generationId=1223, tripId=1330, claimVersion=1, claimType=initial, redelivered=false
+2026-08-28T23:33:14.623+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] i.m.ItineraryGenerationRequestedListener : Itinerary generation listener returning for ACK: generationId=1223, tripId=1330, redelivered=false
+2026-08-28T23:33:14.627+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] i.m.ItineraryGenerationRequestedListener : Itinerary generation delivery received: generationId=1224, tripId=1331, redelivered=false
+2026-08-28T23:33:14.634+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] c.p.i.s.ItineraryGenerationWorkerService : Itinerary generation collection claim acquired: generationId=1224, tripId=1331, claimVersion=1, claimType=initial, redelivered=false
+2026-08-28T23:33:14.758+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] i.m.ItineraryGenerationRequestedListener : Itinerary generation listener returning for ACK: generationId=1224, tripId=1331, redelivered=false
+2026-08-28T23:33:14.761+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] i.m.ItineraryGenerationRequestedListener : Itinerary generation delivery received: generationId=1225, tripId=1332, redelivered=false
+2026-08-28T23:33:14.769+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] c.p.i.s.ItineraryGenerationWorkerService : Itinerary generation collection claim acquired: generationId=1225, tripId=1332, claimVersion=1, claimType=initial, redelivered=false
+2026-08-28T23:33:14.899+09:00  INFO 4308 --- [planmate-backend] [ntContainer#0-9] i.m.ItineraryGenerationRequestedListener : Itinerary generation listener returning for ACK: generationId=1225, tripId=1332, redelivered=false
