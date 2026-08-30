@@ -1,0 +1,72 @@
+[
+  {
+    "name": "장애테스트-Claim전Worker종료-01",
+    "tripId": 1323,
+    "generationId": 1226,
+    "createdAt": "2026-08-28T15:30:09.3306830Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-Claim전Worker종료-02",
+    "tripId": 1324,
+    "generationId": 1227,
+    "createdAt": "2026-08-28T15:30:09.3585569Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-Claim전Worker종료-03",
+    "tripId": 1325,
+    "generationId": 1228,
+    "createdAt": "2026-08-28T15:30:09.3794438Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-Claim전Worker종료-04",
+    "tripId": 1326,
+    "generationId": 1229,
+    "createdAt": "2026-08-28T15:30:09.4024650Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-Claim전Worker종료-05",
+    "tripId": 1327,
+    "generationId": 1230,
+    "createdAt": "2026-08-28T15:30:09.4229183Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-Claim전Worker종료-06",
+    "tripId": 1328,
+    "generationId": 1231,
+    "createdAt": "2026-08-28T15:30:09.4453751Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-Claim전Worker종료-07",
+    "tripId": 1329,
+    "generationId": 1232,
+    "createdAt": "2026-08-28T15:30:09.4647296Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-Claim전Worker종료-08",
+    "tripId": 1330,
+    "generationId": 1233,
+    "createdAt": "2026-08-28T15:30:09.4835651Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-Claim전Worker종료-09",
+    "tripId": 1331,
+    "generationId": 1234,
+    "createdAt": "2026-08-28T15:30:09.5025026Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-Claim전Worker종료-10",
+    "tripId": 1332,
+    "generationId": 1235,
+    "createdAt": "2026-08-28T15:30:09.5215217Z",
+    "initialStatus": "CREATED"
+  }
+]

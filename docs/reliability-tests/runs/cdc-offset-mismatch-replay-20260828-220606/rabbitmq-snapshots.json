@@ -1,0 +1,101 @@
+{
+  "mainPreflight": {
+    "name": "planmate.itinerary.generation.requested",
+    "capturedAt": "2026-08-28T13:06:10.9860654Z",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 0,
+    "publish": 54,
+    "deliver": 45,
+    "ack": 31,
+    "redeliver": 1
+  },
+  "sourceQueueAtTen": {
+    "name": "planmate.reliability.exp3.20260828220606.events",
+    "capturedAt": "2026-08-28T13:08:11.5705157Z",
+    "ready": 10,
+    "unacked": 0,
+    "consumers": 0,
+    "publish": 12,
+    "deliver": 2,
+    "ack": 0,
+    "redeliver": 0
+  },
+  "mainBefore": {
+    "name": "planmate.itinerary.generation.requested",
+    "capturedAt": "2026-08-28T13:08:13.3310640Z",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 0,
+    "publish": 54,
+    "deliver": 45,
+    "ack": 31,
+    "redeliver": 1
+  },
+  "mainAfter": {
+    "name": "planmate.itinerary.generation.requested",
+    "capturedAt": "2026-08-28T13:08:38.9835593Z",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "publish": 64,
+    "deliver": 55,
+    "ack": 41,
+    "redeliver": 1
+  },
+  "dlqBefore": {
+    "name": "planmate.itinerary.generation.requested.dlq",
+    "capturedAt": "2026-08-28T13:08:13.3353699Z",
+    "ready": 167,
+    "unacked": 0,
+    "consumers": 0,
+    "publish": 0,
+    "deliver": 0,
+    "ack": 0,
+    "redeliver": 0
+  },
+  "dlqAfter": {
+    "name": "planmate.itinerary.generation.requested.dlq",
+    "capturedAt": "2026-08-28T13:08:38.9879298Z",
+    "ready": 167,
+    "unacked": 0,
+    "consumers": 0,
+    "publish": 0,
+    "deliver": 0,
+    "ack": 0,
+    "redeliver": 0
+  },
+  "auditBefore": {
+    "name": "planmate.reliability.exp3.20260828220606.replay.audit",
+    "capturedAt": "2026-08-28T13:08:13.3388149Z",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 0,
+    "publish": 0,
+    "deliver": 0,
+    "ack": 0,
+    "redeliver": 0
+  },
+  "auditDuring": {
+    "name": "planmate.reliability.exp3.20260828220606.replay.audit",
+    "capturedAt": "2026-08-28T13:08:36.6461031Z",
+    "ready": 10,
+    "unacked": 0,
+    "consumers": 0,
+    "publish": 10,
+    "deliver": 0,
+    "ack": 0,
+    "redeliver": 0
+  },
+  "auditAfter": {
+    "name": "planmate.reliability.exp3.20260828220606.replay.audit",
+    "capturedAt": "2026-08-28T13:08:38.9913834Z",
+    "ready": 10,
+    "unacked": 0,
+    "consumers": 0,
+    "publish": 10,
+    "deliver": 0,
+    "ack": 0,
+    "redeliver": 0
+  }
+}

@@ -21,10 +21,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 @Service
+@ConditionalOnProperty(
+        name = "app.itinerary.candidates.provider",
+        havingValue = "google",
+        matchIfMissing = true
+)
 public class PlaceCandidateCollectionService implements CandidateRecommender {
 
     public static final int DEFAULT_TARGET_CANDIDATE_COUNT = 120;

@@ -1,0 +1,146 @@
+{
+  "retryable": [
+    {
+      "name": "장애테스트-재시도가능실패-01",
+      "tripId": 1293,
+      "generationId": 1176,
+      "initialStatus": "CREATED",
+      "createdAt": "2026-08-28T13:32:42.5218289Z"
+    },
+    {
+      "name": "장애테스트-재시도가능실패-02",
+      "tripId": 1294,
+      "generationId": 1177,
+      "initialStatus": "CREATED",
+      "createdAt": "2026-08-28T13:32:42.6843777Z"
+    },
+    {
+      "name": "장애테스트-재시도가능실패-03",
+      "tripId": 1295,
+      "generationId": 1178,
+      "initialStatus": "CREATED",
+      "createdAt": "2026-08-28T13:32:42.8478453Z"
+    },
+    {
+      "name": "장애테스트-재시도가능실패-04",
+      "tripId": 1296,
+      "generationId": 1179,
+      "initialStatus": "CREATED",
+      "createdAt": "2026-08-28T13:32:43.0058745Z"
+    },
+    {
+      "name": "장애테스트-재시도가능실패-05",
+      "tripId": 1297,
+      "generationId": 1180,
+      "initialStatus": "CREATED",
+      "createdAt": "2026-08-28T13:32:43.1475263Z"
+    },
+    {
+      "name": "장애테스트-재시도가능실패-06",
+      "tripId": 1298,
+      "generationId": 1181,
+      "initialStatus": "CREATED",
+      "createdAt": "2026-08-28T13:32:43.2865425Z"
+    },
+    {
+      "name": "장애테스트-재시도가능실패-07",
+      "tripId": 1299,
+      "generationId": 1182,
+      "initialStatus": "CREATED",
+      "createdAt": "2026-08-28T13:32:43.4252547Z"
+    },
+    {
+      "name": "장애테스트-재시도가능실패-08",
+      "tripId": 1300,
+      "generationId": 1183,
+      "initialStatus": "CREATED",
+      "createdAt": "2026-08-28T13:32:43.5626157Z"
+    },
+    {
+      "name": "장애테스트-재시도가능실패-09",
+      "tripId": 1301,
+      "generationId": 1184,
+      "initialStatus": "CREATED",
+      "createdAt": "2026-08-28T13:32:43.6893869Z"
+    },
+    {
+      "name": "장애테스트-재시도가능실패-10",
+      "tripId": 1302,
+      "generationId": 1185,
+      "initialStatus": "CREATED",
+      "createdAt": "2026-08-28T13:32:43.8144099Z"
+    }
+  ],
+  "nonRetryable": [
+    {
+      "name": "장애테스트-재시도불가실패-01",
+      "tripId": 1303,
+      "generationId": 1186,
+      "initialStatus": "CREATED",
+      "createdAt": "2026-08-28T13:34:07.2814107Z"
+    },
+    {
+      "name": "장애테스트-재시도불가실패-02",
+      "tripId": 1304,
+      "generationId": 1187,
+      "initialStatus": "CREATED",
+      "createdAt": "2026-08-28T13:34:07.4224738Z"
+    },
+    {
+      "name": "장애테스트-재시도불가실패-03",
+      "tripId": 1305,
+      "generationId": 1188,
+      "initialStatus": "CREATED",
+      "createdAt": "2026-08-28T13:34:07.5764135Z"
+    },
+    {
+      "name": "장애테스트-재시도불가실패-04",
+      "tripId": 1306,
+      "generationId": 1189,
+      "initialStatus": "CREATED",
+      "createdAt": "2026-08-28T13:34:07.7199491Z"
+    },
+    {
+      "name": "장애테스트-재시도불가실패-05",
+      "tripId": 1307,
+      "generationId": 1190,
+      "initialStatus": "CREATED",
+      "createdAt": "2026-08-28T13:34:07.8410024Z"
+    },
+    {
+      "name": "장애테스트-재시도불가실패-06",
+      "tripId": 1308,
+      "generationId": 1191,
+      "initialStatus": "CREATED",
+      "createdAt": "2026-08-28T13:34:07.9630406Z"
+    },
+    {
+      "name": "장애테스트-재시도불가실패-07",
+      "tripId": 1309,
+      "generationId": 1192,
+      "initialStatus": "CREATED",
+      "createdAt": "2026-08-28T13:34:08.0810525Z"
+    },
+    {
+      "name": "장애테스트-재시도불가실패-08",
+      "tripId": 1310,
+      "generationId": 1193,
+      "initialStatus": "CREATED",
+      "createdAt": "2026-08-28T13:34:08.1975030Z"
+    },
+    {
+      "name": "장애테스트-재시도불가실패-09",
+      "tripId": 1311,
+      "generationId": 1194,
+      "initialStatus": "CREATED",
+      "createdAt": "2026-08-28T13:34:08.3114260Z"
+    },
+    {
+      "name": "장애테스트-재시도불가실패-10",
+      "tripId": 1312,
+      "generationId": 1195,
+      "initialStatus": "CREATED",
+      "createdAt": "2026-08-28T13:34:08.4197642Z"
+    }
+  ]
+}

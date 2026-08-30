@@ -1,0 +1,42 @@
+{
+  "retryableCreated": {
+    "outboxCount": 10,
+    "createdCount": 10,
+    "collectingCount": 0,
+    "readyCount": 0,
+    "failedCount": 0,
+    "candidateCount": 0,
+    "failureReasons": {}
+  },
+  "nonRetryableCreated": {
+    "outboxCount": 10,
+    "createdCount": 10,
+    "collectingCount": 0,
+    "readyCount": 0,
+    "failedCount": 0,
+    "candidateCount": 0,
+    "failureReasons": {}
+  },
+  "retryableFinal": {
+    "outboxCount": 10,
+    "createdCount": 0,
+    "collectingCount": 0,
+    "readyCount": 0,
+    "failedCount": 10,
+    "candidateCount": 0,
+    "failureReasons": {
+      "PLACE_PROVIDER_UNAVAILABLE": 10
+    }
+  },
+  "nonRetryableFinal": {
+    "outboxCount": 10,
+    "createdCount": 0,
+    "collectingCount": 0,
+    "readyCount": 0,
+    "failedCount": 10,
+    "candidateCount": 0,
+    "failureReasons": {
+      "PLACE_PROVIDER_REQUEST_REJECTED": 10
+    }
+  }
+}

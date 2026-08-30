@@ -4,6 +4,7 @@ import com.planmate.itinerary.api.ItineraryGenerationStatus;
 import com.planmate.itinerary.config.ItineraryGenerationWorkerProperties;
 import com.planmate.itinerary.entity.ItineraryGenerationEntity;
 import com.planmate.itinerary.messaging.ItineraryGenerationRecoveryPublisher;
+import com.planmate.itinerary.metrics.ItineraryGenerationWorkerMetrics;
 import com.planmate.itinerary.repository.ItineraryGenerationRepository;
 import java.time.Clock;
 import java.time.Instant;
@@ -28,17 +29,20 @@ public class StaleItineraryGenerationRecoveryScheduler {
     private final ItineraryGenerationRepository generationRepository;
     private final ItineraryGenerationRecoveryPublisher recoveryPublisher;
     private final ItineraryGenerationWorkerProperties properties;
+    private final ItineraryGenerationWorkerMetrics metrics;
     private final Clock clock;
 
     public StaleItineraryGenerationRecoveryScheduler(
             ItineraryGenerationRepository generationRepository,
             ItineraryGenerationRecoveryPublisher recoveryPublisher,
             ItineraryGenerationWorkerProperties properties,
+            ItineraryGenerationWorkerMetrics metrics,
             Clock clock
     ) {
         this.generationRepository = generationRepository;
         this.recoveryPublisher = recoveryPublisher;
         this.properties = properties;
+        this.metrics = metrics;
         this.clock = clock;
     }
 
@@ -53,6 +57,13 @@ public class StaleItineraryGenerationRecoveryScheduler {
         for (ItineraryGenerationEntity generation : staleGenerations) {
             try {
                 recoveryPublisher.publish(generation.getId(), generation.getTripId());
+                metrics.recordRecoveryPublished();
+                log.info(
+                        "Stale itinerary generation recovery published: generationId={}, tripId={}, claimVersion={}",
+                        generation.getId(),
+                        generation.getTripId(),
+                        generation.getCollectionClaimVersion()
+                );
             } catch (RuntimeException exception) {
                 log.warn("Failed to publish stale itinerary generation recovery: generationId={}",
                         generation.getId(), exception);
