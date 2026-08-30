@@ -105,11 +105,9 @@
 - 전달 수와 최종 데이터 수를 혼동하지 않게 표시했는가
 - Grafana 원본 시간 범위와 공식 Run 시간이 일치하는가
 
-## 7. 포트폴리오 반영 단일 기준 문서
+## 7. 공개 검증 자료
 
-- 통합 최종 원고: `docs/포트폴리오-장애주입테스트-1-7-통합최종원고.md`
-- 상세 결과 가이드: `docs/장애주입테스트-결과보고-포트폴리오-반영가이드.md`
 - 이미지 인덱스: `docs/reliability-tests/portfolio-images-index.md`
 - 공식 원본: `docs/reliability-tests/runs/<공식 Run ID>/result.json`
 
-포트폴리오 저장소의 에이전트는 통합 최종 원고를 본문 기준으로 사용하고, 숫자 확인이 필요할 때 상세 결과 가이드와 공식 `result.json`을 조회한다.
+실험 수치는 각 공식 Run의 `README.md`와 `result.json`을 기준으로 확인한다.
