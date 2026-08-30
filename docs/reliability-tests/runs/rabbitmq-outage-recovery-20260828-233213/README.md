@@ -113,7 +113,7 @@ pwsh ./scripts/reliability-tests/Invoke-RabbitMqOutageRecovery.ps1 -RequestCount
 - RabbitMQ 스냅샷: publish/deliver/ACK `10/10/10`, redeliver 0, Main Queue 0
 - 실행 종료 후 컨테이너: RabbitMQ healthy, Debezium UP
 
-## 포트폴리오에서 읽는 순서
+## 시각 증거 읽는 순서
 
 1. `00-실험개요-장애범위-관측타임라인.png` — 질문과 한 문장 결론
 2. `01-장애범위-RabbitMQ만중단.png` — API는 정상, RabbitMQ만 중단
@@ -122,7 +122,7 @@ pwsh ./scripts/reliability-tests/Invoke-RabbitMqOutageRecovery.ps1 -RequestCount
 5. `05-복구전달-발행10-전달10-ACK10.png` — 복구 뒤 10/10/10 일치
 6. `07-최종판정-완료10-유실0-중복0.png` — 최종 PASS
 
-`08-읽는순서-용어설명.png`은 기술 용어가 익숙하지 않은 채용담당자용 보조 이미지다.
+`08-읽는순서-용어설명.png`은 기술 용어가 익숙하지 않은 독자를 위한 보조 이미지다.
 
 ## 증거 파일
 

@@ -224,7 +224,7 @@
   "preload": false,
   "refresh": "",
   "schemaVersion": 41,
-  "tags": ["planmate", "reliability", "portfolio", "experiment-02"],
+  "tags": ["planmate", "reliability", "experiment-02"],
   "templating": { "list": [] },
   "time": {
     "from": "2026-08-28T12:15:02.000Z",

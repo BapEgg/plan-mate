@@ -109,7 +109,7 @@ DLQ에는 실험 전에 이미 167건이 있었으므로 절대값이 아니라 
 
 ## 시각 증거
 
-### 포트폴리오용 전체 결과
+### 한글 전체 결과
 
 ![장애 범위, 요청 복구 흐름, 정합성 판정을 한글로 정리한 Grafana 대시보드](images/debezium-stop-portfolio-overview.png)
 
@@ -161,8 +161,8 @@ API 서버와 RabbitMQ는 정상 상태를 유지했고 이벤트 전달기인 D
 - `queries.sql`: DB 재검증 SQL
 - `images/debezium-stop-01-health-timeline.png`: Debezium `UP → DOWN → UP` Grafana 증거
 - `images/debezium-stop-02-generation-recovery.png`: CREATED 10건이 READY 10건으로 전환된 Grafana 증거
-- `images/debezium-stop-03-result-summary.svg`: 포트폴리오용 정량 결과 요약
-- `images/debezium-stop-portfolio-overview.png`: 한글 설명과 판정표를 포함한 포트폴리오용 전체 화면
+- `images/debezium-stop-03-result-summary.svg`: 정량 결과 요약
+- `images/debezium-stop-portfolio-overview.png`: 한글 설명과 판정표를 포함한 전체 화면
 - `images/debezium-stop-portfolio-health.png`: API·Debezium·RabbitMQ 장애 범위 State Timeline
 - `images/debezium-stop-portfolio-recovery.png`: 전달 대기 10건이 후보 수집 완료 10건으로 복구된 한글 그래프
-- `infra/grafana/dashboards/planmate-reliability-experiment-01.json`: 포트폴리오 전용 Grafana 대시보드 원본
+- `infra/grafana/dashboards/planmate-reliability-experiment-01.json`: 실험 1 전용 Grafana 대시보드 원본

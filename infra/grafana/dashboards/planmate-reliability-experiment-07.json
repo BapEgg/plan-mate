@@ -222,7 +222,7 @@
   ],
   "refresh": false,
   "schemaVersion": 41,
-  "tags": ["planmate", "reliability", "portfolio", "rabbitmq", "worker", "claim", "experiment-07"],
+  "tags": ["planmate", "reliability", "rabbitmq", "worker", "claim", "experiment-07"],
   "templating": { "list": [] },
   "time": {
     "from": "2026-08-28T15:30:15.000Z",

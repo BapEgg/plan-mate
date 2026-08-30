@@ -137,7 +137,7 @@ ORDER BY generation_id;
 
 DB, Worker A/B 로그, 두 Worker의 Metric, RabbitMQ 스냅샷이 같은 수치를 가리킨다.
 
-## Grafana와 포트폴리오 이미지
+## Grafana 시각화 증거
 
 Grafana Dashboard 원본: `infra/grafana/dashboards/planmate-reliability-experiment-05.json`
 
@@ -149,7 +149,7 @@ Grafana Dashboard 원본: `infra/grafana/dashboards/planmate-reliability-experim
 6. `images/06-Fencing10-SKIP10.png`
 7. `images/07-최종판정-복구10-중복0.png`
 
-포트폴리오 본문에는 `01 장애 범위 → 02 Worker A Stale → 04 Worker B 복구 → 06 Fencing → 07 최종 판정` 순서를 권장한다. 상세 수치가 필요할 때 03과 05를 각 그래프 뒤에 추가한다.
+핵심 결과는 `01 장애 범위 → 02 Worker A Stale → 04 Worker B 복구 → 06 Fencing → 07 최종 판정` 순서로 확인할 수 있다. 상세 수치는 03과 05의 기대값·실제값 표에서 확인한다.
 
 ## 구현하며 추가한 관측 기능
 
