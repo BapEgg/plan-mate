@@ -6,7 +6,6 @@
 
 ## 문서
 
-- [포트폴리오 완성 및 장애 주입 테스트 로드맵](docs/portfolio-reliability-roadmap.md)
 - [장애 주입 테스트 공식 Run 목록](docs/reliability-tests/README.md)
 - [Debezium 중단 후 재시작 장애 주입 테스트 결과](docs/reliability-tests/runs/debezium-stop-restart-20260828-173040/README.md)
 - [ACK 이전 Worker 강제 종료 장애 주입 테스트 결과](docs/reliability-tests/runs/worker-before-ack-termination-20260828-211457/README.md)
@@ -15,7 +14,6 @@
 - [Stale Generation 자동 복구와 Fencing 장애 주입 테스트 결과](docs/reliability-tests/runs/stale-generation-recovery-20260828-225751/README.md)
 - [RabbitMQ 중단 중 CDC 발행 실패와 복구 장애 주입 테스트 결과](docs/reliability-tests/runs/rabbitmq-outage-recovery-20260828-233213/README.md)
 - [RabbitMQ 전달 후 Claim 이전 Worker 강제 종료 장애 주입 테스트 결과](docs/reliability-tests/runs/worker-before-claim-termination-20260829-002951/README.md)
-- [장애 주입 테스트 결과 보고 및 포트폴리오 반영 가이드](docs/장애주입테스트-결과보고-포트폴리오-반영가이드.md)
 - [로컬 인프라 실행 방법](infra/README.md)
 - [일정 생성 Worker 실패와 DLQ 운영 정책](docs/itinerary-generation-dlq.md)
 - [수동 AI 일정 생성 검증 방법](docs/manual-itinerary-verification.md)
