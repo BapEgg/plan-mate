@@ -258,7 +258,7 @@
   ],
   "refresh": false,
   "schemaVersion": 41,
-  "tags": ["planmate", "reliability", "portfolio", "stale", "lease", "fencing", "experiment-05"],
+  "tags": ["planmate", "reliability", "stale", "lease", "fencing", "experiment-05"],
   "templating": { "list": [] },
   "time": {
     "from": "2026-08-28T13:57:55.000Z",

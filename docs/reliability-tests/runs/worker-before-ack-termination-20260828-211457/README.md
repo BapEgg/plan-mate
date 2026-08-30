@@ -99,7 +99,7 @@ ORDER BY generation_id;
 
 첫 번째 결과는 10행 모두 `READY_FOR_PLANNING`, 두 번째 결과는 각 행의 세 숫자가 모두 `120`이면 중복 없이 통과한 것이다.
 
-정확한 ACK 직전 종료는 사람 손으로 타이밍을 맞추기 어렵다. 포트폴리오 재현용 측정은 아래 자동 실행기를 사용하는 편이 안전하다.
+정확한 ACK 직전 종료는 사람 손으로 타이밍을 맞추기 어렵다. 재현 가능한 측정에는 아래 자동 실행기를 사용하는 편이 안전하다.
 
 ```powershell
 .\scripts\reliability-tests\Invoke-WorkerBeforeAckTermination.ps1 `
@@ -160,7 +160,7 @@ ORDER BY generation_id;
 
 Prometheus 수집 간격은 15초이므로 Grafana의 Worker DOWN/UP 경계에는 최대 약 15초의 관측 오차가 있다. 정확한 Health 복구 시간은 0.5초 간격 Health endpoint 폴링값이다. Unacked 1건은 약 4초 동안만 존재해 Prometheus Queue 시계열에는 잡히지 않았고 RabbitMQ Management API 스냅샷으로 증명했다.
 
-## 9. 포트폴리오 이미지
+## 9. 시각화 증거
 
 | 이미지 | 설명 |
 | --- | --- |
@@ -170,7 +170,7 @@ Prometheus 수집 간격은 15초이므로 Grafana의 Worker DOWN/UP 경계에�
 | `images/worker-before-ack-03-verdict.png` | 기대값·실제값과 PASS 판정표 |
 | `images/worker-before-ack-04-redelivery-skip.png` | 복구 Worker 원본 9·재전달 1·SKIP 1 Metric |
 | `images/worker-before-ack-05-recovery-explanation.png` | 재큐잉·재전달·멱등 처리의 5단계 해설 |
-| `images/worker-before-ack-04-result-summary.svg` | 포트폴리오 카드용 정량 요약 |
+| `images/worker-before-ack-04-result-summary.svg` | 정량 결과 요약 |
 
 Grafana Dashboard 원본은 `infra/grafana/dashboards/planmate-reliability-experiment-02.json`이다.
 

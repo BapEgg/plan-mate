@@ -123,7 +123,7 @@ The connector is trying to read change stream ... but this is no longer availabl
 | 22:08:33.015 | 새 slot의 Replay Connector Health UP |
 | 22:08:36.711 | 재전달 10건·Worker SKIP 10건·Queue 안정화 확인 |
 
-## 포트폴리오 이미지
+## 시각화 증거
 
 1. `images/cdc-offset-01-failure-scope.png`
    - 운영 API·RabbitMQ·운영 Debezium은 정상이고 실험 CDC만 `정상 → 중단 → 정상`으로 바뀐 증거
@@ -156,7 +156,7 @@ Grafana 대시보드 원본: `infra/grafana/dashboards/planmate-reliability-expe
 
 첫 실행 `cdc-offset-mismatch-replay-20260828-220239`에서는 자동화가 Connector 시작 로그의 `offset mismatch strategy` 설명을 실제 오류로 너무 일찍 인식해 탐지 시간을 `0.620초`로 잘못 기록했다. 교차 검증에서 실제 WARN/ERROR가 약 8초 뒤 발생한 것을 찾아냈고, 실제 문장인 `Last recorded offset is no longer available`만 타이머 종료 조건으로 인정하도록 수정했다.
 
-따라서 첫 실행은 `SUPERSEDED`로 표시하고 포트폴리오에서 제외한다. 이 문서의 두 번째 실행만 공식 결과이며, 정확한 탐지 시간은 **7.637초**다.
+따라서 첫 실행은 `SUPERSEDED`로 표시하고 공식 결과에서 제외한다. 이 문서의 두 번째 실행만 공식 결과이며, 정확한 탐지 시간은 **7.637초**다.
 
 Grafana state timeline은 짧은 마지막 정상 구간에 `정상` 글자를 강제로 표시하면 글자가 잘렸다. 표시 범위를 의도적 종료 전 22:08:12까지 넓히고 값 표시를 `auto`로 변경해 `정상/중단/정상`이 모두 온전히 보이도록 수정했다.
 

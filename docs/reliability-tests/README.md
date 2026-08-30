@@ -1,6 +1,6 @@
 # PlanMate 장애 주입 테스트 실행 기록
 
-포트폴리오에 사용할 수 있는 완료 실험은 `result.json`과 최종 판정이 함께 있는 Run만 해당한다.
+공식 완료 실험은 `result.json`과 최종 판정이 함께 있는 Run만 해당한다.
 
 | 실험 | 최신 완료 Run | 판정 |
 | --- | --- | :---: |
@@ -12,7 +12,7 @@
 | RabbitMQ 중단 중 CDC 발행 실패와 복구 | `runs/rabbitmq-outage-recovery-20260828-233213` | PASS |
 | RabbitMQ 전달 후 DB Claim 이전 Worker 강제 종료 | `runs/worker-before-claim-termination-20260829-002951` | PASS |
 
-Preflight에서 중단됐거나 관측 순서를 고치는 과정에서 생성된 예비 Run은 공식 결과로 사용하지 않으며 저장소에도 포함하지 않는다. 위 표의 Run만 포트폴리오와 기술 문서의 정량 근거로 사용한다.
+Preflight에서 중단됐거나 관측 순서를 고치는 과정에서 생성된 예비 Run은 공식 결과로 사용하지 않으며 저장소에도 포함하지 않는다. 위 표의 Run만 신뢰성 검증의 정량 근거로 사용한다.
 
 공개 Run에는 결과 재검증에 필요한 구조화 데이터와 이미지를 보존한다. 로컬 계정·장비 정보가 포함된 PowerShell transcript(`commands.log`), PID, Debezium Offset 원본과 실행 중간 `runtime` 파일은 공개하지 않는다. Worker/Debezium 로그는 비밀값과 로컬 식별자를 검사한 공식 Run 파일만 보존한다.
 

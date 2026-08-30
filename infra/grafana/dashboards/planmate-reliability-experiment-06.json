@@ -224,7 +224,7 @@
   ],
   "refresh": false,
   "schemaVersion": 41,
-  "tags": ["planmate", "reliability", "portfolio", "rabbitmq", "debezium", "outbox", "experiment-06"],
+  "tags": ["planmate", "reliability", "rabbitmq", "debezium", "outbox", "experiment-06"],
   "templating": { "list": [] },
   "time": {
     "from": "2026-08-28T14:32:22.000Z",
