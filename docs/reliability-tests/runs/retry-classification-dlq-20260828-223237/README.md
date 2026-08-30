@@ -124,7 +124,7 @@ WHERE generation_id BETWEEN 1176 AND 1195;
 
 로그·Metric·DB·RabbitMQ 네 자료가 같은 수치를 가리키므로 한 도구의 표시 오류만으로 PASS가 나온 결과가 아니다.
 
-## Grafana와 포트폴리오 이미지
+## Grafana 시각화 증거
 
 Grafana Dashboard 원본: `infra/grafana/dashboards/planmate-reliability-experiment-04.json`
 
@@ -136,18 +136,18 @@ Grafana Dashboard 원본: `infra/grafana/dashboards/planmate-reliability-experim
 6. `images/06-DLQ-0에서10에서20.png`
 7. `images/07-최종판정-증거교차검증.png`
 
-포트폴리오 본문에는 `01 장애 범위 → 02 Retryable → 04 Non-Retryable → 06 DLQ → 07 최종 판정` 순서를 권장한다. 세부 수치 표가 필요할 때 03과 05를 각 그래프 바로 뒤에 추가한다.
+핵심 결과는 `01 장애 범위 → 02 Retryable → 04 Non-Retryable → 06 DLQ → 07 최종 판정` 순서로 확인할 수 있다. 세부 수치는 03과 05의 기대값·실제값 표에서 확인한다.
 
 ## 실험 중 발견한 문제와 개선
 
-첫 사전 실행 `retry-classification-dlq-20260828-223019`은 이전 API 프로세스의 출력 파이프가 막혀 첫 여행 생성 요청이 60초 타임아웃됐다. DB를 확인하니 테스트 여행은 0건이었고 전용 Queue 생성 전이었다. 해당 Run을 `PRECHECK_FAILED`와 포트폴리오 사용 금지로 표시하고, API를 파일 로그 방식으로 재기동한 뒤 새 Run으로 다시 수행했다.
+첫 사전 실행 `retry-classification-dlq-20260828-223019`은 이전 API 프로세스의 출력 파이프가 막혀 첫 여행 생성 요청이 60초 타임아웃됐다. DB를 확인하니 테스트 여행은 0건이었고 전용 Queue 생성 전이었다. 해당 Run을 `PRECHECK_FAILED`와 공식 결과 사용 금지로 표시하고, API를 파일 로그 방식으로 재기동한 뒤 새 Run으로 다시 수행했다.
 
 코드에는 다음 관측 기능을 추가했다.
 
 - 실패 시도마다 `generationId`, `tripId`, `attempt`, `maxAttempts`, `classification`, `failureCode` 구조화 로그
 - `failure.attempt` Metric에 `classification`·`failureCode` 태그
 - `retry` Metric에 `classification`·`failureCode` 태그
-- 포트폴리오 그래프에서 Retryable 30/20과 Non-Retryable 10/0을 분리 표시
+- 결과 그래프에서 Retryable 30/20과 Non-Retryable 10/0을 분리 표시
 
 ## 한계
 
