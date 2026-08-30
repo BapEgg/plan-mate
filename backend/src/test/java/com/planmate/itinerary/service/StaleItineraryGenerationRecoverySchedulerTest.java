@@ -8,6 +8,8 @@ import com.planmate.itinerary.api.ItineraryGenerationStatus;
 import com.planmate.itinerary.config.ItineraryGenerationWorkerProperties;
 import com.planmate.itinerary.entity.ItineraryGenerationEntity;
 import com.planmate.itinerary.messaging.ItineraryGenerationRecoveryPublisher;
+import com.planmate.itinerary.metrics.ItineraryGenerationWorkerMetrics;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import com.planmate.itinerary.repository.ItineraryGenerationRepository;
 import java.time.Clock;
 import java.time.Instant;
@@ -33,15 +35,18 @@ class StaleItineraryGenerationRecoverySchedulerTest {
     private ItineraryGenerationRecoveryPublisher recoveryPublisher;
 
     private ItineraryGenerationWorkerProperties properties;
+    private SimpleMeterRegistry meterRegistry;
     private StaleItineraryGenerationRecoveryScheduler scheduler;
 
     @BeforeEach
     void setUp() {
         properties = new ItineraryGenerationWorkerProperties();
+        meterRegistry = new SimpleMeterRegistry();
         scheduler = new StaleItineraryGenerationRecoveryScheduler(
                 generationRepository,
                 recoveryPublisher,
                 properties,
+                new ItineraryGenerationWorkerMetrics(meterRegistry),
                 Clock.fixed(NOW, ZoneOffset.UTC)
         );
     }
@@ -60,6 +65,9 @@ class StaleItineraryGenerationRecoverySchedulerTest {
 
         verify(recoveryPublisher).publish(1L, 11L);
         verify(recoveryPublisher).publish(2L, 22L);
+        org.assertj.core.api.Assertions.assertThat(
+                meterRegistry.get("planmate.itinerary.generation.worker.recovery.publish").counter().count()
+        ).isEqualTo(2.0);
     }
 
     @Test

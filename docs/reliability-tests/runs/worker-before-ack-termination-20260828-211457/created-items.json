@@ -1,0 +1,72 @@
+[
+  {
+    "name": "장애테스트-워커ACK전중단-01",
+    "tripId": 1245,
+    "generationId": 1166,
+    "createdAt": "2026-08-28T12:15:16.5131368Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-워커ACK전중단-02",
+    "tripId": 1246,
+    "generationId": 1167,
+    "createdAt": "2026-08-28T12:15:16.5444837Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-워커ACK전중단-03",
+    "tripId": 1247,
+    "generationId": 1168,
+    "createdAt": "2026-08-28T12:15:16.5724919Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-워커ACK전중단-04",
+    "tripId": 1248,
+    "generationId": 1169,
+    "createdAt": "2026-08-28T12:15:16.5993837Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-워커ACK전중단-05",
+    "tripId": 1249,
+    "generationId": 1170,
+    "createdAt": "2026-08-28T12:15:16.6263037Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-워커ACK전중단-06",
+    "tripId": 1250,
+    "generationId": 1171,
+    "createdAt": "2026-08-28T12:15:16.6535868Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-워커ACK전중단-07",
+    "tripId": 1251,
+    "generationId": 1172,
+    "createdAt": "2026-08-28T12:15:16.6797417Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-워커ACK전중단-08",
+    "tripId": 1252,
+    "generationId": 1173,
+    "createdAt": "2026-08-28T12:15:16.7067428Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-워커ACK전중단-09",
+    "tripId": 1253,
+    "generationId": 1174,
+    "createdAt": "2026-08-28T12:15:16.7325395Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-워커ACK전중단-10",
+    "tripId": 1254,
+    "generationId": 1175,
+    "createdAt": "2026-08-28T12:15:16.7572687Z",
+    "initialStatus": "CREATED"
+  }
+]

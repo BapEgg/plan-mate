@@ -1,0 +1,72 @@
+[
+  {
+    "name": "장애테스트-스테일복구-01",
+    "tripId": 1313,
+    "generationId": 1196,
+    "initialStatus": "CREATED",
+    "createdAt": "2026-08-28T13:57:58.7663261Z"
+  },
+  {
+    "name": "장애테스트-스테일복구-02",
+    "tripId": 1314,
+    "generationId": 1197,
+    "initialStatus": "CREATED",
+    "createdAt": "2026-08-28T13:57:58.9337045Z"
+  },
+  {
+    "name": "장애테스트-스테일복구-03",
+    "tripId": 1315,
+    "generationId": 1198,
+    "initialStatus": "CREATED",
+    "createdAt": "2026-08-28T13:57:59.1016553Z"
+  },
+  {
+    "name": "장애테스트-스테일복구-04",
+    "tripId": 1316,
+    "generationId": 1199,
+    "initialStatus": "CREATED",
+    "createdAt": "2026-08-28T13:57:59.2411588Z"
+  },
+  {
+    "name": "장애테스트-스테일복구-05",
+    "tripId": 1317,
+    "generationId": 1200,
+    "initialStatus": "CREATED",
+    "createdAt": "2026-08-28T13:57:59.3789319Z"
+  },
+  {
+    "name": "장애테스트-스테일복구-06",
+    "tripId": 1318,
+    "generationId": 1201,
+    "initialStatus": "CREATED",
+    "createdAt": "2026-08-28T13:57:59.5163998Z"
+  },
+  {
+    "name": "장애테스트-스테일복구-07",
+    "tripId": 1319,
+    "generationId": 1202,
+    "initialStatus": "CREATED",
+    "createdAt": "2026-08-28T13:57:59.6308789Z"
+  },
+  {
+    "name": "장애테스트-스테일복구-08",
+    "tripId": 1320,
+    "generationId": 1203,
+    "initialStatus": "CREATED",
+    "createdAt": "2026-08-28T13:57:59.7467587Z"
+  },
+  {
+    "name": "장애테스트-스테일복구-09",
+    "tripId": 1321,
+    "generationId": 1204,
+    "initialStatus": "CREATED",
+    "createdAt": "2026-08-28T13:57:59.8618185Z"
+  },
+  {
+    "name": "장애테스트-스테일복구-10",
+    "tripId": 1322,
+    "generationId": 1205,
+    "initialStatus": "CREATED",
+    "createdAt": "2026-08-28T13:57:59.9742289Z"
+  }
+]

@@ -1,0 +1,35 @@
+# HELP planmate_itinerary_generation_candidates Candidate count of an itinerary generation successfully transitioned to ready.
+# TYPE planmate_itinerary_generation_candidates summary
+planmate_itinerary_generation_candidates_count 10
+planmate_itinerary_generation_candidates_sum 1200.0
+# HELP planmate_itinerary_generation_candidates_max Candidate count of an itinerary generation successfully transitioned to ready.
+# TYPE planmate_itinerary_generation_candidates_max gauge
+planmate_itinerary_generation_candidates_max 120.0
+# HELP planmate_itinerary_generation_stale Itinerary generation count that stayed in a processing status longer than expected.
+# TYPE planmate_itinerary_generation_stale gauge
+planmate_itinerary_generation_stale{status="COLLECTING_CANDIDATES",threshold="PT15M"} 0.0
+planmate_itinerary_generation_stale{status="CREATED",threshold="5m"} 0.0
+# HELP planmate_itinerary_generation_status Current itinerary generation count by status.
+# TYPE planmate_itinerary_generation_status gauge
+planmate_itinerary_generation_status{status="COLLECTING_CANDIDATES"} 0.0
+planmate_itinerary_generation_status{status="COMPLETED"} 0.0
+planmate_itinerary_generation_status{status="CREATED"} 0.0
+planmate_itinerary_generation_status{status="FAILED"} 20.0
+planmate_itinerary_generation_status{status="READY_FOR_PLANNING"} 61.0
+# HELP planmate_itinerary_generation_worker_claim_total Itinerary generation worker collection claim count.
+# TYPE planmate_itinerary_generation_worker_claim_total counter
+planmate_itinerary_generation_worker_claim_total{type="initial"} 10.0
+# HELP planmate_itinerary_generation_worker_delivery_total Itinerary generation worker message delivery count.
+# TYPE planmate_itinerary_generation_worker_delivery_total counter
+planmate_itinerary_generation_worker_delivery_total{redelivered="false"} 9.0
+planmate_itinerary_generation_worker_delivery_total{redelivered="true"} 1.0
+# HELP planmate_itinerary_generation_worker_duration_seconds Itinerary generation worker message processing duration.
+# TYPE planmate_itinerary_generation_worker_duration_seconds summary
+planmate_itinerary_generation_worker_duration_seconds_count{result="success"} 10
+planmate_itinerary_generation_worker_duration_seconds_sum{result="success"} 1.5930707
+# HELP planmate_itinerary_generation_worker_duration_seconds_max Itinerary generation worker message processing duration.
+# TYPE planmate_itinerary_generation_worker_duration_seconds_max gauge
+planmate_itinerary_generation_worker_duration_seconds_max{result="success"} 0.4543502
+# HELP planmate_itinerary_generation_worker_processed_total Itinerary generation worker message processing count.
+# TYPE planmate_itinerary_generation_worker_processed_total counter
+planmate_itinerary_generation_worker_processed_total{result="success"} 10.0

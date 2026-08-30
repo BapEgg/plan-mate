@@ -1,0 +1,273 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "# 실험 5/5 · Worker 장기 정지와 Stale Generation 자동 복구 — **PASS**\n\n**검증 질문:** Worker A가 Claim을 잡고 오래 멈추면 Lease 만료 후 Worker B가 복구하고, 늦게 돌아온 A의 옛 결과를 차단하는가?  \n**한 문장 결론:** Claim 1·Unacked 10 → Lease 만료 10 → Recovery Publish·Claim 2 각 10 → READY 10/10 → 늦은 A 결과 **Fencing 10** · 후보 중복 **0**",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "실험 요약",
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "API·RabbitMQ·Debezium은 정상 상태를 유지했다. Worker A도 프로세스 Health는 UP이지만 후보 계산을 120초 지연해 작업 진행만 멈췄다. Worker B는 Lease 만료 뒤 시작됐다.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "fillOpacity": 85, "lineWidth": 0 },
+          "mappings": [
+            {
+              "options": {
+                "0": { "color": "red", "index": 0, "text": "중단" },
+                "1": { "color": "green", "index": 1, "text": "정상" }
+              },
+              "type": "value"
+            }
+          ],
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 12, "w": 14, "x": 0, "y": 4 },
+      "id": 2,
+      "options": {
+        "alignValue": "center",
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "mergeValues": true,
+        "rowHeight": 0.68,
+        "showValue": "auto",
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        { "expr": "up{job=\"planmate-backend\"}", "legendFormat": "PlanMate API · 정상 유지", "refId": "A" },
+        { "expr": "up{job=\"rabbitmq\"}", "legendFormat": "RabbitMQ · 정상 유지", "refId": "B" },
+        { "expr": "up{job=\"debezium\"}", "legendFormat": "Debezium · 정상 유지", "refId": "C" },
+        { "expr": "up{job=\"planmate-worker\"}", "legendFormat": "Worker A · Health UP, 작업만 지연", "refId": "D" },
+        { "expr": "up{job=\"planmate-worker-recovery\"}", "legendFormat": "Worker B · Lease 만료 뒤 복구", "refId": "E" }
+      ],
+      "title": "① 장애 범위 · 인프라 정상, Worker A 처리만 장기 지연",
+      "type": "state-timeline"
+    },
+    {
+      "gridPos": { "h": 12, "w": 10, "x": 14, "y": 4 },
+      "id": 3,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "## 실제 실험 타임라인 (KST)\n\n| 시각 | 관측 사건 |\n| --- | --- |\n| 22:58:00 | 테스트 요청 10건 생성 |\n| 22:58:25 | Worker A Health UP |\n| 22:58:27 | A가 10건 Claim 1 · Unacked 10 |\n| 22:58:39 | Lease 만료 10 · A Health는 계속 UP |\n| 22:58:53 | Worker B Health UP |\n| 22:58:53 | Recovery 10 · Claim 2 · READY 10/10 |\n| 23:00:27 | 늦은 A 결과 Fencing 10 |\n| 23:00:47 | Queue 0 · 중복 0 · 최종 PASS |\n\n**장애 핵심:** 서버가 죽은 것이 아니라, 살아 있는 A가 오래된 Claim을 들고 작업만 멈춘 상황이다.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "관측 시각",
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Worker A가 10건을 Claim Version 1로 잡아 Queue Unacked 10이 된다. 15초 Lease가 지나면 Stale 10으로 관측되지만 A의 프로세스 Health는 UP이다.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "건수",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 14,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 3,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 13, "w": 14, "x": 0, "y": 16 },
+      "id": 4,
+      "options": {
+        "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        { "expr": "planmate_itinerary_generation_worker_claim_total{job=\"planmate-worker\",type=\"initial\"}", "legendFormat": "Worker A 초기 Claim 1 · 10건", "refId": "A" },
+        { "expr": "rabbitmq_queue_messages_unacked{queue=\"planmate.reliability.exp5.20260828225751.main\"}", "legendFormat": "A가 잡고 ACK하지 않은 메시지 · 10건", "refId": "B" },
+        { "expr": "planmate_itinerary_generation_stale{job=\"planmate-worker\",status=\"COLLECTING_CANDIDATES\",threshold=\"PT15S\"}", "legendFormat": "Lease 만료로 Stale 판정 · 10건", "refId": "C" }
+      ],
+      "title": "② Worker A · Claim 1과 Unacked 10, Lease 만료 10",
+      "type": "timeseries"
+    },
+    {
+      "gridPos": { "h": 13, "w": 10, "x": 14, "y": 16 },
+      "id": 5,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "| Worker A 판정 항목 | 기대 | 실제 |\n| --- | ---: | ---: |\n| 테스트 메시지 | 10건 | **10건** |\n| 초기 Claim Version | 1 | **1** |\n| A가 잡은 Claim | 10건 | **10건** |\n| Queue Unacked | 10건 | **10건** |\n| Processing Lease | 15초 | **15초** |\n| Lease 만료 관측 | 10건 | **10건** |\n| A Health | UP | **UP 유지** |\n| A 결과 저장 지연 | 120초 | **120초** |\n\n**왜 장애인가?** Health Check만 보면 정상 서버다. 하지만 메시지 10건은 ACK되지 않고 Claim을 잡은 채 멈췄으므로 다른 Worker가 안전하게 이어받을 기준이 필요하다.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "② Worker A · 기대값과 실제값",
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Worker B의 Scheduler가 만료된 Generation 10건을 다시 발행한다. B는 각 메시지를 Claim Version 2로 획득하고 10건 모두 정상 처리한다.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "누적 건수",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 14,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 3,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 13, "w": 14, "x": 0, "y": 29 },
+      "id": 6,
+      "options": {
+        "legend": { "calcs": ["max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        { "expr": "planmate_itinerary_generation_worker_recovery_publish_total{job=\"planmate-worker-recovery\"}", "legendFormat": "Scheduler Recovery Publish · 10건", "refId": "A" },
+        { "expr": "planmate_itinerary_generation_worker_claim_total{job=\"planmate-worker-recovery\",type=\"recovery\"}", "legendFormat": "Worker B 복구 Claim 2 · 10건", "refId": "B" },
+        { "expr": "planmate_itinerary_generation_worker_processed_total{job=\"planmate-worker-recovery\",result=\"success\"}", "legendFormat": "Worker B 정상 처리 · 10건", "refId": "C" }
+      ],
+      "title": "③ Worker B · Recovery Publish 10, Claim 2와 성공 10",
+      "type": "timeseries"
+    },
+    {
+      "gridPos": { "h": 13, "w": 10, "x": 14, "y": 29 },
+      "id": 7,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "| 복구 판정 항목 | 기대 | 실제 |\n| --- | ---: | ---: |\n| Lease 만료 대상 | 10건 | **10건** |\n| Recovery Publish | 10건 | **10건** |\n| Worker B Claim | 10건 | **10건** |\n| 새 Claim Version | 2 | **2** |\n| Worker B 성공 처리 | 10건 | **10건** |\n| READY 전환 | 10/10 | **10/10** |\n| Candidate 저장 | 1,200행 | **1,200행** |\n| Lease 만료 후 READY | 측정 | **13.688초** |\n| Worker B 시작 후 READY | 측정 | **13.687초** |\n\nScheduler가 만료 대상을 다시 Queue에 넣고, B가 더 높은 Version 2를 얻어 현재 작업의 소유자가 됐다.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "③ Worker B · 기대값과 실제값",
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Worker B가 READY를 만든 뒤 늦게 계산을 끝낸 Worker A는 Claim Version 1로 저장을 시도한다. DB의 현재 Version은 2이므로 10건 모두 Fencing되고 SKIP 처리된다.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "누적 건수",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 14,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 3,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 12, "w": 14, "x": 0, "y": 42 },
+      "id": 8,
+      "options": {
+        "legend": { "calcs": ["max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        { "expr": "planmate_itinerary_generation_worker_processed_total{job=\"planmate-worker-recovery\",result=\"success\"}", "legendFormat": "Worker B 반영 성공 · 10건", "refId": "A" },
+        { "expr": "planmate_itinerary_generation_worker_fenced_total{job=\"planmate-worker\",operation=\"candidate_save\"}", "legendFormat": "Worker A 늦은 결과 차단 · 10건", "refId": "B" },
+        { "expr": "planmate_itinerary_generation_worker_processed_total{job=\"planmate-worker\",result=\"skipped\"}", "legendFormat": "Worker A 오래된 작업 SKIP · 10건", "refId": "C" }
+      ],
+      "title": "④ Fencing · Worker B 결과만 반영, 늦은 A 결과 10건 차단",
+      "type": "timeseries"
+    },
+    {
+      "gridPos": { "h": 12, "w": 10, "x": 14, "y": 42 },
+      "id": 9,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "## 최종 판정 · PASS\n\n| 교차검증 항목 | 실제 |\n| --- | ---: |\n| Claim Version 변화 | **1 → 2** |\n| Recovery Publish / Claim | **10 / 10** |\n| Worker B 성공 | **10건** |\n| Worker A Fencing / SKIP | **10 / 10건** |\n| READY / FAILED | **10 / 0건** |\n| Candidate / 중복 | **1,200 / 0행** |\n| Rabbit Publish / Deliver / ACK | **20 / 20 / 20** |\n| Main Queue Ready / Unacked | **0 / 0건** |\n| 실험 DLQ 증가 | **0건** |\n| 운영 DLQ | **167 → 167** |\n\nDB·Worker A/B 로그·Metric·RabbitMQ 네 자료가 같은 결과를 가리킨다.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "⑤ 최종 판정 · 복구 10, Fencing 10, 중복 0",
+      "type": "text"
+    },
+    {
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 54 },
+      "id": 10,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "## 처음 보는 사람을 위한 설명\n\n| 용어 | 쉬운 뜻 | 이 실험에서 확인한 것 |\n| --- | --- | --- |\n| Claim | 이 작업은 내가 처리하겠다는 소유권 | A가 Version 1, B가 Version 2 획득 |\n| Lease | Claim이 유효한 제한 시간 | 15초 뒤 A의 Claim 만료 |\n| Stale | 제한 시간이 지나 믿을 수 없게 된 작업 | 만료된 10건을 Scheduler가 탐지 |\n| Recovery Publish | 다른 Worker가 이어받도록 메시지를 다시 Queue에 넣는 것 | 정확히 10건 발행 |\n| Fencing | 옛 소유자의 늦은 결과가 최신 결과를 덮지 못하게 막는 것 | Version 1 결과 10건 차단 |\n\n**읽는 순서:** ① 장애 범위 → ② A가 잡고 멈춘 10건 → ③ B의 Version 2 복구 → ④ 늦은 A 결과 차단 → ⑤ 최종 DB·Queue 일치",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "용어와 읽는 순서",
+      "type": "text"
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 41,
+  "tags": ["planmate", "reliability", "portfolio", "stale", "lease", "fencing", "experiment-05"],
+  "templating": { "list": [] },
+  "time": {
+    "from": "2026-08-28T13:57:55.000Z",
+    "to": "2026-08-28T14:00:50.000Z"
+  },
+  "timepicker": {},
+  "timezone": "Asia/Seoul",
+  "title": "PlanMate 장애실험 05 · Stale Generation 복구와 Fencing",
+  "uid": "planmate-reliability-exp-05",
+  "version": 1,
+  "weekStart": ""
+}

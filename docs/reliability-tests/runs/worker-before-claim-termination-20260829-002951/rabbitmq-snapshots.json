@@ -1,0 +1,86 @@
+{
+  "beforeWorker": {
+    "name": "planmate.itinerary.generation.requested",
+    "capturedAt": "2026-08-28T15:29:53.9523003Z",
+    "ready": 0,
+    "unacked": 0,
+    "total": 0,
+    "consumers": 0,
+    "publish": 10,
+    "deliver": 10,
+    "ack": 10,
+    "redeliver": 0
+  },
+  "beforeRequests": {
+    "name": "planmate.itinerary.generation.requested",
+    "capturedAt": "2026-08-28T15:30:09.2870617Z",
+    "ready": 0,
+    "unacked": 0,
+    "total": 0,
+    "consumers": 1,
+    "publish": 10,
+    "deliver": 10,
+    "ack": 10,
+    "redeliver": 0
+  },
+  "atFailurePoint": {
+    "name": "planmate.itinerary.generation.requested",
+    "capturedAt": "2026-08-28T15:30:14.4319390Z",
+    "ready": 9,
+    "unacked": 1,
+    "total": 10,
+    "consumers": 1,
+    "publish": 20,
+    "deliver": 11,
+    "ack": 10,
+    "redeliver": 0
+  },
+  "afterKillRequeue": {
+    "name": "planmate.itinerary.generation.requested",
+    "capturedAt": "2026-08-28T15:30:19.1346065Z",
+    "ready": 10,
+    "unacked": 0,
+    "total": 10,
+    "consumers": 0,
+    "publish": 20,
+    "deliver": 11,
+    "ack": 10,
+    "redeliver": 0
+  },
+  "afterRecovery": {
+    "name": "planmate.itinerary.generation.requested",
+    "capturedAt": "2026-08-28T15:30:44.2193560Z",
+    "ready": 0,
+    "unacked": 0,
+    "total": 0,
+    "consumers": 1,
+    "publish": 20,
+    "deliver": 21,
+    "ack": 20,
+    "redeliver": 1
+  },
+  "dlqBefore": {
+    "name": "planmate.itinerary.generation.requested.dlq",
+    "capturedAt": "2026-08-28T15:30:09.2927312Z",
+    "ready": 167,
+    "unacked": 0,
+    "total": 167,
+    "consumers": 0,
+    "publish": 0,
+    "deliver": 0,
+    "ack": 0,
+    "redeliver": 0
+  },
+  "dlqAfter": {
+    "name": "planmate.itinerary.generation.requested.dlq",
+    "capturedAt": "2026-08-28T15:30:44.4898741Z",
+    "ready": 167,
+    "unacked": 0,
+    "total": 167,
+    "consumers": 0,
+    "publish": 0,
+    "deliver": 0,
+    "ack": 0,
+    "redeliver": 0
+  }
+}

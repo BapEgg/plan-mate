@@ -9,7 +9,20 @@ scrape_configs:
       - targets:
           - host.docker.internal:8080
 
+  - job_name: planmate-worker
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets:
+          - host.docker.internal:8081
+
+  - job_name: planmate-worker-recovery
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets:
+          - host.docker.internal:8082
+
   - job_name: rabbitmq
+    metrics_path: /metrics/per-object
     static_configs:
       - targets:
           - rabbitmq:15692
@@ -18,6 +31,16 @@ scrape_configs:
     static_configs:
       - targets:
           - debezium:9404
+
+  - job_name: debezium-exp3-detect
+    static_configs:
+      - targets:
+          - host.docker.internal:9705
+
+  - job_name: debezium-exp3-replay
+    static_configs:
+      - targets:
+          - host.docker.internal:9706
 
   - job_name: prometheus
     static_configs:

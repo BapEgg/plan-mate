@@ -1,0 +1,72 @@
+[
+  {
+    "name": "장애테스트-래빗엠큐중단-01",
+    "tripId": 1323,
+    "generationId": 1216,
+    "createdAt": "2026-08-28T14:32:53.4646124Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-래빗엠큐중단-02",
+    "tripId": 1324,
+    "generationId": 1217,
+    "createdAt": "2026-08-28T14:32:53.4923017Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-래빗엠큐중단-03",
+    "tripId": 1325,
+    "generationId": 1218,
+    "createdAt": "2026-08-28T14:32:53.5167245Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-래빗엠큐중단-04",
+    "tripId": 1326,
+    "generationId": 1219,
+    "createdAt": "2026-08-28T14:32:53.5412429Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-래빗엠큐중단-05",
+    "tripId": 1327,
+    "generationId": 1220,
+    "createdAt": "2026-08-28T14:32:53.5651451Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-래빗엠큐중단-06",
+    "tripId": 1328,
+    "generationId": 1221,
+    "createdAt": "2026-08-28T14:32:53.5879187Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-래빗엠큐중단-07",
+    "tripId": 1329,
+    "generationId": 1222,
+    "createdAt": "2026-08-28T14:32:53.6103683Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-래빗엠큐중단-08",
+    "tripId": 1330,
+    "generationId": 1223,
+    "createdAt": "2026-08-28T14:32:53.6333579Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-래빗엠큐중단-09",
+    "tripId": 1331,
+    "generationId": 1224,
+    "createdAt": "2026-08-28T14:32:53.6587036Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-래빗엠큐중단-10",
+    "tripId": 1332,
+    "generationId": 1225,
+    "createdAt": "2026-08-28T14:32:53.6826577Z",
+    "initialStatus": "CREATED"
+  }
+]

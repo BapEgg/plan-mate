@@ -224,6 +224,108 @@
       },
       "fieldConfig": {
         "defaults": {
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 5
+      },
+      "id": 14,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "up{job=~\"planmate-backend|rabbitmq|debezium\"}",
+          "legendFormat": "{{job}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Service Health Timeline",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 5
+      },
+      "id": 13,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(rabbitmq_queue_messages_published_total{queue=\"planmate.itinerary.generation.requested\"})",
+          "legendFormat": "published",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rabbitmq_queue_messages_delivered_ack_total{queue=\"planmate.itinerary.generation.requested\"})",
+          "legendFormat": "delivered (manual ack)",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(rabbitmq_queue_messages_acked_total{queue=\"planmate.itinerary.generation.requested\"})",
+          "legendFormat": "acked",
+          "refId": "C"
+        }
+      ],
+      "title": "RabbitMQ Delivery Counters",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -244,7 +346,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 5
+        "y": 12
       },
       "id": 4,
       "options": {
@@ -305,7 +407,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 5
+        "y": 12
       },
       "id": 5,
       "options": {
@@ -356,7 +458,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 5
+        "y": 12
       },
       "id": 6,
       "options": {
@@ -403,7 +505,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 12
+        "y": 19
       },
       "id": 7,
       "options": {
@@ -454,7 +556,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 12
+        "y": 19
       },
       "id": 8,
       "options": {
@@ -512,7 +614,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 20
+        "y": 27
       },
       "id": 9,
       "options": {
@@ -559,7 +661,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 20
+        "y": 27
       },
       "id": 10,
       "options": {
@@ -606,7 +708,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 28
+        "y": 35
       },
       "id": 11,
       "options": {
@@ -653,7 +755,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 28
+        "y": 35
       },
       "id": 12,
       "options": {
