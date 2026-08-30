@@ -1,0 +1,239 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "rgba(255, 145, 0, 1)",
+        "name": "실험 시각",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "# 실험 2/5 · DB 반영 후 ACK 이전 Worker 강제 종료 — **PASS**\n\n**검증 질문:** DB 작업은 끝났지만 RabbitMQ ACK 전 Worker가 죽으면 메시지가 다시 전달되고, 이미 처리한 첫 건은 중복 저장 없이 건너뛰는가?  \n**한 문장 결론:** 10건 중 1건을 ACK 직전 강제 종료 → 10건 재큐잉 → 재전달 1건은 SKIP → **READY 10/10 · 유실 0 · 중복 0**",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "실험 요약",
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "API와 RabbitMQ는 정상 상태를 유지하고 메시지를 처리하는 Worker만 중단됐다가 복구됐는지 보여준다. 1은 정상, 0은 중단이다.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "fillOpacity": 85, "lineWidth": 0 },
+          "mappings": [
+            {
+              "options": {
+                "0": { "color": "red", "index": 0, "text": "중단" },
+                "1": { "color": "green", "index": 1, "text": "정상" }
+              },
+              "type": "value"
+            }
+          ],
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 12, "w": 14, "x": 0, "y": 4 },
+      "id": 2,
+      "options": {
+        "alignValue": "center",
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "mergeValues": true,
+        "rowHeight": 0.75,
+        "showValue": "always",
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        { "expr": "up{job=\"planmate-backend\"}", "legendFormat": "API 서버", "refId": "A" },
+        { "expr": "up{job=\"planmate-worker\"}", "legendFormat": "메시지 처리 Worker", "refId": "B" },
+        { "expr": "up{job=\"rabbitmq\"}", "legendFormat": "메시지 큐 (RabbitMQ)", "refId": "C" }
+      ],
+      "title": "① 장애 범위 · Worker만 DOWN → UP",
+      "type": "state-timeline"
+    },
+    {
+      "gridPos": { "h": 12, "w": 10, "x": 14, "y": 4 },
+      "id": 3,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "## 실제 실험 타임라인 (KST)\n\n| 시각 | 관측 사건 |\n| --- | --- |\n| 21:15:16 | 요청 10건 생성 완료 |\n| 21:15:21 | DB 첫 건 READY · RabbitMQ Unacked 1 |\n| 21:15:21 | ACK 전 Worker 강제 종료 |\n| 21:15:25 | Unacked 메시지 재큐잉 · Ready 10 |\n| 21:15:25 | 복구 Worker 시작 |\n| 21:15:39 | Worker Health UP · **13.425초** |\n| 21:15:43 | READY **10/10** · 재전달 SKIP 1 |\n| 21:15:45 | Queue ready 0 · unacked 0 |",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "관측 시각",
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Worker 종료 후 미확인 메시지 1건과 대기 중이던 9건이 합쳐져 Queue Ready 10이 되고, 복구 Worker가 모두 처리해 0으로 감소한다. Unacked 1은 4초 구간이라 RabbitMQ API 스냅샷으로 별도 확인했다.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "메시지 수 (건)",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 16,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 3,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "다시 처리할 메시지 (Ready)" },
+            "properties": [ { "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } } ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "처리 중·ACK 대기 (Unacked)" },
+            "properties": [ { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } } ]
+          }
+        ]
+      },
+      "gridPos": { "h": 13, "w": 14, "x": 0, "y": 16 },
+      "id": 4,
+      "options": {
+        "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        { "expr": "rabbitmq_queue_messages_ready{queue=\"planmate.itinerary.generation.requested\"}", "legendFormat": "다시 처리할 메시지 (Ready)", "refId": "A" },
+        { "expr": "rabbitmq_queue_messages_unacked{queue=\"planmate.itinerary.generation.requested\"}", "legendFormat": "처리 중·ACK 대기 (Unacked)", "refId": "B" }
+      ],
+      "title": "② Queue 복구 · 재큐잉 10건 → 처리 완료 0건",
+      "type": "timeseries"
+    },
+    {
+      "gridPos": { "h": 13, "w": 10, "x": 14, "y": 16 },
+      "id": 5,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "| 판정 항목 | 기대 | 실제 |\n| --- | ---: | ---: |\n| ACK 직전 DB 완료 | 1건 | **1건** |\n| Worker 종료 후 재큐잉 | 10건 | **10건** |\n| RabbitMQ 전달 | 11회 | **11회** |\n| RabbitMQ ACK | 10회 | **10회** |\n| 재전달 | 1건 | **1건** |\n| 중복 처리 차단 | 1건 | **1건** |\n| READY 전환 | 10/10 | **10/10** |\n| 이벤트 유실 / 후보 중복 | 0 / 0 | **0 / 0** |\n| DLQ 증가 | 0건 | **0건** |\n\n`전달 11 = 최초 1 + 복구 처리 10` · `ACK 10 = 최종 메시지 10건`",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "③ 기대값과 실제값",
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "복구 Worker가 받은 10건을 원본 9건과 재전달 1건으로 나누고, 이미 READY인 재전달 건을 SKIP한 사실을 보여준다.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "누적 건수",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 3,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 11, "w": 14, "x": 0, "y": 29 },
+      "id": 6,
+      "options": {
+        "legend": { "calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        { "expr": "planmate_itinerary_generation_worker_delivery_total{redelivered=\"false\"}", "legendFormat": "복구 Worker가 처음 받은 메시지", "refId": "A" },
+        { "expr": "planmate_itinerary_generation_worker_delivery_total{redelivered=\"true\"}", "legendFormat": "RabbitMQ가 다시 전달한 메시지", "refId": "B" },
+        { "expr": "planmate_itinerary_generation_worker_processed_total{result=\"skipped\"}", "legendFormat": "이미 처리되어 건너뜀 (SKIP)", "refId": "C" }
+      ],
+      "title": "④ 재전달 1건을 감지하고 중복 처리 차단",
+      "type": "timeseries"
+    },
+    {
+      "gridPos": { "h": 11, "w": 10, "x": 14, "y": 29 },
+      "id": 7,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "## 왜 PASS인가?\n\n1. Worker가 첫 건의 후보 120개를 DB에 저장했다.\n2. ACK 전에 Worker를 죽였으므로 RabbitMQ는 그 메시지를 **처리 완료로 인정하지 않았다.**\n3. 미확인 1건이 다시 Queue로 돌아가 대기 9건과 합쳐져 Ready 10이 됐다.\n4. 재시작 Worker는 첫 건을 다시 받았지만 DB 상태가 이미 READY라서 **SKIP**했다.\n5. 나머지 9건만 새로 처리해 최종 READY 10/10, 후보 1,200행, 중복 0행이 됐다.\n\n즉, **at-least-once 전달 + 멱등 처리**가 함께 동작했다.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "복구 원리",
+      "type": "text"
+    },
+    {
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 40 },
+      "id": 8,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "## 용어와 실험 통제 조건\n\n| 화면 표시 | 뜻 |\n| --- | --- |\n| Ready | Worker가 아직 가져가지 않았거나, 종료 후 다시 처리 대기 중인 메시지 |\n| Unacked | Worker가 가져갔지만 RabbitMQ에 처리 완료 신호를 아직 보내지 않은 메시지 |\n| 재전달 | ACK되지 않은 메시지를 RabbitMQ가 복구 Worker에게 다시 보내는 것 |\n| SKIP | DB에서 이미 완료된 Generation임을 확인해 후보를 두 번 저장하지 않고 종료 |\n| READY | 장소 후보 수집이 끝나 다음 일정 생성 단계로 진행할 수 있는 상태 |\n\n> **실험 통제:** 메시지 복구만 검증하기 위해 Worker는 외부 Google Places 대신 동일한 후보 120개를 만드는 결정적 실험 공급자를 사용했다. 운영 기본값은 Google 공급자이며 변경되지 않는다.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "처음 보는 사람을 위한 설명",
+      "type": "text"
+    }
+  ],
+  "preload": false,
+  "refresh": "",
+  "schemaVersion": 41,
+  "tags": ["planmate", "reliability", "portfolio", "experiment-02"],
+  "templating": { "list": [] },
+  "time": {
+    "from": "2026-08-28T12:15:02.000Z",
+    "to": "2026-08-28T12:16:00.000Z"
+  },
+  "timepicker": {},
+  "timezone": "Asia/Seoul",
+  "title": "PlanMate 장애실험 02 · ACK 전 Worker 종료와 재전달",
+  "uid": "planmate-reliability-exp-02",
+  "version": 1,
+  "weekStart": ""
+}

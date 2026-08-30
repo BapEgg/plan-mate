@@ -1,0 +1,375 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "rgba(255, 145, 0, 1)",
+        "name": "실험 시각",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "# 실험 1/5 · Debezium 중단 후 재시작 — **PASS**\n\n**검증 질문:** 이벤트 전달기가 멈춘 동안 생성된 요청 10건이 DB에 보존되고, 재기동 후 유실 없이 모두 처리되는가?  \n**한 문장 결론:** Outbox 10건 → RabbitMQ 발행 10건 → Worker ACK 10건 → 후보 수집 완료 10건, **이벤트 유실 0건**",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "실험 요약",
+      "transparent": false,
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "API 서버와 RabbitMQ는 정상 상태를 유지하고 Debezium만 선택적으로 중단됐는지 확인한다. 1은 정상, 0은 중단이다.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 85,
+            "lineWidth": 0
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "red",
+                  "index": 0,
+                  "text": "중단"
+                },
+                "1": {
+                  "color": "green",
+                  "index": 1,
+                  "text": "정상"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 14,
+        "x": 0,
+        "y": 4
+      },
+      "id": 2,
+      "options": {
+        "alignValue": "center",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "mergeValues": true,
+        "rowHeight": 0.75,
+        "showValue": "always",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "up{job=\"planmate-backend\"}",
+          "legendFormat": "API 서버",
+          "refId": "A"
+        },
+        {
+          "expr": "up{job=\"debezium\"}",
+          "legendFormat": "이벤트 전달기 (Debezium)",
+          "refId": "B"
+        },
+        {
+          "expr": "up{job=\"rabbitmq\"}",
+          "legendFormat": "메시지 큐 (RabbitMQ)",
+          "refId": "C"
+        }
+      ],
+      "title": "① 장애 범위 · Debezium만 중단",
+      "type": "state-timeline"
+    },
+    {
+      "gridPos": {
+        "h": 8,
+        "w": 10,
+        "x": 14,
+        "y": 4
+      },
+      "id": 3,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "## 실제 실험 타임라인 (KST)\n\n| 시각 | 관측 사건 |\n| --- | --- |\n| 17:30:41 | Debezium 중단 |\n| 17:30:43 | Health `DOWN` 확인 |\n| 17:30:57 | 중단 상태에서 요청 10건 생성 완료 |\n| 17:31:00 | Debezium 재기동 |\n| 17:31:10 | Health `UP` 확인 · **9.818초** |\n| 17:31:37 | 요청 **10/10건** 후보 수집 완료 |\n| 17:31:59 | Queue ready 0 · unacked 0 · ACK 10 확인 |",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "관측 시각",
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "코드값 대신 사용자 관점의 상태명으로 표시한다. 후보 수집 완료는 실험 전 기준선 1건을 제외한 증가량이다.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "요청 수 (건)",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 3,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "전달 대기"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "장소 후보 수집 중"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "후보 수집 완료 (실험 증가량)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "처리 실패"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 14,
+        "x": 0,
+        "y": 12
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "planmate_itinerary_generation_status{status=\"CREATED\"}",
+          "legendFormat": "전달 대기",
+          "refId": "A"
+        },
+        {
+          "expr": "planmate_itinerary_generation_status{status=\"COLLECTING_CANDIDATES\"}",
+          "legendFormat": "장소 후보 수집 중",
+          "refId": "B"
+        },
+        {
+          "expr": "clamp_min(planmate_itinerary_generation_status{status=\"READY_FOR_PLANNING\"} - 1, 0)",
+          "legendFormat": "후보 수집 완료 (실험 증가량)",
+          "refId": "C"
+        },
+        {
+          "expr": "planmate_itinerary_generation_status{status=\"FAILED\"}",
+          "legendFormat": "처리 실패",
+          "refId": "D"
+        }
+      ],
+      "title": "② 요청 10건의 복구 · 전달 대기 10 → 후보 수집 완료 10",
+      "type": "timeseries"
+    },
+    {
+      "gridPos": {
+        "h": 9,
+        "w": 10,
+        "x": 14,
+        "y": 12
+      },
+      "id": 5,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "## ③ 정합성 판정\n\n| 처리 단계 | 관측값 | 판정 |\n| --- | ---: | :---: |\n| DB Outbox 보존 | **10건** | PASS |\n| RabbitMQ 발행 | **10건** | PASS |\n| RabbitMQ 전달 | **10건** | PASS |\n| Worker ACK | **10건** | PASS |\n| 후보 수집 완료 | **10/10건** | PASS |\n| 처리 실패 | **0건** | PASS |\n| DLQ 증가 | **0건** | PASS |\n| 이벤트 유실 | **0건** | PASS |\n\n`Outbox 10 = Publish 10 = Deliver 10 = ACK 10 = 완료 10`\n\n원본 판정: `result.json` · RabbitMQ Management API · DB 재검증 SQL",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "기대값과 실제값",
+      "type": "text"
+    },
+    {
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      },
+      "id": 6,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "## 상태 코드 읽는 법\n\n| 화면 표시 | 내부 코드 | 뜻 |\n| --- | --- | --- |\n| 전달 대기 | `CREATED` | 요청·입력·Outbox 저장 완료, Worker 시작 전 |\n| 장소 후보 수집 중 | `COLLECTING_CANDIDATES` | Worker가 Google Places 후보를 수집하는 중 |\n| 후보 수집 완료 | `READY_FOR_PLANNING` | 후보 데이터가 준비되어 AI 일정 생성 가능 |\n| 처리 실패 | `FAILED` | 비동기 후보 수집이 재시도 후 실패 |\n\n> 이 실험은 후보 수집 비동기 파이프라인의 복구를 검증한다. 최종 AI 일정 저장 상태인 `COMPLETED` 검증은 이 실험 범위가 아니다.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "용어 설명",
+      "type": "text"
+    }
+  ],
+  "preload": false,
+  "refresh": "",
+  "schemaVersion": 41,
+  "tags": [
+    "planmate",
+    "reliability",
+    "portfolio",
+    "experiment-01"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "2026-08-28T08:30:30.000Z",
+    "to": "2026-08-28T08:32:10.000Z"
+  },
+  "timepicker": {},
+  "timezone": "Asia/Seoul",
+  "title": "PlanMate 장애실험 01 · Debezium 중단과 복구",
+  "uid": "planmate-reliability-exp-01",
+  "version": 1,
+  "weekStart": ""
+}

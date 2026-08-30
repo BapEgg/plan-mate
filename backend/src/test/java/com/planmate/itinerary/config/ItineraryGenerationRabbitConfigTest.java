@@ -41,5 +41,9 @@ class ItineraryGenerationRabbitConfigTest {
                 .anySatisfy(source -> assertThat(source.getProperty(
                         "spring.rabbitmq.listener.simple.default-requeue-rejected"
                 )).isEqualTo(false));
+        assertThat(sources)
+                .anySatisfy(source -> assertThat(source.getProperty(
+                        "spring.rabbitmq.listener.simple.acknowledge-mode"
+                )).isEqualTo("auto"));
     }
 }

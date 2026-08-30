@@ -1,0 +1,72 @@
+[
+  {
+    "name": "장애테스트-데비지움중단-01",
+    "tripId": 1245,
+    "generationId": 1117,
+    "createdAt": "2026-08-28T08:30:55.9659210Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-데비지움중단-02",
+    "tripId": 1246,
+    "generationId": 1118,
+    "createdAt": "2026-08-28T08:30:56.1100242Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-데비지움중단-03",
+    "tripId": 1247,
+    "generationId": 1119,
+    "createdAt": "2026-08-28T08:30:56.2363442Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-데비지움중단-04",
+    "tripId": 1248,
+    "generationId": 1120,
+    "createdAt": "2026-08-28T08:30:56.3652494Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-데비지움중단-05",
+    "tripId": 1249,
+    "generationId": 1121,
+    "createdAt": "2026-08-28T08:30:56.4979701Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-데비지움중단-06",
+    "tripId": 1250,
+    "generationId": 1122,
+    "createdAt": "2026-08-28T08:30:56.6157145Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-데비지움중단-07",
+    "tripId": 1251,
+    "generationId": 1123,
+    "createdAt": "2026-08-28T08:30:56.7310593Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-데비지움중단-08",
+    "tripId": 1252,
+    "generationId": 1124,
+    "createdAt": "2026-08-28T08:30:56.8504749Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-데비지움중단-09",
+    "tripId": 1253,
+    "generationId": 1125,
+    "createdAt": "2026-08-28T08:30:56.9599646Z",
+    "initialStatus": "CREATED"
+  },
+  {
+    "name": "장애테스트-데비지움중단-10",
+    "tripId": 1254,
+    "generationId": 1126,
+    "createdAt": "2026-08-28T08:30:57.0899829Z",
+    "initialStatus": "CREATED"
+  }
+]

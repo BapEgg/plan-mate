@@ -1,0 +1,239 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "# 실험 6 · RabbitMQ 중단 중 CDC 발행 실패와 복구 — **PASS**\n\n**검증 질문:** Outbox 이벤트를 읽은 Debezium이 RabbitMQ에 보내지 못하면, 전송 위치를 확정하지 않고 Broker 복구 후 10건을 다시 전달하는가?  \n**한 문장 결론:** RabbitMQ 중단 중 Outbox 10건 보존·전달 위치 정지 → 재기동 후 발행·전달·ACK 10/10/10 → 완료 10/10 · 유실 0 · 중복 0",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "실험 요약",
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "PlanMate API는 요청을 받아 DB에 Outbox를 계속 저장했다. 실제 장애 대상인 RabbitMQ만 정상→중단→정상으로 바뀌었다.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "fillOpacity": 85, "lineWidth": 0 },
+          "mappings": [
+            {
+              "options": {
+                "0": { "color": "red", "index": 0, "text": "중단" },
+                "1": { "color": "green", "index": 1, "text": "정상" }
+              },
+              "type": "value"
+            }
+          ],
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 13, "w": 14, "x": 0, "y": 4 },
+      "id": 2,
+      "options": {
+        "alignValue": "center",
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "mergeValues": true,
+        "rowHeight": 0.8,
+        "showValue": "auto",
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        { "expr": "up{job=\"planmate-backend\"}", "legendFormat": "API · 정상 유지", "refId": "A" },
+        { "expr": "up{job=\"rabbitmq\"}", "legendFormat": "RabbitMQ · 중단 후 복구", "refId": "B" }
+      ],
+      "title": "① 장애 범위 · RabbitMQ만 중단",
+      "type": "state-timeline"
+    },
+    {
+      "gridPos": { "h": 13, "w": 10, "x": 14, "y": 4 },
+      "id": 3,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "## 실제 실험 타임라인 (KST)\n\n| 시각 | 누구나 이해할 수 있는 사건 |\n| --- | --- |\n| 23:32:35 | RabbitMQ 중단 |\n| 23:32:53 | 테스트 요청·Outbox 10건 저장 |\n| 23:33:00 | Debezium 발행 실패, 전달 위치 정지 확인 |\n| 23:33:03 | RabbitMQ 재기동 |\n| 23:33:09 | RabbitMQ Health 정상 |\n| 23:33:19 | 10건 모두 후보 수집 완료 |\n| 23:33:21 | Queue 0 · 유실 0 · 중복 0 · PASS |\n\n**장애 핵심:** DB 저장은 성공했지만 메시지를 받을 Broker가 없었다. 복구 전까지 10건은 전달 대기 상태로 안전하게 남았다.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "관측 시각과 장애 의미",
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "RabbitMQ가 중단된 동안 새 요청 10건은 전달 대기로 쌓였다. Broker 복구 후 전달 대기는 0으로 줄고 후보 수집 완료가 10건 증가했다.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "실험 요청 건수",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 14,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 3,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 13, "w": 14, "x": 0, "y": 17 },
+      "id": 4,
+      "options": {
+        "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        { "expr": "planmate_itinerary_generation_status{job=\"planmate-backend\",status=\"CREATED\"}", "legendFormat": "전달 대기 · 중단 중 10건", "refId": "A" },
+        { "expr": "clamp_min(planmate_itinerary_generation_status{job=\"planmate-backend\",status=\"READY_FOR_PLANNING\"} - 41, 0)", "legendFormat": "후보 수집 완료 · 복구 후 10건", "refId": "B" },
+        { "expr": "clamp_min(planmate_itinerary_generation_status{job=\"planmate-backend\",status=\"FAILED\"} - 20, 0)", "legendFormat": "처리 실패 · 0건", "refId": "C" }
+      ],
+      "title": "② 요청 상태 · 전달 대기 10건이 완료 10건으로 복구",
+      "type": "timeseries"
+    },
+    {
+      "gridPos": { "h": 13, "w": 10, "x": 14, "y": 17 },
+      "id": 5,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "| 중단 중 판정 항목 | 기대 | 실제 |\n| --- | ---: | ---: |\n| 테스트 요청 | 10건 | **10건** |\n| DB Outbox 저장 | 10건 | **10건** |\n| 전달 대기 | 10건 | **10건** |\n| RabbitMQ 연결 | 불가 | **불가** |\n| Debezium Sink 오류 | 발생 | **54회 감지** |\n| 전달 위치 확정 | 정지 | **정지** |\n| 중단 중 READY | 0건 | **0건** |\n\n**왜 안전한가?** RabbitMQ에 보내지 못한 10건을 처리 완료로 표시하지 않았다. DB의 원본 이벤트와 Debezium의 마지막 확인 위치가 그대로 남아 재기동 후 다시 보낼 수 있었다.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "② 중단 중 · 기대값과 실제값",
+      "type": "text"
+    },
+    {
+      "gridPos": { "h": 13, "w": 24, "x": 0, "y": 30 },
+      "id": 6,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "**전달 위치가 멈춘 증거**\n\n| 관측 지점 | RabbitMQ 중단 전 | 중단 중 | 복구 후 | 의미 |\n| --- | --- | --- | --- | --- |\n| DB 현재 WAL 위치 | `0/2D94B48` | **`0/2DA4900`** | `0/2E8DB50` | 요청 저장으로 DB 변경은 실제 발생 |\n| Debezium Offset 파일 | `dc8423…60897` | **`dc8423…60897`** | `1b37b2…5bda2` | Broker 중단 중 처리 위치를 확정하지 않음 |\n| Replication Slot 확인 위치 | `0/2C8EF68` | **`0/2C8EF68`** | `0/2DA3E90` | 보내지 못한 구간을 건너뛰지 않음 |\n| Outbox 원본 이벤트 | - | **10건 보존** | 10건 전달 완료 | 재전송할 원본 유지 |\n\n**쉬운 설명:** DB에는 새 데이터가 생겼지만, 택배를 받을 RabbitMQ가 없었다. Debezium은 배송 완료 도장을 찍지 않았고, RabbitMQ가 돌아오자 같은 위치부터 10건을 전달했다.  \n**증거 출처:** `cdc-checkpoints.json`, `database-snapshots.json`, `debezium-broker-down.log`",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "③ 전달 위치 보호 · Offset과 Slot이 중단 중 그대로 유지",
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "RabbitMQ 재기동 후 Debezium 발행, Worker 전달, Worker 처리 완료 ACK가 모두 10건으로 일치한다. Audit Queue도 동일한 Generation ID 10개를 보관했다.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "누적 건수",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 14,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 3,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 13, "w": 14, "x": 0, "y": 43 },
+      "id": 7,
+      "options": {
+        "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        { "expr": "sum(rabbitmq_queue_messages_published_total{queue=\"planmate.itinerary.generation.requested\"}) or vector(0)", "legendFormat": "Debezium이 Queue에 발행 · 10건", "refId": "A" },
+        { "expr": "sum(rabbitmq_queue_messages_delivered_ack_total{queue=\"planmate.itinerary.generation.requested\"}) or vector(0)", "legendFormat": "RabbitMQ가 Worker에 전달 · 10건", "refId": "B" },
+        { "expr": "sum(rabbitmq_queue_messages_acked_total{queue=\"planmate.itinerary.generation.requested\"}) or vector(0)", "legendFormat": "Worker 처리 완료 ACK · 10건", "refId": "C" },
+        { "expr": "sum(rabbitmq_queue_messages_ready{queue=\"planmate.reliability.exp6.20260828233213.audit\"}) or vector(0)", "legendFormat": "Audit Queue가 확인한 고유 이벤트 · 10건", "refId": "D" }
+      ],
+      "title": "④ 복구 전달 · 발행 10 = 전달 10 = ACK 10",
+      "type": "timeseries"
+    },
+    {
+      "gridPos": { "h": 13, "w": 10, "x": 14, "y": 43 },
+      "id": 8,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "| 복구 판정 항목 | 기대 | 실제 |\n| --- | ---: | ---: |\n| Audit 이벤트 | 10건 | **10건** |\n| 고유 Generation ID | 10개 | **10개** |\n| RabbitMQ 발행 | 10건 | **10건** |\n| Worker 전달 | 10건 | **10건** |\n| 처리 완료 ACK | 10건 | **10건** |\n| READY 전환 | 10/10 | **10/10** |\n| Candidate 저장 | 1,200행 | **1,200행** |\n| RabbitMQ Health 복구 | 측정 | **5.416초** |\n| RabbitMQ Start → READY | 측정 | **15.905초** |\n\nAudit Queue의 10개 Generation ID와 DB의 1216~1225가 정확히 일치했다.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "④ 복구 후 · 기대값과 실제값",
+      "type": "text"
+    },
+    {
+      "gridPos": { "h": 13, "w": 24, "x": 0, "y": 56 },
+      "id": 9,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "**DB·Audit Queue·RabbitMQ 교차검증**\n\n| 교차검증 항목 | 실제 | 판정 |\n| --- | ---: | :---: |\n| Outbox / Audit 이벤트 | **10 / 10건** | PASS |\n| 발행 / 전달 / ACK | **10 / 10 / 10건** | PASS |\n| 후보 수집 완료 / 실패 | **10 / 0건** | PASS |\n| Candidate / 장소 중복 / 순위 중복 | **1,200 / 0 / 0행** | PASS |\n| 이벤트 유실 | **0건** | PASS |\n| 재전달 | **0건** | PASS |\n| 운영 DLQ | **167 → 167, 증가 0건** | PASS |\n| Main Queue Ready / Unacked | **0 / 0건** | PASS |\n\n**결론:** RabbitMQ가 중단돼도 Debezium은 보내지 못한 이벤트의 처리 위치를 확정하지 않았다. Broker 복구 후 10건을 모두 전달했고 DB·Audit Queue·RabbitMQ 수치가 일치했다.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "⑤ 최종 판정 · 완료 10, 유실 0, 중복 0",
+      "type": "text"
+    },
+    {
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 69 },
+      "id": 10,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "## 처음 보는 사람을 위한 읽는 순서\n\n| 순서 | 질문 | 이 화면의 답 |\n| ---: | --- | --- |\n| ① | 무엇이 고장 났나? | RabbitMQ만 중단, API는 요청 저장 계속 |\n| ② | 중단 중 요청은 사라졌나? | Outbox와 전달 대기에 10건 보존 |\n| ③ | Debezium이 보냈다고 착각했나? | Offset과 Slot이 움직이지 않아 미전송 위치 유지 |\n| ④ | 재기동 후 모두 전달됐나? | 발행·전달·ACK 10/10/10 |\n| ⑤ | 최종 데이터가 정확한가? | 완료 10, 유실 0, 중복 0, DLQ 증가 0 |\n\n`Outbox`는 아직 보내지 못한 이벤트 원본, `Offset/Slot`은 Debezium이 어디까지 안전하게 전달했는지 기억하는 책갈피, `ACK`는 Worker가 처리를 끝냈다는 확인 신호다.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.0.0",
+      "title": "용어와 읽는 순서",
+      "type": "text"
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 41,
+  "tags": ["planmate", "reliability", "portfolio", "rabbitmq", "debezium", "outbox", "experiment-06"],
+  "templating": { "list": [] },
+  "time": {
+    "from": "2026-08-28T14:32:22.000Z",
+    "to": "2026-08-28T14:33:42.000Z"
+  },
+  "timepicker": {},
+  "timezone": "Asia/Seoul",
+  "title": "PlanMate 장애실험 06 · RabbitMQ 중단과 CDC 복구",
+  "uid": "planmate-reliability-exp-06",
+  "version": 1,
+  "weekStart": ""
+}

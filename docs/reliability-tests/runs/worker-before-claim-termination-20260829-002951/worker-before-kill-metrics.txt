@@ -1,0 +1,24 @@
+# HELP planmate_itinerary_generation_candidates Candidate count of an itinerary generation successfully transitioned to ready.
+# TYPE planmate_itinerary_generation_candidates summary
+planmate_itinerary_generation_candidates_count 0
+planmate_itinerary_generation_candidates_sum 0.0
+# HELP planmate_itinerary_generation_candidates_max Candidate count of an itinerary generation successfully transitioned to ready.
+# TYPE planmate_itinerary_generation_candidates_max gauge
+planmate_itinerary_generation_candidates_max 0.0
+# HELP planmate_itinerary_generation_stale Itinerary generation count that stayed in a processing status longer than expected.
+# TYPE planmate_itinerary_generation_stale gauge
+planmate_itinerary_generation_stale{status="COLLECTING_CANDIDATES",threshold="PT15M"} 0.0
+planmate_itinerary_generation_stale{status="CREATED",threshold="5m"} 0.0
+# HELP planmate_itinerary_generation_status Current itinerary generation count by status.
+# TYPE planmate_itinerary_generation_status gauge
+planmate_itinerary_generation_status{status="COLLECTING_CANDIDATES"} 0.0
+planmate_itinerary_generation_status{status="COMPLETED"} 0.0
+planmate_itinerary_generation_status{status="CREATED"} 10.0
+planmate_itinerary_generation_status{status="FAILED"} 20.0
+planmate_itinerary_generation_status{status="READY_FOR_PLANNING"} 51.0
+# HELP planmate_itinerary_generation_worker_delivery_total Itinerary generation worker message delivery count.
+# TYPE planmate_itinerary_generation_worker_delivery_total counter
+planmate_itinerary_generation_worker_delivery_total{redelivered="false"} 1.0
+# HELP planmate_itinerary_generation_worker_reliability_hook_total Reliability-test-only worker pause hook entry count.
+# TYPE planmate_itinerary_generation_worker_reliability_hook_total counter
+planmate_itinerary_generation_worker_reliability_hook_total{phase="after_delivery_before_claim"} 1.0

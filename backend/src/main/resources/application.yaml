@@ -84,6 +84,7 @@ spring:
     password: ${RABBITMQ_PASSWORD:guest}
     listener:
       simple:
+        acknowledge-mode: auto
         default-requeue-rejected: false
 
   jpa:
@@ -144,6 +145,8 @@ app:
       stale-recovery-enabled: ${APP_ITINERARY_GENERATION_WORKER_STALE_RECOVERY_ENABLED:true}
       recovery-scan-interval: ${APP_ITINERARY_GENERATION_WORKER_RECOVERY_SCAN_INTERVAL:1m}
       recovery-batch-size: ${APP_ITINERARY_GENERATION_WORKER_RECOVERY_BATCH_SIZE:50}
+      reliability-after-delivery-before-claim-delay: ${APP_ITINERARY_GENERATION_WORKER_RELIABILITY_AFTER_DELIVERY_BEFORE_CLAIM_DELAY:0s}
+      reliability-after-commit-before-ack-delay: ${APP_ITINERARY_GENERATION_WORKER_RELIABILITY_AFTER_COMMIT_BEFORE_ACK_DELAY:0s}
       exchange: ${APP_ITINERARY_GENERATION_EXCHANGE:planmate.itinerary}
       queue: ${APP_ITINERARY_GENERATION_QUEUE:planmate.itinerary.generation.requested}
       routing-key: ${APP_ITINERARY_GENERATION_ROUTING_KEY:itinerary.generation.requested}
@@ -154,6 +157,10 @@ app:
       default-start-time: ${APP_ITINERARY_SCHEDULE_DEFAULT_START_TIME:08:00}
       default-end-time: ${APP_ITINERARY_SCHEDULE_DEFAULT_END_TIME:20:00}
     candidates:
+      provider: ${APP_ITINERARY_CANDIDATES_PROVIDER:google}
+      deterministic-delay: ${APP_ITINERARY_CANDIDATE_DETERMINISTIC_DELAY:0s}
+      reliability-failure-mode: ${APP_ITINERARY_CANDIDATE_RELIABILITY_FAILURE_MODE:}
+      reliability-failure-delay: ${APP_ITINERARY_CANDIDATE_RELIABILITY_FAILURE_DELAY:0s}
       target-count: ${APP_ITINERARY_CANDIDATE_TARGET_COUNT:120}
       max-raw-count: ${APP_ITINERARY_CANDIDATE_MAX_RAW_COUNT:180}
       page-size: ${APP_ITINERARY_CANDIDATE_PAGE_SIZE:20}

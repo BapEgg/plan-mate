@@ -64,6 +64,11 @@ class ItineraryGenerationWorkerServiceTest {
         verify(persistenceService, never()).markFailed(anyLong(), anyLong(), anyString());
         assertProcessedCount("success", 1.0);
         assertDurationCount("success", 1L);
+        assertThat(meterRegistry.get("planmate.itinerary.generation.worker.claim")
+                        .tag("type", "initial")
+                        .counter()
+                        .count())
+                .isEqualTo(1.0);
     }
 
     @Test
@@ -96,7 +101,8 @@ class ItineraryGenerationWorkerServiceTest {
         verify(persistenceService).markFailed(123L, 4L, "PLACE_PROVIDER_UNAVAILABLE");
         assertProcessedCount("failed", 1.0);
         assertDurationCount("failed", 1L);
-        assertRetryCount(1.0);
+        assertRetryCount("retryable", "PLACE_PROVIDER_UNAVAILABLE", 1.0);
+        assertFailureAttemptCount("retryable", "PLACE_PROVIDER_UNAVAILABLE", 2.0);
     }
 
     @Test
@@ -127,6 +133,7 @@ class ItineraryGenerationWorkerServiceTest {
         verify(generationService).collectCandidates(45L, 123L, 4L);
         verify(persistenceService).markFailed(123L, 4L, "WORKER_PROCESSING_FAILED");
         assertThat(meterRegistry.find("planmate.itinerary.generation.worker.retry").counter()).isNull();
+        assertFailureAttemptCount("non_retryable", "WORKER_PROCESSING_FAILED", 1.0);
     }
 
     @Test
@@ -155,6 +162,16 @@ class ItineraryGenerationWorkerServiceTest {
 
         verify(persistenceService, never()).markFailed(anyLong(), anyLong(), anyString());
         assertProcessedCount("skipped", 1.0);
+        assertThat(meterRegistry.get("planmate.itinerary.generation.worker.claim")
+                        .tag("type", "recovery")
+                        .counter()
+                        .count())
+                .isEqualTo(1.0);
+        assertThat(meterRegistry.get("planmate.itinerary.generation.worker.fenced")
+                        .tag("operation", "candidate_save")
+                        .counter()
+                        .count())
+                .isEqualTo(1.0);
     }
 
     private void assertProcessedCount(String result, double count) {
@@ -173,8 +190,19 @@ class ItineraryGenerationWorkerServiceTest {
                 .isEqualTo(count);
     }
 
-    private void assertRetryCount(double count) {
+    private void assertRetryCount(String classification, String failureCode, double count) {
         assertThat(meterRegistry.get("planmate.itinerary.generation.worker.retry")
+                        .tag("classification", classification)
+                        .tag("failureCode", failureCode)
+                        .counter()
+                        .count())
+                .isEqualTo(count);
+    }
+
+    private void assertFailureAttemptCount(String classification, String failureCode, double count) {
+        assertThat(meterRegistry.get("planmate.itinerary.generation.worker.failure.attempt")
+                        .tag("classification", classification)
+                        .tag("failureCode", failureCode)
                         .counter()
                         .count())
                 .isEqualTo(count);
