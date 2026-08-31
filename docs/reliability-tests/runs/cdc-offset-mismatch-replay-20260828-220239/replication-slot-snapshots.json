@@ -1,0 +1,26 @@
+{
+  "checkpoint1": {
+    "slot_name": "planmate_exp3_detect_20260828220239",
+    "restart_lsn": "0/1940968",
+    "confirmed_flush_lsn": "0/19409D0",
+    "active": false
+  },
+  "checkpoint2": {
+    "slot_name": "planmate_exp3_detect_20260828220239",
+    "restart_lsn": "0/1940B90",
+    "confirmed_flush_lsn": "0/1940B90",
+    "active": false
+  },
+  "detectFinal": {
+    "slot_name": "planmate_exp3_detect_20260828220239",
+    "restart_lsn": "0/1940D28",
+    "confirmed_flush_lsn": "0/19426E8",
+    "active": false
+  },
+  "replayFinal": {
+    "slot_name": "planmate_exp3_replay_20260828220239",
+    "restart_lsn": "0/1989078",
+    "confirmed_flush_lsn": "0/19890B0",
+    "active": true
+  }
+}

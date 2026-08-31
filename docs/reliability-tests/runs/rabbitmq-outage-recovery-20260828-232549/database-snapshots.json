@@ -1,0 +1,24 @@
+{
+  "during": {
+    "capturedAt": "2026-08-28T23:27:31.216983+09:00",
+    "outboxCount": 10,
+    "createdCount": 10,
+    "collectingCount": 0,
+    "readyCount": 0,
+    "failedCount": 0,
+    "candidateCount": 0,
+    "distinctGenerationPlaceCount": 0,
+    "distinctGenerationRankCount": 0
+  },
+  "after": {
+    "capturedAt": "2026-08-28T23:27:52.583177+09:00",
+    "outboxCount": 10,
+    "createdCount": 0,
+    "collectingCount": 0,
+    "readyCount": 10,
+    "failedCount": 0,
+    "candidateCount": 1200,
+    "distinctGenerationPlaceCount": 1200,
+    "distinctGenerationRankCount": 1200
+  }
+}

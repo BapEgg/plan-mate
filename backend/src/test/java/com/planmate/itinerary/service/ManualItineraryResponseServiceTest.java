@@ -148,6 +148,24 @@ class ManualItineraryResponseServiceTest {
     }
 
     @Test
+    void providerResponseUsesTheExistingValidationAndPersistencePath() {
+        given(itineraryRepository.save(Mockito.any())).willAnswer(invocation -> invocation.getArgument(0));
+        given(itineraryDayRepository.save(Mockito.any())).willAnswer(invocation -> invocation.getArgument(0));
+        given(itineraryItemRepository.save(Mockito.any())).willAnswer(invocation -> invocation.getArgument(0));
+        given(generationCandidateSnapshotStore.countByGenerationId(10L)).willReturn(2L);
+
+        service.submitProviderResponse(1L, 10L, validDraft());
+
+        assertThat(generation.getStatus()).isEqualTo(ItineraryGenerationStatus.COMPLETED);
+        verifyNoInteractions(tripAccessChecker);
+        verify(validationMetrics).recordSubmit(Mockito.any(AiItineraryValidationReport.class));
+        verify(itineraryRepository).save(Mockito.any(ItineraryEntity.class));
+        verify(itineraryDayRepository, Mockito.times(2)).save(Mockito.any(ItineraryDayEntity.class));
+        verify(itineraryItemRepository, Mockito.times(2)).save(Mockito.any(ItineraryItemEntity.class));
+        verify(eventPublisher).publishEvent(Mockito.any(ItineraryGenerationStatusChangedEvent.class));
+    }
+
+    @Test
     void rejectsDraftWhenGenerationBelongsToDifferentTrip() {
         assertThatThrownBy(() -> service.submit(99L, 2L, 10L, validDraft()))
                 .isInstanceOf(ItineraryException.class)

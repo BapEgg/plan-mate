@@ -3,6 +3,7 @@ package com.planmate.realtime.itinerary;
 import com.planmate.itinerary.api.event.ItineraryGenerationStatusChangedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.annotation.Order;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -24,6 +25,7 @@ public class ItineraryGenerationRealtimeSubscriber {
         this.eventMapper = eventMapper;
     }
 
+    @Order(0)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handle(ItineraryGenerationStatusChangedEvent event) {
         try {

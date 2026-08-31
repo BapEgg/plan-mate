@@ -1,5 +1,6 @@
 ﻿import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
+import { useRef } from 'react'
 import './App.css'
 import { MainPage } from './pages/main/MainPage'
 import { TripCreatePage } from './pages/trip/TripCreatePage'
@@ -19,6 +20,11 @@ import {
   signup,
 } from './api/auth'
 import type { AuthUser, OAuth2Provider } from './api/auth'
+import {
+  ACCESS_TOKEN_REFRESHED_EVENT,
+  ACCESS_TOKEN_STORAGE_KEY,
+  SESSION_EXPIRED_EVENT,
+} from './api/client'
 
 type Page = 'auth' | 'emailVerification' | 'findLoginId' | 'resetPassword' | 'main' | 'tripCreate' | 'tripDetail'
 type AuthMode = 'login' | 'signup'
@@ -31,7 +37,17 @@ type Notice = {
 
 type AsyncStatus = 'idle' | 'loading' | 'success' | 'error'
 
-const ACCESS_TOKEN_KEY = 'planmate.accessToken'
+const TRAVEL_THOUGHTS = [
+  '이번엔 어디 갈까?',
+  '2박 3일이면 좋겠어',
+  '너무 빡빡하진 않게',
+  '맛있는 건 꼭 먹자',
+  '차 없이 다닐 수 있으면 좋겠어',
+  '하루쯤은 여유롭게',
+]
+
+const STORY_MOMENT_DURATIONS = [700, 700, 700, 700, 700, 700, 1700]
+const FINAL_STORY_MOMENT = 7
 
 function resolvePage(): Page {
   if (window.location.pathname === '/main') {
@@ -59,7 +75,7 @@ function App() {
   const [page, setPage] = useState<Page>(() => resolvePage())
   const [authMode, setAuthMode] = useState<AuthMode>('login')
   const [notice, setNotice] = useState<Notice | null>(null)
-  const [accessToken, setAccessToken] = useState(() => localStorage.getItem(ACCESS_TOKEN_KEY) ?? '')
+  const [accessToken, setAccessToken] = useState(() => localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY) ?? '')
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const [emailVerificationStatus, setEmailVerificationStatus] = useState<AsyncStatus>('idle')
   const [loginIdRecoveryStatus, setLoginIdRecoveryStatus] = useState<AsyncStatus>('idle')
@@ -73,15 +89,40 @@ function App() {
   }, [])
 
   const persistAccessToken = useCallback((token: string) => {
-    localStorage.setItem(ACCESS_TOKEN_KEY, token)
+    localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, token)
     setAccessToken(token)
   }, [])
 
   const clearAccessToken = useCallback(() => {
-    localStorage.removeItem(ACCESS_TOKEN_KEY)
+    localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY)
     setAccessToken('')
     setCurrentUser(null)
   }, [])
+
+  const redirectToLogin = useCallback((message = '로그인 세션이 만료되었습니다. 다시 로그인해 주세요.') => {
+    clearAccessToken()
+    window.history.replaceState(null, '', '/')
+    setPage('auth')
+    setAuthMode('login')
+    setNotice({ tone: 'error', message })
+  }, [clearAccessToken])
+
+  useEffect(() => {
+    const handleAccessTokenRefreshed = (event: Event) => {
+      const refreshed = event as CustomEvent<{ accessToken?: string }>
+      if (refreshed.detail?.accessToken) {
+        setAccessToken(refreshed.detail.accessToken)
+      }
+    }
+    const handleSessionExpired = () => redirectToLogin()
+
+    window.addEventListener(ACCESS_TOKEN_REFRESHED_EVENT, handleAccessTokenRefreshed)
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
+    return () => {
+      window.removeEventListener(ACCESS_TOKEN_REFRESHED_EVENT, handleAccessTokenRefreshed)
+      window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
+    }
+  }, [redirectToLogin])
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -118,9 +159,7 @@ function App() {
 
       const status = await getAuthStatus(token)
       if (!status.authenticated || !status.user) {
-        clearAccessToken()
-        navigate('/')
-        setNotice({ tone: 'error', message: '로그인이 필요합니다.' })
+        redirectToLogin('로그인이 필요합니다.')
         return
       }
 
@@ -131,11 +170,9 @@ function App() {
         role: status.user.role,
       })
     } catch {
-      clearAccessToken()
-      navigate('/')
-      setNotice({ tone: 'error', message: '로그인이 필요합니다.' })
+      redirectToLogin()
     }
-  }, [accessToken, clearAccessToken, navigate, persistAccessToken])
+  }, [accessToken, persistAccessToken, redirectToLogin])
 
   const verifyEmailToken = useCallback(async () => {
     const token = new URLSearchParams(window.location.search).get('token') ?? ''
@@ -336,7 +373,7 @@ function App() {
 
   if (page === 'emailVerification') {
     return (
-      <AuthShell notice={notice}>
+      <AuthShell notice={notice} initiallyOpen>
         <section className="verification-card" aria-live="polite">
           <p className="eyebrow">Email verification</p>
           <h1>이메일 인증</h1>
@@ -379,6 +416,7 @@ function App() {
     return (
       <TripDetailPage
         accessToken={accessToken}
+        key={window.location.pathname}
         tripId={window.location.pathname.split('/').filter(Boolean)[1] ?? ''}
         user={currentUser}
         onBackToMain={() => navigate('/main')}
@@ -389,7 +427,7 @@ function App() {
 
   if (page === 'findLoginId') {
     return (
-      <AuthShell notice={notice}>
+      <AuthShell notice={notice} initiallyOpen>
         <FindLoginIdCard
           onSubmit={handleFindLoginId}
           onBackToLogin={() => navigate('/')}
@@ -403,7 +441,7 @@ function App() {
 
   if (page === 'resetPassword') {
     return (
-      <AuthShell notice={notice}>
+      <AuthShell notice={notice} initiallyOpen>
         <ResetPasswordCard
           onRequestSubmit={handleResetPasswordRequest}
           onConfirmSubmit={handleResetPasswordConfirm}
@@ -416,21 +454,32 @@ function App() {
   }
 
   return (
-    <AuthShell notice={notice}>
-      <section className="auth-card" aria-label="인증 폼">
-        <div className="brand-mark" aria-hidden="true">PM</div>
+    <AuthShell notice={notice} initiallyOpen={Boolean(notice)}>
+      <section className="auth-card" aria-labelledby="auth-card-title">
+        <div className="brand-lockup" aria-label="PlanMate" translate="no">
+          <span className="brand-mark" aria-hidden="true">P</span>
+          <span>PlanMate</span>
+        </div>
         <div className="card-heading">
-          <p className="card-kicker">PlanMate</p>
-          <h1>여행 계획을 실행 가능한 일정으로</h1>
-          <p>회원가입 후 이메일 인증을 완료하면 여행 일정 만들기를 시작할 수 있습니다.</p>
+          <p className="card-kicker">{authMode === 'login' ? '다시 만나 반가워요' : '첫 여행 준비'}</p>
+          <h1 id="auth-card-title">
+            {authMode === 'login' ? '계획 중인 여행으로 돌아가기' : '첫 여행 계획 시작하기'}
+          </h1>
+          <p>
+            {authMode === 'login'
+              ? '저장한 일정과 여행 조건을 불러옵니다.'
+              : '가입 후 이메일 인증을 마치면 목적지와 여행 스타일을 입력할 수 있어요.'}
+          </p>
         </div>
 
         <div className="auth-tabs" role="tablist" aria-label="인증 방식">
           <button
+            id="login-tab"
             className={`auth-tab ${authMode === 'login' ? 'active' : ''}`}
             type="button"
             role="tab"
             aria-selected={authMode === 'login'}
+            aria-controls="auth-panel"
             onClick={() => {
               setAuthMode('login')
               setNotice(null)
@@ -439,10 +488,12 @@ function App() {
             로그인
           </button>
           <button
+            id="signup-tab"
             className={`auth-tab ${authMode === 'signup' ? 'active' : ''}`}
             type="button"
             role="tab"
             aria-selected={authMode === 'signup'}
+            aria-controls="auth-panel"
             onClick={() => {
               setAuthMode('signup')
               setNotice(null)
@@ -452,26 +503,31 @@ function App() {
           </button>
         </div>
 
-        {authMode === 'login' ? (
-          <LoginForm
-            onSubmit={handleLogin}
-            onFindLoginId={() => navigate('/auth/find-login-id')}
-            onResetPassword={() => navigate('/auth/reset-password')}
-          />
-        ) : (
-          <SignupForm onSubmit={handleSignup} />
-        )}
+        <div id="auth-panel" role="tabpanel" aria-labelledby={`${authMode}-tab`}>
+          {authMode === 'login' ? (
+            <LoginForm
+              onSubmit={handleLogin}
+              onFindLoginId={() => navigate('/auth/find-login-id')}
+              onResetPassword={() => navigate('/auth/reset-password')}
+            />
+          ) : (
+            <SignupForm onSubmit={handleSignup} />
+          )}
+        </div>
 
         <div className="divider"><span />또는<span /></div>
         <div className="social-actions" aria-label="소셜 로그인">
           <button className="social-button google" type="button" onClick={() => handleOAuth2Login('google')}>
-            Google로 계속하기
+            <span className="social-mark google-mark" aria-hidden="true"><GoogleMark /></span>
+            <span><span translate="no">Google</span>로 계속하기</span>
           </button>
           <button className="social-button naver" type="button" onClick={() => handleOAuth2Login('naver')}>
-            Naver로 계속하기
+            <span className="social-mark" aria-hidden="true">N</span>
+            <span>네이버로 계속하기</span>
           </button>
           <button className="social-button kakao" type="button" onClick={() => handleOAuth2Login('kakao')}>
-            Kakao로 계속하기
+            <span className="social-mark" aria-hidden="true">K</span>
+            <span>카카오로 계속하기</span>
           </button>
         </div>
       </section>
@@ -522,7 +578,7 @@ function FindLoginIdCard({
         <form className="auth-form" onSubmit={onSubmit}>
           <label>
             <span>가입한 이메일</span>
-            <input name="email" type="email" placeholder="가입할 때 사용한 이메일" autoComplete="email" required />
+            <input name="email" type="email" placeholder="가입할 때 사용한 이메일" autoComplete="email" spellCheck={false} required />
           </label>
           <p className="form-guide">보안을 위해 아이디는 이메일 인증 완료 후 안내하는 흐름으로 연결합니다.</p>
           <button className="primary-action" type="submit">인증 메일 받기</button>
@@ -609,7 +665,7 @@ function ResetPasswordCard({
                 />
               </label>
               {passwordMismatch && (
-                <p className="field-error" id="new-password-confirm-error">
+              <p className="field-error" id="new-password-confirm-error" aria-live="polite">
                   새 비밀번호와 비밀번호 확인이 일치하지 않습니다.
                 </p>
               )}
@@ -625,11 +681,11 @@ function ResetPasswordCard({
         <form className="auth-form" onSubmit={onRequestSubmit}>
           <label>
             <span>아이디</span>
-            <input name="loginId" type="text" placeholder="아이디를 입력하세요" autoComplete="username" required />
+            <input name="loginId" type="text" placeholder="아이디를 입력하세요" autoComplete="username" spellCheck={false} required />
           </label>
           <label>
             <span>가입한 이메일</span>
-            <input name="email" type="email" placeholder="가입할 때 사용한 이메일" autoComplete="email" required />
+            <input name="email" type="email" placeholder="가입할 때 사용한 이메일" autoComplete="email" spellCheck={false} required />
           </label>
           <p className="form-guide">비밀번호 원문은 저장하지 않으므로 기존 비밀번호를 알려줄 수 없고, 새 비밀번호 설정 링크만 발송합니다.</p>
           <button className="primary-action" type="submit">재설정 메일 받기</button>
@@ -658,11 +714,11 @@ function LoginForm({
     <form className="auth-form" onSubmit={onSubmit}>
       <label>
         <span>아이디</span>
-        <input name="loginId" type="text" placeholder="아이디를 입력하세요" autoComplete="username" required />
+        <input name="loginId" type="text" autoComplete="username" spellCheck={false} required />
       </label>
       <label>
         <span>비밀번호</span>
-        <input name="password" type="password" placeholder="비밀번호를 입력하세요" autoComplete="current-password" required />
+        <input name="password" type="password" autoComplete="current-password" required />
       </label>
       <div className="account-recovery-actions" aria-label="계정 복구">
         <button className="text-action" type="button" onClick={onFindLoginId}>
@@ -683,23 +739,17 @@ function SignupForm({ onSubmit }: { onSubmit: (event: FormEvent<HTMLFormElement>
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
 
-  const nicknameValid = nickname.trim().length >= 2 && nickname.trim().length <= 30
-  const passwordValid = password.length >= 8 && password.length <= 72
   const passwordMismatch = passwordConfirm.length > 0 && password !== passwordConfirm
-  const canSubmit = nicknameValid
-    && passwordValid
-    && passwordConfirm.length >= 8
-    && !passwordMismatch
 
   return (
     <form className="auth-form" onSubmit={onSubmit}>
       <label>
         <span>아이디</span>
-        <input name="loginId" type="text" placeholder="영문, 숫자, ., _, - 조합" autoComplete="username" minLength={4} maxLength={50} required />
+        <input name="loginId" type="text" placeholder="예: planmate_01" autoComplete="username" spellCheck={false} minLength={4} maxLength={50} required />
       </label>
       <label>
         <span>이메일</span>
-        <input name="email" type="email" placeholder="인증 메일을 받을 주소" autoComplete="email" required />
+        <input name="email" type="email" placeholder="예: travel@example.com" autoComplete="email" spellCheck={false} required />
       </label>
       <label>
         <span>닉네임</span>
@@ -746,43 +796,259 @@ function SignupForm({ onSubmit }: { onSubmit: (event: FormEvent<HTMLFormElement>
         />
       </label>
       {passwordMismatch && (
-        <p className="field-error" id="password-confirm-error">
+        <p className="field-error" id="password-confirm-error" aria-live="polite">
           비밀번호와 비밀번호 확인이 일치하지 않습니다.
         </p>
       )}
-      <p className="form-guide">모든 항목을 입력하고 비밀번호가 일치해야 회원가입할 수 있습니다.</p>
-      <button className="primary-action" type="submit" disabled={!canSubmit}>회원가입</button>
+      <p className="form-guide">입력한 이메일로 인증 링크를 보내드려요.</p>
+      <button className="primary-action" type="submit">회원가입</button>
     </form>
   )
 }
 
-function AuthShell({ children, notice }: { children: React.ReactNode; notice: Notice | null }) {
+function AuthShell({
+  children,
+  notice,
+  initiallyOpen = false,
+}: {
+  children: React.ReactNode
+  notice: Notice | null
+  initiallyOpen?: boolean
+}) {
+  const [isAuthOpen, setIsAuthOpen] = useState(initiallyOpen || Boolean(notice))
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const journeyButtonRef = useRef<HTMLButtonElement>(null)
+  const hasOpenedRef = useRef(initiallyOpen)
+
+  useEffect(() => {
+    if (!isAuthOpen) {
+      return
+    }
+
+    hasOpenedRef.current = true
+    const journeyButton = journeyButtonRef.current
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    window.requestAnimationFrame(() => dialogRef.current?.focus())
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsAuthOpen(false)
+        return
+      }
+
+      if (event.key !== 'Tab' || !dialogRef.current) {
+        return
+      }
+
+      const focusableElements = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+        ),
+      )
+      const firstElement = focusableElements[0]
+      const lastElement = focusableElements.at(-1)
+
+      if (!firstElement || !lastElement) {
+        event.preventDefault()
+        return
+      }
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault()
+        lastElement.focus()
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault()
+        firstElement.focus()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', handleKeyDown)
+      if (hasOpenedRef.current) {
+        window.requestAnimationFrame(() => journeyButton?.focus())
+      }
+    }
+  }, [isAuthOpen])
+
   return (
     <main className="auth-page">
+      <a className="skip-link" href="#journey-start">여행 시작하기로 바로가기</a>
       <div className="background-grid" aria-hidden="true" />
-      <section className="auth-stage" aria-labelledby="auth-title">
+      <section className="auth-stage" aria-labelledby="auth-title" aria-hidden={isAuthOpen || undefined}>
         <aside className="brand-scene" aria-label="PlanMate 서비스 소개">
-          <p className="eyebrow">AI-assisted travel planner</p>
-          <h2 id="auth-title">흩어진 여행 정보를 하나의 실행 가능한 일정으로 정리합니다.</h2>
-          <div className="route-card" aria-hidden="true">
-            <span className="route-node node-start">서울</span>
-            <span className="route-line" />
-            <span className="route-node node-middle">강릉</span>
-            <span className="route-line" />
-            <span className="route-node node-end">속초</span>
+          <div className="scene-heading">
+            <div className="scene-meta">
+              <span className="scene-wordmark" translate="no">PlanMate</span>
+            </div>
+            <div className="scene-copy">
+              <p className="eyebrow">이번엔 진짜 떠나볼까요?</p>
+              <h2 id="auth-title">“어디 갈까?”만<br className="mobile-title-break" /> <em>고민이라면</em></h2>
+              <p className="scene-description">여행에서 하고 싶은 것만 하나씩 골라보세요.</p>
+            </div>
           </div>
-          <ul className="feature-list">
-            <li>숙소와 이동 시간을 반영한 일정</li>
-            <li>친구 초대와 공동 편집 준비</li>
-            <li>이메일 인증 기반 안전한 로그인</li>
-          </ul>
+          <TripPlanStory />
+          <div className="scene-actions">
+            <button
+              className="journey-start-button"
+              id="journey-start"
+              ref={journeyButtonRef}
+              type="button"
+              onClick={() => setIsAuthOpen(true)}
+            >
+              계속하기
+              <span aria-hidden="true">→</span>
+            </button>
+          </div>
         </aside>
-        <div className="auth-column">
-          {notice && <p className={`notice ${notice.tone}`}>{notice.message}</p>}
-          {children}
-        </div>
       </section>
+      {isAuthOpen && (
+        <div
+          className="auth-modal-layer"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setIsAuthOpen(false)
+            }
+          }}
+        >
+          <div
+            className="auth-column"
+            id="auth-content"
+            ref={dialogRef}
+            role="dialog"
+            aria-label="PlanMate 로그인 및 회원가입"
+            aria-modal="true"
+            tabIndex={-1}
+          >
+            <button
+              className="auth-modal-close"
+              type="button"
+              aria-label="로그인 창 닫기"
+              onClick={() => setIsAuthOpen(false)}
+            >
+              <span aria-hidden="true">×</span>
+            </button>
+            {notice && (
+              <p
+                className={`notice ${notice.tone}`}
+                role={notice.tone === 'error' ? 'alert' : 'status'}
+                aria-live={notice.tone === 'error' ? 'assertive' : 'polite'}
+              >
+                {notice.message}
+              </p>
+            )}
+            {children}
+          </div>
+        </div>
+      )}
     </main>
+  )
+}
+
+function GoogleMark() {
+  return (
+    <svg viewBox="0 0 18 18" width="18" height="18" focusable="false">
+      <path fill="#4285F4" d="M17.64 9.205c0-.638-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.797 2.716v2.258h2.909c1.702-1.567 2.684-3.874 2.684-6.614Z" />
+      <path fill="#34A853" d="M9 18c2.43 0 4.468-.806 5.956-2.181l-2.91-2.258c-.805.54-1.835.859-3.046.859-2.344 0-4.328-1.584-5.037-3.71H.956v2.332A9 9 0 0 0 9 18Z" />
+      <path fill="#FBBC05" d="M3.963 10.71A5.41 5.41 0 0 1 3.681 9c0-.594.102-1.171.282-1.71V4.958H.956A9 9 0 0 0 0 9c0 1.452.347 2.827.956 4.042l3.007-2.332Z" />
+      <path fill="#EA4335" d="M9 3.58c1.321 0 2.507.454 3.44 1.346l2.582-2.582C13.464.891 11.427 0 9 0A9 9 0 0 0 .956 4.958L3.963 7.29C4.672 5.164 6.656 3.58 9 3.58Z" />
+    </svg>
+  )
+}
+
+function TripPlanStory() {
+  const [storyMoment, setStoryMoment] = useState(0)
+
+  useEffect(() => {
+    const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)')
+    let timeoutId: number | undefined
+    let cancelled = false
+
+    function scheduleMoment(moment: number) {
+      if (cancelled) {
+        return
+      }
+
+      if (motionPreference.matches) {
+        setStoryMoment(FINAL_STORY_MOMENT)
+        return
+      }
+
+      setStoryMoment(moment)
+
+      if (moment === FINAL_STORY_MOMENT) {
+        return
+      }
+
+      timeoutId = window.setTimeout(
+        () => scheduleMoment(moment + 1),
+        STORY_MOMENT_DURATIONS[moment],
+      )
+    }
+
+    function handleMotionPreferenceChange() {
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId)
+      }
+      scheduleMoment(motionPreference.matches ? FINAL_STORY_MOMENT : 0)
+    }
+
+    scheduleMoment(0)
+    motionPreference.addEventListener('change', handleMotionPreferenceChange)
+
+    return () => {
+      cancelled = true
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId)
+      }
+      motionPreference.removeEventListener('change', handleMotionPreferenceChange)
+    }
+  }, [])
+
+  return (
+    <div className={`planning-story story-moment-${storyMoment}`}>
+      <div className="thought-cloud" aria-hidden="true">
+        {TRAVEL_THOUGHTS.map((thought, index) => (
+          <span
+            className={`thought-bubble thought-${index + 1} ${storyMoment > index ? 'is-visible' : ''}`}
+            key={thought}
+          >
+            {thought}
+          </span>
+        ))}
+      </div>
+
+      <article className="plan-draft" aria-hidden="true">
+        <ol className="plan-days">
+          <BookletDay day="DAY 1" index={1} />
+          <BookletDay day="DAY 2" index={2} />
+          <BookletDay day="DAY 3" index={3} />
+        </ol>
+      </article>
+    </div>
+  )
+}
+
+function BookletDay({ day, index }: { day: string; index: number }) {
+  const blockPatterns = [
+    ['block-medium', 'block-short', 'block-wide'],
+    ['block-wide', 'block-medium', 'block-short'],
+    ['block-short', 'block-wide', 'block-medium'],
+  ]
+
+  return (
+    <li className={`booklet-day booklet-day-${index}`}>
+      <span className="plan-day-label">{day}</span>
+      <span className="booklet-blocks">
+        {blockPatterns[index - 1].map((blockClass, blockIndex) => (
+          <i className={`booklet-block ${blockClass}`} key={`${blockClass}-${blockIndex}`} />
+        ))}
+      </span>
+    </li>
   )
 }
 

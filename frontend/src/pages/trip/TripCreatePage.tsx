@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ChangeEvent, CompositionEvent, FormEvent, KeyboardEvent, ReactNode } from 'react'
+import type { ChangeEvent, CompositionEvent, FormEvent, KeyboardEvent, MouseEvent, ReactNode } from 'react'
 import type { AuthUser } from '../../api/auth'
 import { ApiError } from '../../api/client'
 import { autocompleteAccommodations, autocompletePlaces, autocompletePlacesInDestination } from '../../api/places'
 import type { PlaceAutocompleteItem } from '../../api/places'
 import {
-  createItineraryGeneration,
   createTrip,
   getAiRequest,
-  getItineraryGeneration,
   getManualPrompt,
   getTripDetail,
   submitManualResponse,
@@ -16,16 +14,7 @@ import {
 } from '../../api/trips'
 import type { AiItineraryDraft, CreateTripRequest, ItineraryGenerationCreateResponse, ItineraryGenerationDetailResponse } from '../../api/trips'
 import type { AiItineraryValidationReport } from '../../api/itineraryValidation'
-import { connectTripRealtimeEvents, ITINERARY_GENERATION_STATUS_CHANGED } from '../../api/realtime'
-import type { ItineraryGenerationStatusChangedPayload } from '../../api/realtime'
 import { AiItineraryValidationReportPanel } from './AiItineraryValidationReportPanel'
-import coupleMascotUrl from '../../assets/mascots/couple.png'
-import coworkersMascotUrl from '../../assets/mascots/coworkers.png'
-import familyMascotUrl from '../../assets/mascots/family.png'
-import friendsMascotUrl from '../../assets/mascots/friends.png'
-import otherMascotUrl from '../../assets/mascots/other.png'
-import parentsMascotUrl from '../../assets/mascots/parents.png'
-import soloMascotUrl from '../../assets/mascots/solo.png'
 import './TripCreatePage.css'
 
 type TripCreatePageProps = {
@@ -48,6 +37,11 @@ type TripInfoStepId =
   | 'REVIEW'
   | 'GENERATING'
 type StepDirection = 'forward' | 'backward'
+type TripInfoValidation = {
+  message: string
+  step: Exclude<TripInfoStepId, 'GENERATING'>
+  target: string
+}
 type SelectionPhase =
   | 'IDLE'
   | 'SEARCHING'
@@ -132,15 +126,6 @@ const COMPANION_OPTIONS: Array<{ id: CompanionType; label: string; description: 
   { id: 'COWORKERS', label: '동료', description: '단체 이동에 맞춰요.' },
   { id: 'OTHER', label: '기타', description: '동행 특성에 맞게 조정해요.' },
 ]
-const MASCOT_IMAGE_BY_COMPANION: Record<CompanionType, string> = {
-  SOLO: soloMascotUrl,
-  COUPLE: coupleMascotUrl,
-  FRIENDS: friendsMascotUrl,
-  FAMILY: familyMascotUrl,
-  PARENTS: parentsMascotUrl,
-  COWORKERS: coworkersMascotUrl,
-  OTHER: otherMascotUrl,
-}
 const CHILD_AGE_OPTIONS: Array<{ id: ChildAgeGroup; label: string }> = [
   { id: 'INFANT', label: '영유아' },
   { id: 'PRESCHOOL', label: '미취학' },
@@ -332,7 +317,12 @@ export function TripCreatePage({
   const trimmedTitle = title.trim()
   const trimmedSearchQuery = searchQuery.trim()
   const confirmedDestination = draftDestination
-  const dateRangeValid = !startDate || !endDate || startDate <= endDate
+  const today = getTodayInputValue()
+  const dateRangeValid = (
+    (!startDate || startDate >= today)
+    && (!endDate || endDate >= today)
+    && (!startDate || !endDate || startDate <= endDate)
+  )
   const tripDuration = getTripDuration(startDate, endDate)
   const budgetNumericAmount = parseCurrencyAmount(budgetAmount)
   const appliedDailyStartTime = scheduleTimeMode === 'DEFAULT' ? DEFAULT_DAILY_START_TIME : dailyStartTime
@@ -364,60 +354,6 @@ export function TripCreatePage({
   )
 
   useEffect(() => () => clearVisualTimers(), [])
-
-  useEffect(() => {
-    if (!MANUAL_HANDOFF_ENABLED || !createdTripId || !itineraryGeneration?.generationId) {
-      return undefined
-    }
-
-    let active = true
-    const generationId = itineraryGeneration.generationId
-
-    async function refetchGeneration() {
-      try {
-        const latest = await getItineraryGeneration(accessToken, createdTripId, generationId)
-        if (!active) {
-          return
-        }
-        await applyGenerationDetail(latest)
-      } catch (error: unknown) {
-        if (!active) {
-          return
-        }
-        setManualStatus('error')
-        setManualMessage(toUserMessage(error))
-      }
-    }
-
-    const connection = connectTripRealtimeEvents({
-      accessToken,
-      tripId: createdTripId,
-      onConnect: () => {
-        void refetchGeneration()
-      },
-      onError: (message) => {
-        if (active) {
-          setManualMessage(message)
-        }
-      },
-      onEvent: (event) => {
-        if (event.type !== ITINERARY_GENERATION_STATUS_CHANGED || event.payload.generationId !== generationId) {
-          return
-        }
-        void applyGenerationPayload(event.payload).catch((error: unknown) => {
-          if (active) {
-            setManualStatus('error')
-            setManualMessage(toUserMessage(error))
-          }
-        })
-      },
-    })
-
-    return () => {
-      active = false
-      connection.disconnect()
-    }
-  }, [accessToken, createdTripId, itineraryGeneration?.generationId])
 
   async function handleAccommodationSearch() {
     if (accommodationMode !== 'PLACE_SEARCH') {
@@ -480,15 +416,6 @@ export function TripCreatePage({
       status: generation.status,
       candidateCount: generation.candidateCount,
       failureReason: generation.failureReason,
-    })
-  }
-
-  async function applyGenerationPayload(payload: ItineraryGenerationStatusChangedPayload) {
-    await applyGenerationSnapshot({
-      generationId: payload.generationId,
-      status: payload.status,
-      candidateCount: payload.candidateCount,
-      failureReason: payload.failureReason,
     })
   }
 
@@ -721,7 +648,7 @@ export function TripCreatePage({
   }
 
   function handleInfoNext() {
-    const error = getTripInfoStepError(infoStep, {
+    const validation = getTripInfoStepError(infoStep, {
       title: trimmedTitle,
       startDate,
       endDate,
@@ -737,8 +664,9 @@ export function TripCreatePage({
       dailyScheduleRangeValid,
     })
 
-    if (error) {
-      setFormError(error)
+    if (validation) {
+      setFormError(validation.message)
+      focusTripInfoField(validation.target)
       return
     }
 
@@ -969,16 +897,6 @@ export function TripCreatePage({
       return
     }
 
-    if (!trimmedTitle || !startDate || !endDate) {
-      setFormError('여행방 이름과 여행 기간을 입력해 주세요.')
-      return
-    }
-
-    if (!dateRangeValid) {
-      setFormError('돌아오는 날은 출발일과 같거나 이후여야 합니다.')
-      return
-    }
-
     const reviewError = getTripInfoStepError('REVIEW', {
       title: trimmedTitle,
       startDate,
@@ -996,8 +914,9 @@ export function TripCreatePage({
     })
 
     if (reviewError) {
-      setFormError(reviewError)
-      setInfoStep('REVIEW')
+      goToInfoStep(reviewError.step, 'backward')
+      setFormError(reviewError.message)
+      focusTripInfoField(reviewError.target)
       return
     }
 
@@ -1065,15 +984,8 @@ export function TripCreatePage({
     try {
       const created = await createTrip(accessToken, payload)
       setCreatedTripId(created.id)
-      if (MANUAL_HANDOFF_ENABLED) {
-        const generation = await createItineraryGeneration(accessToken, created.id)
-        setItineraryGeneration(generation)
-        setManualMessage(generationStatusMessage(generation))
-        setSubmitStatus('success')
-        return
-      }
       setSubmitStatus('success')
-      scheduleVisualTimer(() => onCreatedTrip(created.id), 700)
+      scheduleVisualTimer(() => onCreatedTrip(created.id), 450)
     } catch (error: unknown) {
       setSubmitStatus('error')
       setInfoStep('REVIEW')
@@ -1287,7 +1199,6 @@ export function TripCreatePage({
           manualValidationReport={manualValidationReport}
           manualResponseJson={manualResponseJson}
           manualStatus={manualStatus}
-          onBack={handleBackToDestinationStep}
           onAiRequestLoad={handleLoadAiRequest}
           onCopyText={copyText}
           onInfoBack={handleInfoBack}
@@ -1385,10 +1296,9 @@ function TripCreateHeader({
 }) {
   return (
     <nav className="trip-create-header" aria-label="여행 생성 내비게이션">
-      <button className="trip-create-brand" type="button" onClick={onBackToMain} aria-label="메인으로 돌아가기">
-        <span className="trip-create-brand-mark" aria-hidden="true">PM</span>
-        <strong>PlanMate</strong>
-      </button>
+      <a className="trip-create-brand" href="/main" onClick={(event) => handleSpaNavigation(event, onBackToMain)} aria-label="PlanMate 메인으로 돌아가기">
+        <img src="/brand/planmate-lockup.svg" alt="PlanMate" width="166" height="50" />
+      </a>
 
       <TripCreateStepIndicator activeStep={activeStep} />
 
@@ -1405,7 +1315,6 @@ function TripCreateStepIndicator({ activeStep }: { activeStep: 1 | 2 }) {
   const steps = [
     { id: 1, label: '목적지' },
     { id: 2, label: '여행 정보' },
-    { id: 3, label: '일정 생성' },
   ]
 
   return (
@@ -1507,13 +1416,13 @@ function DestinationVisualStage({
     : '어디로 떠나볼까요?'
   const description = selectedPreview
     ? '이곳이 맞다면 한 번 더 선택해 여행 정보를 정해 주세요.'
-    : '도시나 지역을 검색하면 여행의 시작점을 함께 찾아드릴게요.'
+    : '도시나 지역을 검색해 여행의 시작점을 정해보세요.'
 
   return (
     <div className={`destination-visual-stage ${hasPreview ? 'has-preview' : ''} ${isZooming ? 'is-zooming' : ''}`}>
       <div className="destination-stage-badge">
         <span />
-        단계 1 / 3 · 목적지 선택
+        단계 1 / 2 · 목적지 선택
       </div>
       <div className="destination-globe-wrap" aria-hidden="true">
         {!hasPreview ? <InitialGlobeVisual /> : <DestinationZoomVisual />}
@@ -1610,6 +1519,7 @@ function DestinationSearchForm({
         <span className="trip-create-sr-only">도시, 국가 또는 지역 검색</span>
         <span className="destination-search-control">
           <input
+            name="destinationQuery"
             type="text"
             placeholder="도시, 국가 또는 지역을 검색해 주세요"
             value={searchQuery}
@@ -1809,7 +1719,6 @@ function TripConditionStep({
   manualValidationReport,
   manualResponseJson,
   manualStatus,
-  onBack,
   onAiRequestLoad,
   onCopyText,
   onInfoBack,
@@ -1920,7 +1829,6 @@ function TripConditionStep({
   manualValidationReport: AiItineraryValidationReport | null
   manualResponseJson: string
   manualStatus: AsyncStatus
-  onBack: () => void
   onAiRequestLoad: () => void
   onCopyText: (value: string) => void
   onInfoBack: () => void
@@ -2010,10 +1918,9 @@ function TripConditionStep({
 
   if (infoStep === 'GENERATING') {
     return (
-      <section className="trip-info-page" aria-label="일정 생성 진행">
+      <section className="trip-info-page" aria-label="여행 저장 진행">
         <GeneratingTripPanel
           aiRequestJson={aiRequestJson}
-          companionType={companionType}
           createdTripId={createdTripId}
           destination={destination}
           generation={generation}
@@ -2195,7 +2102,7 @@ function TripConditionStep({
             />
           )}
 
-          {formError && <p className="trip-create-field-error">{formError}</p>}
+          {formError && <p className="trip-create-field-error" role="alert">{formError}</p>}
           {submitError && <p className="trip-create-submit-error" role="alert">{submitError}</p>}
 
           <TripInfoSummary summary={summary} />
@@ -2206,7 +2113,7 @@ function TripConditionStep({
             </button>
             {showSubmitButton ? (
               <button className="trip-create-primary-action" type="submit" disabled={!canSubmit}>
-                {submitStatus === 'loading' ? '일정 준비 중' : 'AI 여행 일정 만들기'}
+                {submitStatus === 'loading' ? '여행 저장 중' : '여행 저장하기'}
               </button>
             ) : (
               <button className="trip-create-primary-action" type="button" onClick={onInfoNext}>
@@ -2223,9 +2130,6 @@ function TripConditionStep({
         </section>
       </section>
 
-      <button className="trip-info-destination-edit" type="button" onClick={onBack}>
-        목적지 다시 선택
-      </button>
     </form>
   )
 }
@@ -2319,115 +2223,114 @@ function TripInfoVisual({
   tripDuration: TripDuration | null
 }) {
   const destinationName = destination?.mainText ?? '여행지'
-  const mascotImage = MASCOT_IMAGE_BY_COMPANION[companionType]
-  const mascotAlt = `${companionTypeLabel(companionType)} 여행 마스코트`
+  const previewFacts = (() => {
+    switch (infoStep) {
+      case 'BASIC':
+        return [destinationName, tripDuration ? tripDurationLabel(tripDuration) : '날짜를 골라주세요']
+      case 'COMPANION':
+        return [companionTypeLabel(companionType), `${companionCount}명`]
+      case 'BUDGET':
+        return [budgetLevelLabel(budgetLevel), '숙박 · 교통 · 식비']
+      case 'PREFERENCE':
+        return [travelPaceLabel(travelPace), interests.slice(0, 3).map(interestLabel).join(' · ') || '관심사를 골라주세요']
+      case 'ACCOMMODATION':
+        return [accommodationModeLabel(accommodationMode), '하루 이동의 기준점']
+      case 'REQUESTS':
+        return [`가고 싶은 곳 ${mustVisitPlaces.length}`, `피할 일정 ${avoidItems.length}`]
+      case 'REVIEW':
+        return [destinationName, title || '여행 이름을 확인해 주세요']
+      default:
+        return [destinationName]
+    }
+  })()
 
   return (
-    <aside className={`trip-info-visual step-${infoStep.toLowerCase()}`} aria-label="단계별 여행 정보 미리보기">
-      <span className="trip-info-visual-badge">PlanMate Preview</span>
-      {infoStep === 'BASIC' && (
-        <>
-          <div className="info-map-illustration">
-            <img className="step-mascot-image" src={mascotImage} alt="" aria-hidden="true" />
-            <span className="info-map-pin">{destinationName}</span>
-            <span className="info-map-route" />
-            <span className="info-calendar-tile">{tripDuration ? tripDurationLabel(tripDuration) : '날짜 선택'}</span>
-          </div>
-          <div className="info-date-strip">
-            {(tripDuration?.dateLabels ?? ['출발일', '여행일', '돌아오는 날']).slice(0, 5).map((label) => (
-              <span key={label}>{label}</span>
-            ))}
-          </div>
-        </>
-      )}
-
-      {infoStep === 'COMPANION' && (
-        <>
-          <div className="companion-mascot-stage">
-            <img className="companion-mascot-image" src={mascotImage} alt={mascotAlt} />
-            <span className="companion-count-badge">
-              총 {companionCount}명
-            </span>
-          </div>
-          <p>{companionTypeLabel(companionType)} 여행 · 총 {companionCount}명</p>
-        </>
-      )}
-
-      {infoStep === 'BUDGET' && (
-        <>
-          <div className={`budget-journey-visual level-${budgetLevel.toLowerCase()}`}>
-            <img className="step-mascot-image" src={mascotImage} alt="" aria-hidden="true" />
-            <span className="budget-suitcase" />
-            <span className="budget-coin coin-one" />
-            <span className="budget-coin coin-two" />
-            <span className="budget-coin coin-three" />
-            <span className="budget-ticket">예산</span>
-          </div>
-          <div className="budget-icons">
-            <span>숙박</span>
-            <span>교통</span>
-            <span>식비</span>
-          </div>
-          <p>{budgetLevelLabel(budgetLevel)} 예산으로 균형을 잡아요.</p>
-        </>
-      )}
-
-      {infoStep === 'PREFERENCE' && (
-        <>
-          <div className={`pace-route pace-${travelPace.toLowerCase()}`}>
-            <img className="step-mascot-image" src={mascotImage} alt="" aria-hidden="true" />
-            <span>숙소</span>
-            <i />
-            <span>장소</span>
-            <i />
-            <span>식사</span>
-            {travelPace === 'PACKED' && <><i /><span>야경</span></>}
-          </div>
-          <div className="interest-pin-row">
-            {interests.slice(0, 5).map((interest) => (
-              <span key={interest}>{interestLabel(interest)}</span>
-            ))}
-          </div>
-        </>
-      )}
-
-      {infoStep === 'ACCOMMODATION' && (
-        <>
-          <div className="stay-illustration">
-            <img className="step-mascot-image" src={mascotImage} alt="" aria-hidden="true" />
-            <span className="stay-building" />
-            <span className="stay-pin" />
-            <span className="stay-route" />
-          </div>
-          <p>{accommodationModeLabel(accommodationMode)} 기준으로 동선을 준비해요.</p>
-        </>
-      )}
-
-      {infoStep === 'REQUESTS' && (
-        <>
-          <div className="request-illustration">
-            <img className="step-mascot-image" src={mascotImage} alt="" aria-hidden="true" />
-            <span className="star-pin">{mustVisitPlaces.length}</span>
-            <span className="avoid-pin">{avoidItems.length}</span>
-            <span className="speech-bubble" />
-          </div>
-          <p>꼭 갈 곳과 피하고 싶은 일정을 마지막으로 정리해요.</p>
-        </>
-      )}
-
-      {infoStep === 'REVIEW' && (
-        <>
-          <div className="review-constellation">
-            <img className="step-mascot-image" src={mascotImage} alt="" aria-hidden="true" />
-            <span>{destinationName}</span>
-            <span>{tripDuration ? `${tripDuration.days}일` : '기간'}</span>
-            <span>{companionCount}명</span>
-            <span>{interests.length}개 취향</span>
-          </div>
-          <p>{title || `${destinationName} 여행`} 조건을 한 번 더 확인해요.</p>
-        </>
-      )}
+    <aside className={`trip-info-visual step-${infoStep.toLowerCase()}`} aria-label={`${TRIP_INFO_STEPS.find((step) => step.id === infoStep)?.label ?? '여행 정보'} 미리보기`}>
+      <div className="trip-preview-heading">
+        <span>여행 미리보기</span>
+        <strong>{TRIP_INFO_STEPS.find((step) => step.id === infoStep)?.label}</strong>
+      </div>
+      <div className="trip-preview-artwork">
+        <TripStepArtwork step={infoStep} />
+      </div>
+      <div className="trip-preview-facts">
+        {previewFacts.map((fact, index) => <span key={`${fact}-${index}`}>{fact}</span>)}
+      </div>
+      <p className="trip-preview-caption">입력한 내용이 여행 계획의 기준이 됩니다.</p>
     </aside>
+  )
+}
+
+function TripStepArtwork({ step }: { step: TripInfoStepId }) {
+  return (
+    <svg viewBox="0 0 420 260" role="presentation" focusable="false">
+      <path className="preview-route-line" d="M44 205C105 151 148 224 211 164s98-38 166-109" />
+      {step === 'BASIC' && (
+        <g className="preview-basic-art">
+          <rect x="82" y="48" width="170" height="138" rx="20" />
+          <path d="M82 88h170" />
+          <path d="M120 34v31M214 34v31" />
+          <rect x="111" y="112" width="36" height="28" rx="8" />
+          <rect x="159" y="112" width="36" height="28" rx="8" />
+          <path d="M300 75c0-27 22-49 49-49s49 22 49 49c0 37-49 90-49 90s-49-53-49-90Z" />
+          <circle cx="349" cy="75" r="17" />
+        </g>
+      )}
+      {step === 'COMPANION' && (
+        <g className="preview-companion-art">
+          <circle cx="210" cy="80" r="43" />
+          <circle cx="116" cy="112" r="34" />
+          <circle cx="304" cy="112" r="34" />
+          <path d="M146 205c4-50 29-77 64-77s60 27 64 77" />
+          <path d="M62 210c4-42 22-66 54-66 20 0 36 10 46 29M358 210c-4-42-22-66-54-66-20 0-36 10-46 29" />
+        </g>
+      )}
+      {step === 'BUDGET' && (
+        <g className="preview-budget-art">
+          <rect x="112" y="73" width="196" height="132" rx="26" />
+          <path d="M170 73V49c0-12 9-21 21-21h38c12 0 21 9 21 21v24" />
+          <path d="M112 126h196M157 113v29M263 113v29" />
+          <circle cx="329" cy="71" r="31" />
+          <path d="M316 71h26M329 58v26" />
+        </g>
+      )}
+      {step === 'PREFERENCE' && (
+        <g className="preview-preference-art">
+          <circle cx="86" cy="186" r="25" />
+          <circle cx="211" cy="145" r="29" />
+          <circle cx="338" cy="70" r="34" />
+          <path d="M96 165c24-36 72-50 94-31M234 128c31-24 55-42 76-48" />
+          <path d="M75 186h22M211 132v26M325 70h26" />
+        </g>
+      )}
+      {step === 'ACCOMMODATION' && (
+        <g className="preview-stay-art">
+          <path d="M98 206V72l112-42 112 42v134" />
+          <path d="M210 30v176M133 101h38M249 101h38M133 137h38M249 137h38" />
+          <rect x="177" y="153" width="66" height="53" rx="7" />
+          <path d="M350 82c0-22 18-40 40-40s40 18 40 40c0 30-40 72-40 72s-40-42-40-72Z" transform="translate(-34 0)" />
+        </g>
+      )}
+      {step === 'REQUESTS' && (
+        <g className="preview-request-art">
+          <rect x="69" y="43" width="282" height="168" rx="24" />
+          <path d="M106 91h145M106 127h204M106 163h116" />
+          <path d="m292 52 10 20 22 3-16 15 4 22-20-11-20 11 4-22-16-15 22-3Z" />
+          <circle cx="330" cy="181" r="35" />
+          <path d="m317 181 9 9 18-21" />
+        </g>
+      )}
+      {step === 'REVIEW' && (
+        <g className="preview-review-art">
+          <rect x="92" y="54" width="215" height="148" rx="21" transform="rotate(-7 92 54)" />
+          <rect x="118" y="43" width="215" height="148" rx="21" transform="rotate(5 118 43)" />
+          <rect x="105" y="58" width="215" height="148" rx="21" />
+          <path d="M139 99h94M139 132h146M139 165h112" />
+          <circle cx="298" cy="77" r="29" />
+          <path d="m285 77 9 9 18-21" />
+        </g>
+      )}
+    </svg>
   )
 }
 
@@ -2455,6 +2358,7 @@ function BasicInfoPanel({
   onTitleSuggestionSelect: (value: string) => void
 }) {
   const suggestions = getTitleSuggestions(destination?.mainText ?? '여행', tripDuration)
+  const today = getTodayInputValue()
 
   return (
     <div className="trip-info-fields">
@@ -2463,6 +2367,7 @@ function BasicInfoPanel({
         <input
           name="title"
           type="text"
+          autoComplete="off"
           placeholder="예: 후쿠오카 먹고 쉬는 여행"
           maxLength={60}
           value={title}
@@ -2485,8 +2390,11 @@ function BasicInfoPanel({
           <input
             name="startDate"
             type="date"
+            autoComplete="off"
+            min={today}
             value={startDate}
             onChange={(event) => onStartDateChange(event.target.value)}
+            aria-invalid={Boolean(startDate) && startDate < today}
             required
           />
         </label>
@@ -2496,6 +2404,8 @@ function BasicInfoPanel({
           <input
             name="endDate"
             type="date"
+            autoComplete="off"
+            min={startDate || today}
             value={endDate}
             onChange={(event) => onEndDateChange(event.target.value)}
             aria-invalid={!dateRangeValid}
@@ -2548,7 +2458,7 @@ function CompanionInfoPanel({
   onSeniorCountChange: (value: number) => void
 }) {
   return (
-    <div className="trip-info-fields">
+    <div className="trip-info-fields" data-validation-field="companion" data-validation-focus tabIndex={-1}>
       <CounterControl
         label="여행 인원"
         max={20}
@@ -2561,7 +2471,6 @@ function CompanionInfoPanel({
         {COMPANION_OPTIONS.map((option) => (
           <OptionCard
             description={option.description}
-            imageSrc={MASCOT_IMAGE_BY_COMPANION[option.id]}
             isSelected={companionType === option.id}
             key={option.id}
             label={option.label}
@@ -2635,7 +2544,7 @@ function BudgetInfoPanel({
       <div className="budget-input-row">
         <label className="trip-info-field currency-field">
           <span>통화</span>
-          <select value={currencyCode} onChange={(event) => onCurrencyCodeChange(event.target.value as CurrencyCode)}>
+          <select name="currencyCode" value={currencyCode} onChange={(event) => onCurrencyCodeChange(event.target.value as CurrencyCode)}>
             {CURRENCY_OPTIONS.map((option) => (
               <option key={option.id} value={option.id}>{option.label}</option>
             ))}
@@ -2644,7 +2553,9 @@ function BudgetInfoPanel({
         <label className="trip-info-field">
           <span>총예산</span>
           <input
+            name="budgetAmount"
             inputMode="numeric"
+            autoComplete="off"
             placeholder="1,100,000"
             value={budgetAmount}
             onChange={(event) => onBudgetAmountChange(event.target.value)}
@@ -2725,7 +2636,7 @@ function PreferenceInfoPanel({
         ))}
       </OptionGrid>
 
-      <div className="input-cluster">
+      <div className="input-cluster" data-validation-field="interests" data-validation-focus tabIndex={-1}>
         <div className="cluster-heading">
           <strong>관심사</strong>
           <span>{interests.length} / 5 선택</span>
@@ -2889,7 +2800,9 @@ function AccommodationInfoPanel({
               <span className="trip-create-sr-only">숙소명 또는 주소 검색</span>
               <span className="destination-search-control">
                 <input
+                  name="accommodationQuery"
                   type="text"
+                  autoComplete="off"
                   placeholder="숙소명 또는 주소를 검색해 주세요"
                   value={accommodationQuery}
                   maxLength={120}
@@ -2902,7 +2815,6 @@ function AccommodationInfoPanel({
                       onAccommodationSearch()
                     }
                   }}
-                  autoComplete="off"
                   aria-busy={accommodationSearchStatus === 'loading'}
                   aria-describedby="accommodation-search-guide accommodation-search-status"
                 />
@@ -2968,12 +2880,12 @@ function AccommodationInfoPanel({
         <div className="trip-date-range-card time-range">
           <label>
             <span>체크인</span>
-            <input type="time" value={checkInTime} onChange={(event) => onCheckInTimeChange(event.target.value)} />
+            <input name="checkInTime" type="time" autoComplete="off" value={checkInTime} onChange={(event) => onCheckInTimeChange(event.target.value)} />
           </label>
           <span className="date-range-connector" aria-hidden="true" />
           <label>
             <span>체크아웃</span>
-            <input type="time" value={checkOutTime} onChange={(event) => onCheckOutTimeChange(event.target.value)} />
+            <input name="checkOutTime" type="time" autoComplete="off" value={checkOutTime} onChange={(event) => onCheckOutTimeChange(event.target.value)} />
           </label>
         </div>
       )}
@@ -3006,12 +2918,12 @@ function AccommodationInfoPanel({
           <div className="trip-date-range-card time-range">
             <label>
               <span>일정 시작</span>
-              <input type="time" value={dailyStartTime} onChange={(event) => onDailyStartTimeChange(event.target.value)} />
+              <input name="dailyStartTime" type="time" autoComplete="off" value={dailyStartTime} onChange={(event) => onDailyStartTimeChange(event.target.value)} />
             </label>
             <span className="date-range-connector" aria-hidden="true" />
             <label>
               <span>일정 종료</span>
-              <input type="time" value={dailyEndTime} onChange={(event) => onDailyEndTimeChange(event.target.value)} />
+              <input name="dailyEndTime" type="time" autoComplete="off" value={dailyEndTime} onChange={(event) => onDailyEndTimeChange(event.target.value)} />
             </label>
           </div>
         )}
@@ -3173,7 +3085,9 @@ function RequestsInfoPanel({
             <span className="trip-create-sr-only">꼭 가고 싶은 장소 검색</span>
             <span className="destination-search-control">
               <input
+                name="mustVisitQuery"
                 type="text"
+                autoComplete="off"
                 placeholder="장소명 또는 주소를 검색해 주세요"
                 value={mustVisitQuery}
                 maxLength={120}
@@ -3186,7 +3100,6 @@ function RequestsInfoPanel({
                     onMustVisitSearch()
                   }
                 }}
-                autoComplete="off"
                 aria-busy={mustVisitSearchStatus === 'loading'}
                 aria-describedby="must-visit-search-guide must-visit-search-status"
               />
@@ -3274,6 +3187,8 @@ function RequestsInfoPanel({
       <label className="trip-info-field">
         <span>그 밖에 원하는 내용</span>
         <textarea
+          name="freeRequest"
+          autoComplete="off"
           maxLength={800}
           placeholder="예: 둘째 날은 오전 10시 이후부터 시작하고, 현지인들이 많이 가는 식당을 포함해 주세요."
           value={freeRequest}
@@ -3375,7 +3290,6 @@ function ReviewCard({
 
 function GeneratingTripPanel({
   aiRequestJson,
-  companionType,
   createdTripId,
   destination,
   generation,
@@ -3396,7 +3310,6 @@ function GeneratingTripPanel({
   title,
 }: {
   aiRequestJson: string
-  companionType: CompanionType
   createdTripId: string
   destination: PlaceAutocompleteItem | null
   generation: TrackedItineraryGeneration | null
@@ -3417,14 +3330,11 @@ function GeneratingTripPanel({
   title: string
 }) {
   const destinationName = destination?.mainText ?? '여행지'
-  const mascotImage = MASCOT_IMAGE_BY_COMPANION[companionType]
   const isManualHandoffReady = isGenerationReadyForManualHandoff(generation)
   const steps = [
-    '여행 정보 확인',
-    '목적지 주변 장소 탐색',
-    '관심사에 맞는 후보지 선별',
-    '날짜별 이동 동선 구성',
-    '최종 일정 검토',
+    '여행 기본 정보 확인',
+    '함께 가는 사람과 취향 정리',
+    '선택한 여행 조건 저장',
   ]
 
   return (
@@ -3432,18 +3342,17 @@ function GeneratingTripPanel({
       <div className="generating-globe-loader" aria-hidden="true">
         <span className="loader-globe" />
         <span className="loader-route" />
-        <img className="loader-mascot-image" src={mascotImage} alt="" />
         <span className="loader-marker marker-one" />
         <span className="loader-marker marker-two" />
         <span className="loader-marker marker-three" />
       </div>
-      <span>{submitStatus === 'success' ? '일정 준비 완료' : 'AI 일정 준비 중'}</span>
-      <h1>{title || destinationName} 여행을 만들고 있어요.</h1>
-      <p>입력한 조건을 기준으로 장소 후보와 하루 단위 동선을 정리합니다.</p>
+      <span>{submitStatus === 'success' ? '여행 저장 완료' : '여행 저장 중'}</span>
+      <h1>{title || destinationName}을 보관함에 담고 있어요.</h1>
+      <p>선택한 여행 조건을 저장한 뒤 상세 화면으로 이동합니다.</p>
       <ol>
         {steps.map((step, index) => (
-          <li className={index < 2 ? 'done' : index === 2 ? 'active' : ''} key={step}>
-            <span>{index < 2 ? '✓' : index === 2 ? '●' : '○'}</span>
+          <li className={index < 2 ? 'done' : 'active'} key={step}>
+            <span>{index < 2 ? '✓' : '●'}</span>
             {step}
           </li>
         ))}
@@ -3555,7 +3464,7 @@ function OptionCard({
 }) {
   return (
     <button className={`option-card ${imageSrc ? 'has-image' : ''} ${isSelected ? 'selected' : ''}`} type="button" aria-pressed={isSelected} onClick={onClick}>
-      {imageSrc && <img className="option-card-image" src={imageSrc} alt="" aria-hidden="true" />}
+      {imageSrc && <img className="option-card-image" src={imageSrc} alt="" aria-hidden="true" width="58" height="58" />}
       <span className="option-card-copy">
         <strong>{label}</strong>
         <span>{description}</span>
@@ -3671,9 +3580,9 @@ function getTripInfoQuestion(step: TripInfoStepId) {
     case 'REQUESTS':
       return '꼭 반영했으면 하는 내용이 있나요?'
     case 'REVIEW':
-      return '이 조건으로 여행을 만들어볼까요?'
+      return '이 내용으로 여행을 저장할까요?'
     case 'GENERATING':
-      return '여행을 만들고 있어요.'
+      return '여행을 저장하고 있어요.'
     default:
       return '여행 정보를 알려주세요.'
   }
@@ -3682,21 +3591,21 @@ function getTripInfoQuestion(step: TripInfoStepId) {
 function getTripInfoDescription(step: TripInfoStepId) {
   switch (step) {
     case 'BASIC':
-      return '여행 기간에 맞춰 방문할 장소 수와 하루 일정을 조절할게요.'
+      return '여행 이름과 날짜를 정해 보관함에 저장할 기본 정보를 만듭니다.'
     case 'COMPANION':
-      return '동행자에 맞춰 이동 속도와 장소 선택을 조절할게요.'
+      return '함께 가는 사람과 인원을 기록해 두면 이후 계획을 이어가기 편해요.'
     case 'BUDGET':
-      return '예산 안에서 숙소, 식사, 이동과 방문지를 균형 있게 구성할게요.'
+      return '총예산과 포함할 항목을 미리 적어두세요.'
     case 'PREFERENCE':
-      return '여행 속도와 관심사에 맞춰 하루의 밀도와 장소 구성을 결정할게요.'
+      return '선호하는 여행 속도와 관심사를 골라두세요.'
     case 'ACCOMMODATION':
-      return '숙소를 기준으로 매일의 출발지와 복귀 동선을 계산할게요.'
+      return '정한 숙소가 있다면 저장하고, 아직이라면 선호 지역만 선택해도 됩니다.'
     case 'REQUESTS':
       return '가고 싶은 장소와 피하고 싶은 일정을 마지막으로 알려주세요.'
     case 'REVIEW':
-      return '입력한 내용을 확인한 뒤 AI가 전체 일정을 구성합니다.'
+      return '저장하면 여행 상세 화면에서 이 내용을 다시 확인하고 계획을 이어갈 수 있습니다.'
     case 'GENERATING':
-      return '입력한 조건을 기준으로 장소 후보를 찾고 전체 일정을 구성합니다.'
+      return '선택한 여행 조건을 안전하게 저장합니다.'
     default:
       return ''
   }
@@ -3721,6 +3630,14 @@ function getTripInfoNextLabel(step: TripInfoStepId) {
   }
 }
 
+function handleSpaNavigation(event: MouseEvent<HTMLAnchorElement>, navigate: () => void) {
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+    return
+  }
+  event.preventDefault()
+  navigate()
+}
+
 function getTripInfoStepError(
   step: TripInfoStepId,
   values: {
@@ -3738,7 +3655,7 @@ function getTripInfoStepError(
     selectedAccommodation: PlaceAutocompleteItem | null
     dailyScheduleRangeValid: boolean
   },
-) {
+): TripInfoValidation | null {
   const shouldValidateBasic = step === 'BASIC' || step === 'REVIEW'
   const shouldValidateCompanion = step === 'COMPANION' || step === 'REVIEW'
   const shouldValidateBudget = step === 'BUDGET' || step === 'REVIEW'
@@ -3747,42 +3664,53 @@ function getTripInfoStepError(
 
   if (shouldValidateBasic) {
     if (!values.title) {
-      return '여행방 이름을 입력해 주세요.'
+      return { message: '여행방 이름을 입력해 주세요.', step: 'BASIC', target: '[name="title"]' }
     }
     if (!values.startDate || !values.endDate) {
-      return '출발일과 돌아오는 날을 선택해 주세요.'
+      return {
+        message: '출발일과 돌아오는 날을 선택해 주세요.',
+        step: 'BASIC',
+        target: values.startDate ? '[name="endDate"]' : '[name="startDate"]',
+      }
     }
     if (!values.dateRangeValid) {
-      return '돌아오는 날은 출발일과 같거나 이후여야 합니다.'
+      const today = getTodayInputValue()
+      if (values.startDate < today) {
+        return { message: '출발일은 오늘 또는 이후 날짜로 선택해 주세요.', step: 'BASIC', target: '[name="startDate"]' }
+      }
+      if (values.endDate < today) {
+        return { message: '돌아오는 날은 오늘 또는 이후 날짜로 선택해 주세요.', step: 'BASIC', target: '[name="endDate"]' }
+      }
+      return { message: '돌아오는 날은 출발일과 같거나 이후여야 합니다.', step: 'BASIC', target: '[name="endDate"]' }
     }
   }
 
   if (shouldValidateCompanion) {
     if (values.companionCount < 1) {
-      return '여행 인원은 1명 이상이어야 합니다.'
+      return { message: '여행 인원은 1명 이상이어야 합니다.', step: 'COMPANION', target: '[data-validation-field="companion"]' }
     }
     if (!childAndSeniorCountValid(values.companionCount, values.childCount, values.seniorCount)) {
-      return '어린이와 시니어 인원 합계가 전체 인원을 넘을 수 없습니다.'
+      return { message: '어린이와 시니어 인원 합계가 전체 인원을 넘을 수 없습니다.', step: 'COMPANION', target: '[data-validation-field="companion"]' }
     }
   }
 
   if (shouldValidateBudget && values.budgetAmount < 0 && !values.budgetLevel) {
-    return '총예산 또는 예산 수준 중 하나를 선택해 주세요.'
+    return { message: '총예산 또는 예산 수준 중 하나를 선택해 주세요.', step: 'BUDGET', target: '[name="budgetAmount"]' }
   }
 
   if (shouldValidatePreference && values.interests.length < 1) {
-    return '관심사를 최소 1개 선택해 주세요.'
+    return { message: '관심사를 최소 1개 선택해 주세요.', step: 'PREFERENCE', target: '[data-validation-field="interests"]' }
   }
 
   if (shouldValidateAccommodation && values.accommodationMode === 'PLACE_SEARCH' && !values.selectedAccommodation) {
-    return '검색 결과에서 숙소를 선택해 주세요.'
+    return { message: '검색 결과에서 숙소를 선택해 주세요.', step: 'ACCOMMODATION', target: '[name="accommodationQuery"]' }
   }
 
   if (shouldValidateAccommodation && !values.dailyScheduleRangeValid) {
-    return '하루 일정 시작 시간은 종료 시간보다 빨라야 합니다.'
+    return { message: '하루 일정 시작 시간은 종료 시간보다 빨라야 합니다.', step: 'ACCOMMODATION', target: '[name="dailyStartTime"]' }
   }
 
-  return ''
+  return null
 }
 
 function childAndSeniorCountValid(companionCount: number, childCount: number, seniorCount: number) {
@@ -3818,6 +3746,13 @@ function tripDurationSentence(duration: TripDuration) {
 }
 
 function getDateRangeError(startDate: string, endDate: string) {
+  const today = getTodayInputValue()
+  if (startDate && startDate < today) {
+    return '출발일은 오늘 또는 이후 날짜로 선택해 주세요.'
+  }
+  if (endDate && endDate < today) {
+    return '돌아오는 날은 오늘 또는 이후 날짜로 선택해 주세요.'
+  }
   if (!startDate || !endDate || startDate <= endDate) {
     return ''
   }
@@ -3825,7 +3760,7 @@ function getDateRangeError(startDate: string, endDate: string) {
 }
 
 function getTripDuration(startDate: string, endDate: string): TripDuration | null {
-  if (!startDate || !endDate || startDate > endDate) {
+  if (!startDate || !endDate || startDate < getTodayInputValue() || endDate < getTodayInputValue() || startDate > endDate) {
     return null
   }
 
@@ -3843,6 +3778,28 @@ function getTripDuration(startDate: string, endDate: string): TripDuration | nul
     nights: Math.max(days - 1, 0),
     dateLabels,
   }
+}
+
+function getTodayInputValue() {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function focusTripInfoField(selector: string) {
+  window.requestAnimationFrame(() => {
+    const target = document.querySelector<HTMLElement>(selector)
+    if (!target) {
+      return
+    }
+    target.focus({ preventScroll: true })
+    target.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      block: 'center',
+    })
+  })
 }
 
 function formatMonthDay(date: Date) {

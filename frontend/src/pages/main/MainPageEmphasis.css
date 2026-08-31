@@ -1,0 +1,826 @@
+/* Current direction: one animated departure board inside a quiet travel shelf. */
+.dashboard-page {
+  background: #d7e8ee;
+}
+
+.dashboard-app-shell {
+  --sheet-gutter: clamp(34px, 5vw, 68px);
+  box-sizing: border-box;
+  width: min(1280px, calc(100% - 64px));
+  min-height: 100vh;
+  padding-inline: var(--sheet-gutter);
+  border: 0;
+  background: rgba(248, 251, 252, 0.94);
+  box-shadow: 0 0 72px rgba(50, 88, 108, 0.12);
+}
+
+.dashboard-nav {
+  border: 0;
+}
+
+.dashboard-brand {
+  display: block;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  box-shadow: 0 9px 24px rgba(52, 90, 110, 0.16);
+}
+
+.dashboard-brand::before,
+.dashboard-brand::after {
+  display: none;
+  content: none;
+}
+
+.dashboard-brand svg {
+  display: block;
+  width: 44px;
+  height: 44px;
+}
+
+.dashboard-brand:focus-visible {
+  outline: 3px solid rgba(82, 120, 188, 0.42);
+  outline-offset: 4px;
+}
+
+.dashboard-nav-actions > a.header-create-button {
+  gap: 6px;
+  min-width: 102px;
+  padding-inline: 15px;
+}
+
+.header-create-button > span {
+  display: inline-grid;
+  width: 14px;
+  place-items: center;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.dashboard-shell {
+  gap: 38px;
+  padding-top: 40px;
+}
+
+.dashboard-intro h1 {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  letter-spacing: 0;
+}
+
+.dashboard-intro h1 strong {
+  font-size: clamp(3.1rem, 5.6vw, 5rem);
+  letter-spacing: -0.075em;
+}
+
+.dashboard-focus-grid {
+  gap: 0;
+  margin-inline: calc(var(--sheet-gutter) * -1);
+}
+
+.dashboard-section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 13px;
+  padding: 0 var(--sheet-gutter) 18px;
+}
+
+.dashboard-section-heading h2 {
+  margin: 0;
+  font-size: clamp(1.7rem, 3vw, 2.35rem);
+}
+
+.departure-countdown {
+  display: inline-block;
+  min-height: 0;
+  padding: 0 0 3px;
+  border-radius: 0;
+  color: #466273;
+  background: transparent;
+  font-size: 0.82rem;
+  font-weight: 950;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.departure-countdown.urgent {
+  border-bottom: 3px solid #c66d58;
+  color: #9a4c3c;
+  background: transparent;
+}
+
+.departure-countdown.soon {
+  border-bottom: 3px solid #dda831;
+  color: #74540f;
+  background: transparent;
+}
+
+.departure-countdown.near {
+  border-bottom: 3px solid #5278bc;
+  color: #365e9f;
+  background: transparent;
+}
+
+.departure-countdown.later {
+  border-bottom: 3px solid #8aa4b0;
+  color: #466273;
+  background: transparent;
+}
+
+.departure-countdown.active {
+  border-bottom: 3px solid #4f8a72;
+  color: #2f6b55;
+  background: transparent;
+}
+
+.featured-trip-card,
+.featured-trip-card.planning,
+.featured-trip-card.upcoming,
+.featured-trip-card.completed {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  grid-template-columns: minmax(0, 1fr) 210px;
+  min-height: 310px;
+  padding: 44px var(--sheet-gutter) 46px;
+  border: 0;
+  border-radius: 0;
+  color: #203f50;
+  background: linear-gradient(105deg, rgba(229, 241, 245, 0.98) 0%, rgba(222, 236, 244, 0.98) 58%, rgba(220, 229, 247, 0.98) 100%);
+  box-shadow: none;
+  animation: departure-board-arrive 540ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.featured-trip-card::before {
+  position: absolute;
+  z-index: -1;
+  top: -230px;
+  right: -100px;
+  display: block;
+  width: 520px;
+  height: 520px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.34);
+  content: "";
+  animation: departure-sky-settle 900ms 100ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.featured-trip-card::after {
+  display: none;
+}
+
+.featured-trip-copy {
+  position: relative;
+  z-index: 2;
+  animation: departure-copy-arrive 500ms 90ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.featured-trip-topline {
+  margin-bottom: 0;
+}
+
+.featured-trip-card .featured-label {
+  color: #5278bc;
+  font-variant-numeric: tabular-nums;
+}
+
+.trip-status {
+  gap: 7px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: #526a76;
+  background: transparent;
+}
+
+.trip-status.planning,
+.trip-status.upcoming,
+.trip-status.completed {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: #526a76;
+  background: transparent;
+}
+
+.trip-status::before {
+  width: 16px;
+  height: 3px;
+  border-radius: 1px;
+  background: #7f9aa6;
+  content: "";
+}
+
+.trip-status.planning::before { background: #4f8a72; }
+.trip-status.upcoming::before { background: #5278bc; }
+.trip-status.completed::before { background: #c78470; }
+
+.featured-destination {
+  display: block;
+  width: fit-content;
+  margin: 23px 0 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: #365e9f;
+  background: transparent;
+}
+
+.featured-destination strong {
+  color: inherit;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.featured-trip-card h3 { margin-top: 0; }
+
+.featured-trip-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px 0;
+  width: auto;
+  margin-top: 26px;
+}
+
+.featured-trip-meta span {
+  display: grid;
+  gap: 4px;
+  min-height: 0;
+  align-content: start;
+  margin-right: 24px;
+  padding: 0 24px 0 0;
+  border: 0;
+  border-right: 1px solid rgba(82, 120, 188, 0.27);
+  border-radius: 0;
+  background: transparent;
+}
+
+.featured-trip-meta span:last-child {
+  margin-right: 0;
+  padding-right: 0;
+  border-right: 0;
+}
+
+.featured-trip-meta span:not(:last-child)::after,
+.featured-trip-meta span + span::before {
+  display: none;
+  content: none;
+}
+
+.featured-trip-meta small {
+  color: #718690;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.featured-trip-meta strong {
+  overflow: visible;
+  color: #203f50;
+  font-size: 0.96rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.featured-travel-stack {
+  position: relative;
+  z-index: 2;
+  width: 210px;
+  height: 210px;
+  justify-self: end;
+  pointer-events: none;
+}
+
+.featured-ticket-sheet,
+.featured-date-panel {
+  position: absolute;
+  width: 146px;
+  height: 170px;
+  border-radius: 18px 18px 27px 18px;
+}
+
+.featured-ticket-sheet {
+  display: grid;
+  align-content: end;
+  gap: 11px;
+  padding: 26px 22px;
+  border: 1px solid rgba(82, 120, 188, 0.16);
+  box-shadow: 0 15px 30px rgba(50, 88, 108, 0.13);
+}
+
+.featured-ticket-sheet i {
+  display: block;
+  height: 6px;
+  border-radius: 2px;
+  background: rgba(82, 120, 188, 0.22);
+}
+
+.featured-ticket-sheet i:nth-child(2) { width: 72%; }
+.featured-ticket-sheet i:nth-child(3) { width: 46%; }
+
+.ticket-sheet-back {
+  top: 34px;
+  left: 0;
+  background: #f7fbfc;
+  transform: rotate(-8deg);
+  animation: ticket-back-arrive 600ms 110ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.ticket-sheet-middle {
+  top: 12px;
+  left: 42px;
+  background: #dce8f5;
+  transform: rotate(6deg);
+  animation: ticket-middle-arrive 600ms 210ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.featured-date-panel {
+  right: 2px;
+  bottom: 0;
+  z-index: 2;
+  border: 0;
+  color: #fff;
+  background: #6d88ad;
+  box-shadow: 0 17px 34px rgba(50, 88, 108, 0.2);
+  animation: departure-date-land 680ms 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.featured-trip-card.urgency-urgent .featured-date-panel { background: #c66d58; }
+.featured-trip-card.urgency-soon .featured-date-panel { color: #563f0c; background: #f2cc66; }
+.featured-trip-card.urgency-near .featured-date-panel { background: #5278bc; }
+.featured-trip-card.urgency-later .featured-date-panel { background: #6d88ad; }
+.featured-trip-card.urgency-active .featured-date-panel { background: #4f8a72; }
+
+.featured-trip-card.urgency-soon .featured-date-panel span,
+.featured-trip-card.urgency-soon .featured-date-panel strong { color: #563f0c; }
+
+.trip-dashboard {
+  gap: 24px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.trip-dashboard > .section-heading { padding-top: 0; }
+
+.trip-dashboard.is-delete-mode {
+  padding-bottom: 110px;
+}
+
+.trip-dashboard-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.trip-dashboard-actions .trip-refresh-button,
+.trip-delete-mode-button {
+  min-height: 42px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 8px 0 5px;
+  color: #526a76;
+  background: transparent;
+  box-shadow: none;
+  font-size: 0.86rem;
+  font-weight: 850;
+}
+
+.trip-dashboard-actions .trip-refresh-button:hover:not(:disabled),
+.trip-dashboard-actions .trip-refresh-button:focus-visible {
+  border-bottom-color: #5278bc;
+  color: #365e9f;
+  background: transparent;
+}
+
+.trip-delete-mode-button:hover,
+.trip-delete-mode-button:focus-visible,
+.trip-delete-mode-button.active {
+  border-bottom-color: #bd604e;
+  color: #9c4838;
+}
+
+.trip-filter-list {
+  gap: 24px;
+  border: 0;
+}
+
+.trip-filter-list button,
+.trip-filter-list button[aria-pressed="true"] {
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 0 6px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  color: #667c87;
+  background: transparent;
+  box-shadow: none;
+}
+
+.trip-filter-list button[aria-pressed="true"] {
+  border-bottom-color: #5278bc;
+  color: #203f50;
+}
+
+.trip-filter-list button span,
+.trip-filter-list button[aria-pressed="true"] span {
+  min-width: auto;
+  height: auto;
+  padding: 0;
+  border-radius: 0;
+  color: #5278bc;
+  background: transparent;
+}
+
+.trip-card,
+.trip-card.planning,
+.trip-card.upcoming,
+.trip-card.completed {
+  border-color: rgba(82, 120, 188, 0.2);
+  background: rgba(255, 253, 248, 0.96);
+  animation: trip-card-arrive 460ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.trip-destination {
+  display: block;
+  width: auto;
+  margin: 10px 0 0;
+  padding: 0;
+  border-radius: 0;
+  color: #526f7f;
+  background: transparent;
+}
+
+.trip-card-grid > .trip-card:nth-child(2) { animation-delay: 70ms; }
+.trip-card-grid > .trip-card:nth-child(3) { animation-delay: 140ms; }
+.trip-card-grid > .trip-card:nth-child(4) { animation-delay: 210ms; }
+
+.trip-card.delete-mode {
+  user-select: none;
+}
+
+.trip-card.delete-mode > :not(.trip-card-select-button) {
+  pointer-events: none;
+}
+
+.trip-card.selected-for-delete {
+  border-color: #bd604e;
+  background: #fff8f4;
+  box-shadow: 0 0 0 3px rgba(189, 96, 78, 0.2), 0 18px 36px rgba(90, 65, 60, 0.13);
+  transform: translateY(-2px);
+}
+
+.trip-card-select-button {
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  border: 0;
+  border-radius: inherit;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.trip-card-select-button > span {
+  position: absolute;
+  right: 17px;
+  bottom: 16px;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 2px solid #aebfc7;
+  border-radius: 8px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.88);
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.trip-card-select-button[aria-pressed="true"] > span {
+  border-color: #bd604e;
+  background: #bd604e;
+}
+
+.trip-card-select-button:focus-visible {
+  outline: 3px solid rgba(189, 96, 78, 0.42);
+  outline-offset: -5px;
+}
+
+.trip-card-footer {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 18px;
+  margin-top: auto;
+  border-top: 1px solid var(--dash-line);
+}
+
+.trip-card-footer .trip-open-button {
+  flex: 0 0 auto;
+  min-width: auto;
+  border: 0;
+  padding: 11px 0;
+  color: #365364;
+  background: transparent;
+  justify-content: flex-end;
+}
+
+.trip-card-footer .trip-open-button:hover,
+.trip-card-footer .trip-open-button:focus-visible {
+  color: #365e9f;
+  background: transparent;
+}
+
+.trip-delete-dialog {
+  width: min(440px, calc(100% - 32px));
+  overscroll-behavior: contain;
+  border: 0;
+  border-radius: 24px;
+  padding: 0;
+  color: #203f50;
+  background: #fffdf8;
+  box-shadow: 0 28px 90px rgba(32, 63, 80, 0.28);
+}
+
+.trip-delete-dialog::backdrop {
+  background: rgba(32, 63, 80, 0.42);
+  backdrop-filter: blur(7px);
+}
+
+.trip-delete-dialog-content {
+  display: grid;
+  gap: 13px;
+  padding: 30px;
+}
+
+.trip-delete-dialog-content > p,
+.trip-delete-dialog-content > h2,
+.trip-delete-dialog-content > span,
+.trip-delete-dialog-content > strong { margin: 0; }
+
+.trip-delete-dialog-content > p {
+  color: #a14f40;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.trip-delete-dialog-content > h2 {
+  font-size: 1.65rem;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+.trip-delete-dialog-content > span {
+  color: #667c87;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.trip-delete-dialog-content > strong {
+  margin-top: 7px;
+  color: #5f7079;
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.trip-delete-list {
+  display: grid;
+  gap: 6px;
+  margin: 3px 0;
+  padding: 13px 16px 13px 31px;
+  color: #4f626c;
+  background: #f8f1ed;
+  font-size: 0.88rem;
+  font-weight: 750;
+}
+
+.trip-delete-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.trip-delete-dialog-actions button {
+  min-height: 44px;
+  border: 1px solid #d6e2e7;
+  border-radius: 11px;
+  padding: 0 18px;
+  color: #365364;
+  background: #fff;
+  font-weight: 850;
+}
+
+.trip-delete-dialog-actions button.danger {
+  border-color: #b85f4d;
+  color: #fff;
+  background: #b85f4d;
+}
+
+.trip-delete-dialog-actions button:hover:not(:disabled),
+.trip-delete-dialog-actions button:focus-visible { border-color: #5278bc; }
+
+.trip-delete-dialog-actions button.danger:hover:not(:disabled),
+.trip-delete-dialog-actions button.danger:focus-visible {
+  border-color: #974536;
+  background: #974536;
+}
+
+.trip-delete-dock {
+  position: fixed;
+  z-index: 35;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  left: 50%;
+  display: flex;
+  width: min(650px, calc(100% - 32px));
+  min-height: 78px;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 18px;
+  padding: 14px 16px 14px 20px;
+  color: #fff;
+  background: rgba(31, 61, 78, 0.96);
+  box-shadow: 0 22px 60px rgba(31, 61, 78, 0.34);
+  backdrop-filter: blur(14px);
+  transform: translateX(-50%);
+  animation: delete-dock-arrive 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.trip-delete-dock > div {
+  display: grid;
+  flex: 1;
+  gap: 3px;
+  min-width: 0;
+}
+
+.trip-delete-dock strong { font-size: 1rem; }
+
+.trip-delete-dock span {
+  overflow: hidden;
+  color: #cbd9df;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trip-delete-dock button {
+  min-height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 10px;
+  padding: 0 15px;
+  color: #fff;
+  background: transparent;
+  font-weight: 850;
+}
+
+.trip-delete-dock button.danger {
+  border-color: #d77763;
+  background: #bd604e;
+}
+
+.trip-delete-dock button.danger:disabled {
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #90a3ac;
+  background: #435f6d;
+}
+
+.trip-delete-dock button:hover:not(:disabled),
+.trip-delete-dock button:focus-visible {
+  border-color: #fff;
+}
+
+@keyframes departure-board-arrive {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes departure-copy-arrive {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes departure-sky-settle {
+  from { opacity: 0; transform: translate(42px, -24px) scale(0.88); }
+  to { opacity: 1; transform: translate(0, 0) scale(1); }
+}
+
+@keyframes departure-date-land {
+  from { opacity: 0; transform: translate(24px, -18px) rotate(7deg) scale(0.9); }
+  to { opacity: 1; transform: translate(0, 0) rotate(2deg) scale(1); }
+}
+
+@keyframes ticket-back-arrive {
+  from { opacity: 0; transform: translate(-15px, 12px) rotate(-13deg); }
+  to { opacity: 1; transform: translate(0, 0) rotate(-8deg); }
+}
+
+@keyframes ticket-middle-arrive {
+  from { opacity: 0; transform: translate(15px, -10px) rotate(11deg); }
+  to { opacity: 1; transform: translate(0, 0) rotate(6deg); }
+}
+
+@keyframes delete-dock-arrive {
+  from { opacity: 0; transform: translate(-50%, 16px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@keyframes trip-card-arrive {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 820px) {
+  .dashboard-app-shell {
+    --sheet-gutter: 28px;
+    width: min(100% - 28px, 720px);
+  }
+
+  .featured-trip-card,
+  .featured-trip-card.planning,
+  .featured-trip-card.upcoming,
+  .featured-trip-card.completed {
+    grid-template-columns: minmax(0, 1fr) 180px;
+  }
+
+  .featured-travel-stack {
+    width: 180px;
+    transform: scale(0.9);
+    transform-origin: right center;
+  }
+}
+
+@media (max-width: 580px) {
+  .dashboard-app-shell {
+    --sheet-gutter: 16px;
+    width: 100%;
+    box-shadow: none;
+  }
+
+  .dashboard-shell {
+    gap: 32px;
+    padding-top: 26px;
+  }
+
+  .dashboard-section-heading {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .featured-trip-card,
+  .featured-trip-card.planning,
+  .featured-trip-card.upcoming,
+  .featured-trip-card.completed,
+  .featured-trip-card.featured-trip-empty,
+  .featured-trip-card.featured-trip-error {
+    grid-template-columns: minmax(0, 1fr);
+    padding-block: 30px 34px;
+  }
+
+  .featured-travel-stack { display: none; }
+
+  .featured-trip-meta { gap: 14px 0; }
+
+  .featured-trip-meta span,
+  .featured-trip-meta span:first-child {
+    grid-column: auto;
+    margin-right: 16px;
+    padding-right: 16px;
+  }
+
+  .featured-trip-meta strong { font-size: 0.82rem; }
+  .trip-filter-list { gap: 17px; }
+  .trip-delete-dialog-content { padding: 25px 22px 22px; }
+
+  .trip-delete-dock {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+    padding: 14px;
+  }
+
+  .trip-delete-dock > div { grid-column: 1 / -1; }
+  .trip-delete-dock button { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .featured-trip-card,
+  .featured-trip-copy,
+  .featured-date-panel,
+  .featured-ticket-sheet,
+  .trip-card,
+  .trip-delete-dock,
+  .featured-trip-card::before {
+    animation: none;
+  }
+}

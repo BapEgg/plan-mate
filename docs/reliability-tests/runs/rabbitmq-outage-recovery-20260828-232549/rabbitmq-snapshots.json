@@ -1,0 +1,74 @@
+{
+  "mainBefore": {
+    "name": "planmate.itinerary.generation.requested",
+    "capturedAt": "2026-08-28T14:26:07.6450946Z",
+    "ready": 0,
+    "unacked": 0,
+    "total": 0,
+    "consumers": 1,
+    "publish": 94,
+    "deliver": 115,
+    "ack": 41,
+    "redeliver": 31
+  },
+  "mainAfter": {
+    "name": "planmate.itinerary.generation.requested",
+    "capturedAt": "2026-08-28T14:27:52.3182355Z",
+    "ready": 0,
+    "unacked": 0,
+    "total": 0,
+    "consumers": 1,
+    "publish": 10,
+    "deliver": 10,
+    "ack": 10,
+    "redeliver": 0
+  },
+  "dlqBefore": {
+    "name": "planmate.itinerary.generation.requested.dlq",
+    "capturedAt": "2026-08-28T14:25:49.8333857Z",
+    "ready": 167,
+    "unacked": 0,
+    "total": 167,
+    "consumers": 0,
+    "publish": 0,
+    "deliver": 0,
+    "ack": 0,
+    "redeliver": 0
+  },
+  "dlqAfter": {
+    "name": "planmate.itinerary.generation.requested.dlq",
+    "capturedAt": "2026-08-28T14:27:52.8078847Z",
+    "ready": 167,
+    "unacked": 0,
+    "total": 167,
+    "consumers": 0,
+    "publish": 0,
+    "deliver": 0,
+    "ack": 0,
+    "redeliver": 0
+  },
+  "auditBefore": {
+    "name": "planmate.reliability.exp6.20260828232549.audit",
+    "capturedAt": "2026-08-28T14:26:07.6710538Z",
+    "ready": 0,
+    "unacked": 0,
+    "total": 0,
+    "consumers": 0,
+    "publish": 0,
+    "deliver": 0,
+    "ack": 0,
+    "redeliver": 0
+  },
+  "auditAfter": {
+    "name": "planmate.reliability.exp6.20260828232549.audit",
+    "capturedAt": "2026-08-28T14:27:52.3234214Z",
+    "ready": 10,
+    "unacked": 0,
+    "total": 10,
+    "consumers": 0,
+    "publish": 10,
+    "deliver": 0,
+    "ack": 0,
+    "redeliver": 0
+  }
+}

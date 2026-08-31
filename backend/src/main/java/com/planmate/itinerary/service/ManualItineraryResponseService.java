@@ -49,6 +49,21 @@ public class ManualItineraryResponseService {
 
     public void submit(Long userId, Long tripId, Long generationId, AiItineraryDraft draft) {
         tripAccessChecker.checkAccessible(userId, tripId);
+        submitValidatedResponse(tripId, generationId, draft);
+    }
+
+    /**
+     * Submits a response produced by an internal itinerary provider.
+     *
+     * <p>The generation request has already passed the authenticated trip access boundary. Provider responses
+     * deliberately reuse the same validation, normalization, persistence, idempotency, and completion path as a
+     * manual response; only the end-user access check is not repeated here.</p>
+     */
+    public void submitProviderResponse(Long tripId, Long generationId, AiItineraryDraft draft) {
+        submitValidatedResponse(tripId, generationId, draft);
+    }
+
+    private void submitValidatedResponse(Long tripId, Long generationId, AiItineraryDraft draft) {
         ItineraryGenerationEntity generation = getGeneration(tripId, generationId);
 
         if (generation.getStatus() == ItineraryGenerationStatus.READY_FOR_PLANNING) {

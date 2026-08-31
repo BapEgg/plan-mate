@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="300" viewBox="0 0 1000 300" fill="none" role="img" aria-labelledby="title description">
+  <title id="title">PlanMate</title>
+  <desc id="description">Folded map symbol beside the PlanMate wordmark</desc>
+
+  <g transform="translate(30 30) scale(5.454545)">
+    <rect width="44" height="44" rx="12" fill="#5278BC"/>
+    <path d="M9 12.5 18.5 9l8 3 8.5-3v22.5l-8.5 3-8-3L9 35V12.5Z" fill="#F8FBFC"/>
+    <path d="M18.5 9v22.5m8-19.5v22.5" stroke="#B8CCE8" stroke-width="1.8"/>
+    <path d="M12.5 26c4-6 8.5-7.5 13-4.5 2.5 1.7 4.4 1.1 6-1" stroke="#5278BC" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="31.5" cy="20.5" r="2.7" fill="#C96F5A"/>
+  </g>
+
+  <text x="322" y="202" fill="#203F50" font-family="Inter, Pretendard, Arial, Helvetica, sans-serif" font-size="142" font-weight="800" letter-spacing="-6">PlanMate</text>
+</svg>

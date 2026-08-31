@@ -1,0 +1,4 @@
+# 이 중단된 Preflight에서 계속 실행 중인 로컬 API의 원시 출력에는
+# 사용자명과 절대 경로가 포함될 수 있다. 공식 실험 증거가 아니므로 공개하지 않는다.
+api-restart.out.log
+api-restart.err.log

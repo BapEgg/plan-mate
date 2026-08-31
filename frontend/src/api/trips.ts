@@ -260,6 +260,13 @@ export function createTrip(accessToken: string, payload: CreateTripRequest) {
   })
 }
 
+export function deleteTrip(accessToken: string, tripId: string) {
+  return request<void>(`/api/trips/${tripId}`, {
+    method: 'DELETE',
+    headers: bearerHeaders(accessToken),
+  })
+}
+
 export function getTripDetail(accessToken: string, tripId: string) {
   return request<TripDetail>(`/api/trips/${tripId}`, {
     method: 'GET',

@@ -1,0 +1,5 @@
+interface:
+  display_name: "PlanMate Product Design"
+  short_description: "Improve PlanMate travel UX, copy, and visual quality"
+  brand_color: "#1B4E42"
+  default_prompt: "Use $planmate-product-design to improve the travel UX and copy of a PlanMate screen."

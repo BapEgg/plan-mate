@@ -56,6 +56,10 @@ public class TripService implements TripDetailTripReader {
     }
 
     public TripSummaryResponse create(Long userId, TripCreateRequest request) {
+        LocalDate today = LocalDate.now(clock);
+        if (request.startDate().isBefore(today) || request.endDate().isBefore(today)) {
+            throw new InvalidTripRequestException("여행 날짜는 오늘 또는 이후로 선택해 주세요.");
+        }
         String destinationPlaceId = request.destinationPlaceId().trim();
         ResolvedPlace destination = placeDetailsResolver.resolve(destinationPlaceId, "ko");
         ResolvedAccommodation accommodation = resolveAccommodation(request.accommodation());
@@ -125,6 +129,13 @@ public class TripService implements TripDetailTripReader {
                     return toSummaryResponse(trip, tripMemberRepository.countByTrip_Id(trip.getId()));
                 })
                 .toList();
+    }
+
+    @Transactional
+    public void delete(Long userId, Long tripId) {
+        TripEntity trip = tripRepository.findByIdAndCreatedBy_Id(tripId, userId)
+                .orElseThrow(TripNotFoundException::new);
+        tripRepository.delete(trip);
     }
 
     @Transactional(readOnly = true)

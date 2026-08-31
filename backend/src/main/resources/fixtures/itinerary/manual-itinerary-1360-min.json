@@ -1,0 +1,81 @@
+{
+  "generationId": "1360",
+  "days": [
+    {
+      "day": 1,
+      "items": [
+        {
+          "sequence": 1,
+          "placeId": "ChIJ653o87r7DDUR4SQEgcFz8u4",
+          "startTime": "09:00",
+          "durationMinutes": 90
+        },
+        {
+          "sequence": 2,
+          "placeId": "ChIJ5c7RnEn7DDUR3ZsKVgwOgoY",
+          "startTime": "11:00",
+          "durationMinutes": 90
+        },
+        {
+          "sequence": 3,
+          "placeId": "ChIJF2wgtzz7DDURDzj9E87gjLI",
+          "startTime": "13:00",
+          "durationMinutes": 90
+        },
+        {
+          "sequence": 4,
+          "placeId": "ChIJ99rwl6P7DDURcucEskFO9Kg",
+          "startTime": "15:00",
+          "durationMinutes": 60
+        },
+        {
+          "sequence": 5,
+          "placeId": "ChIJQTDcmN36DDURgrFApafv3jo",
+          "startTime": "16:30",
+          "durationMinutes": 90
+        },
+        {
+          "sequence": 6,
+          "placeId": "ChIJlRMTHnT7DDUROrE3-cv1hHw",
+          "startTime": "19:00",
+          "durationMinutes": 120
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "items": [
+        {
+          "sequence": 1,
+          "placeId": "ChIJTamoBq3kDDURccGJpkrWKZQ",
+          "startTime": "09:00",
+          "durationMinutes": 60
+        },
+        {
+          "sequence": 2,
+          "placeId": "ChIJFUMOgbLkDDURsHuqz9O_RDA",
+          "startTime": "10:15",
+          "durationMinutes": 60
+        },
+        {
+          "sequence": 3,
+          "placeId": "ChIJ4apxS6_8DDURNArV40vCwhc",
+          "startTime": "12:00",
+          "durationMinutes": 90
+        },
+        {
+          "sequence": 4,
+          "placeId": "ChIJBdbgpEDjDDURzYvEtgnodYc",
+          "startTime": "14:00",
+          "durationMinutes": 90
+        },
+        {
+          "sequence": 5,
+          "placeId": "ChIJq68im0jjDDURd6bQHYNNDGw",
+          "startTime": "16:00",
+          "durationMinutes": 60
+        }
+      ]
+    }
+  ]
+}

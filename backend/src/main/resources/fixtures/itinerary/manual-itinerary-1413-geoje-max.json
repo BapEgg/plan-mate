@@ -1,0 +1,163 @@
+{
+  "generationId": "1413",
+  "days": [
+    {
+      "day": 1,
+      "items": [
+        {
+          "sequence": 1,
+          "placeId": "ChIJrdpOcvUraTURT1ADAw44ZVI",
+          "startTime": "10:30",
+          "durationMinutes": 75
+        },
+        {
+          "sequence": 2,
+          "placeId": "ChIJ_4fNOHAraTUR8A_7oKxDtYE",
+          "startTime": "12:15",
+          "durationMinutes": 90
+        },
+        {
+          "sequence": 3,
+          "placeId": "ChIJ7egMI3MraTURfgFJyzp5pJ4",
+          "startTime": "14:15",
+          "durationMinutes": 75
+        },
+        {
+          "sequence": 4,
+          "placeId": "ChIJf7r75GkyaTURF-s1gOKFWiw",
+          "startTime": "17:00",
+          "durationMinutes": 60
+        },
+        {
+          "sequence": 5,
+          "placeId": "ChIJGwAhHx8zaTURJMlO2F9O4do",
+          "startTime": "18:30",
+          "durationMinutes": 90
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "items": [
+        {
+          "sequence": 1,
+          "placeId": "ChIJBdK8QgAzaTURuTj5aVcQ0-Y",
+          "startTime": "08:00",
+          "durationMinutes": 60
+        },
+        {
+          "sequence": 2,
+          "placeId": "ChIJYz2wmUE0aTURxsbYIt1Dczs",
+          "startTime": "09:30",
+          "durationMinutes": 180
+        },
+        {
+          "sequence": 3,
+          "placeId": "ChIJFRHZ9TAzaTURdfc-YtSGXfg",
+          "startTime": "13:00",
+          "durationMinutes": 60
+        },
+        {
+          "sequence": 4,
+          "placeId": "ChIJnQMuF60zaTUR9aYs_0Y1QkM",
+          "startTime": "14:30",
+          "durationMinutes": 75
+        },
+        {
+          "sequence": 5,
+          "placeId": "ChIJIbHJLFoyaTUR38PczI7dmPo",
+          "startTime": "18:30",
+          "durationMinutes": 90
+        }
+      ]
+    },
+    {
+      "day": 3,
+      "items": [
+        {
+          "sequence": 1,
+          "placeId": "ChIJ30Awb9vKbjURnPjQ-HpuxKE",
+          "startTime": "08:30",
+          "durationMinutes": 60
+        },
+        {
+          "sequence": 2,
+          "placeId": "ChIJe2rU7dnKbjURI8j7J1xDphY",
+          "startTime": "10:00",
+          "durationMinutes": 90
+        },
+        {
+          "sequence": 3,
+          "placeId": "ChIJ-ztZpYc1aTUR7S1ZRvEULg0",
+          "startTime": "12:00",
+          "durationMinutes": 60
+        },
+        {
+          "sequence": 4,
+          "placeId": "ChIJ2cS3mxHLbjUR1F338yuh_tQ",
+          "startTime": "13:30",
+          "durationMinutes": 75
+        },
+        {
+          "sequence": 5,
+          "placeId": "ChIJwaIdgk81aTURimoLoirlMK8",
+          "startTime": "15:15",
+          "durationMinutes": 90
+        },
+        {
+          "sequence": 6,
+          "placeId": "ChIJjVaeK3gzaTURtMR44LDKfNQ",
+          "startTime": "17:30",
+          "durationMinutes": 60
+        },
+        {
+          "sequence": 7,
+          "placeId": "ChIJGwx6u_kzaTURkarzYxbmoSY",
+          "startTime": "19:00",
+          "durationMinutes": 90
+        }
+      ]
+    },
+    {
+      "day": 4,
+      "items": [
+        {
+          "sequence": 1,
+          "placeId": "ChIJM-JO80QzaTURwUL4EJ8Ned0",
+          "startTime": "08:00",
+          "durationMinutes": 75
+        },
+        {
+          "sequence": 2,
+          "placeId": "ChIJHd3djRTMbjURrEu67m6gCdg",
+          "startTime": "10:30",
+          "durationMinutes": 120
+        },
+        {
+          "sequence": 3,
+          "placeId": "ChIJHwu7pFPJbjURJ9yLusTZpxA",
+          "startTime": "13:00",
+          "durationMinutes": 75
+        },
+        {
+          "sequence": 4,
+          "placeId": "ChIJ4VlgdQDNbjURmBQR6bEFYTA",
+          "startTime": "14:30",
+          "durationMinutes": 60
+        },
+        {
+          "sequence": 5,
+          "placeId": "ChIJ0zSYTd7PbjURdcZGalQ9PAs",
+          "startTime": "16:30",
+          "durationMinutes": 60
+        },
+        {
+          "sequence": 6,
+          "placeId": "ChIJA5fLzDfPbjURmfE50kH6BAk",
+          "startTime": "18:00",
+          "durationMinutes": 90
+        }
+      ]
+    }
+  ]
+}

@@ -4,6 +4,16 @@
 
 현재 일정 생성 경로는 Transactional Outbox, Debezium CDC, RabbitMQ Worker로 분리되어 있으며, 중복 전달과 Worker 중단을 고려한 Claim/Lease/Fencing, Retry/DLQ, Prometheus/Grafana 관측 구조를 포함합니다. AI 일정 생성은 서버가 외부 AI API를 직접 호출하지 않는 manual handoff 방식입니다.
 
+## 35초 제품 데모
+
+[![PlanMate 여행 일정 생성 흐름](docs/assets/workflow/planmate-workflow-poster.png)](docs/assets/workflow/planmate-workflow.mp4)
+
+로그인부터 목적지·여행 조건 입력, 비동기 일정 생성 완료, 날짜별 상세 조회까지 실제 로컬 실행 화면으로 구성했습니다. 이미지를 누르면 MP4 데모가 열립니다.
+
+`사용자 입력 → Trip·Outbox 원자적 저장 → Debezium CDC → RabbitMQ → Worker 검증·저장 → 상세 화면 조회`
+
+상세 화면에서는 생성 단계와 수집 후보 수를 확인하고, Day 탭으로 날짜별 방문 순서·시간·장소 위치를 탐색할 수 있습니다.
+
 ## 문서
 
 - [장애 주입 테스트 공식 Run 목록](docs/reliability-tests/README.md)

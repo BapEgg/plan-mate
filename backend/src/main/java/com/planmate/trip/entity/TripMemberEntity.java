@@ -51,6 +51,10 @@ public class TripMemberEntity {
         return new TripMemberEntity(trip, user, TripMemberRole.OWNER, now);
     }
 
+    public static TripMemberEntity member(TripEntity trip, UserEntity user, Instant now) {
+        return new TripMemberEntity(trip, user, TripMemberRole.MEMBER, now);
+    }
+
     public Long getId() {
         return id;
     }

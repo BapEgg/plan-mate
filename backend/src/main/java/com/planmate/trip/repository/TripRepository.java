@@ -8,6 +8,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface TripRepository extends JpaRepository<TripEntity, Long> {
 
+    Optional<TripEntity> findByIdAndCreatedBy_Id(Long tripId, Long userId);
+
     @Query("""
             SELECT trip
             FROM TripEntity trip

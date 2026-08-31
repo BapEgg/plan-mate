@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -341,6 +342,71 @@ class TripControllerTest {
     }
 
     @Test
+    void createTripRejectsPastTravelDates() throws Exception {
+        UserEntity user = createUser();
+        String accessToken = accessToken(user);
+        LocalDate startDate = LocalDate.now().minusDays(2);
+        LocalDate endDate = LocalDate.now().minusDays(1);
+        long tripCountBeforeRequest = tripRepository.count();
+
+        mockMvc.perform(post("/api/trips")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(tripRequestJson("Past trip", "place-seoul", startDate, endDate)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_TRIP_REQUEST"))
+                .andExpect(jsonPath("$.message").value("여행 날짜는 오늘 또는 이후로 선택해 주세요."));
+
+        assertThat(tripRepository.count()).isEqualTo(tripCountBeforeRequest);
+    }
+
+    @Test
+    void ownerCanDeleteTrip() throws Exception {
+        UserEntity owner = createUser();
+        String accessToken = accessToken(owner);
+        String tripId = createTrip(
+                accessToken,
+                "Delete me",
+                "Jeju",
+                LocalDate.now().plusDays(3),
+                LocalDate.now().plusDays(5)
+        );
+
+        entityManager.clear();
+
+        mockMvc.perform(delete("/api/trips/{tripId}", tripId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .andExpect(status().isNoContent());
+
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(tripRepository.findById(Long.valueOf(tripId))).isEmpty();
+        assertThat(tripMemberRepository.countByTrip_Id(Long.valueOf(tripId))).isZero();
+        assertThat(tripPlanningProfileRepository.findByTrip_Id(Long.valueOf(tripId))).isEmpty();
+    }
+
+    @Test
+    void nonOwnerCannotDeleteTrip() throws Exception {
+        UserEntity owner = createUser();
+        UserEntity other = createUser();
+        String tripId = createTrip(
+                accessToken(owner),
+                "Private trip",
+                "Sokcho",
+                LocalDate.now().plusDays(2),
+                LocalDate.now().plusDays(4)
+        );
+
+        mockMvc.perform(delete("/api/trips/{tripId}", tripId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken(other)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("TRIP_NOT_FOUND"));
+
+        assertThat(tripRepository.existsById(Long.valueOf(tripId))).isTrue();
+    }
+
+    @Test
     void getDetailReturnsTripProfileMembersAndItineraries() throws Exception {
         UserEntity user = createUser();
         String accessToken = accessToken(user);
@@ -348,7 +414,7 @@ class TripControllerTest {
                 accessToken,
                 "Detail trip",
                 "Jeju",
-                LocalDate.now().minusDays(1),
+                LocalDate.now(),
                 LocalDate.now().plusDays(1)
         );
 

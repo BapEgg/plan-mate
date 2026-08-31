@@ -6,11 +6,17 @@
 .gradle/
 build/
 
+# Local package-manager cache
+.pnpm-store/
+
 # Environment
 backend/.env
 backend/.env.*
 
 !backend/.env.example
+
+# User-uploaded local development files
+backend/uploads/
 
 # Spring Local Config
 backend/src/main/resources/application-local.yml

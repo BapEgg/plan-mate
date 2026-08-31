@@ -1,0 +1,46 @@
+[
+  {
+    "payload_bytes": 50,
+    "redelivered": false,
+    "exchange": "planmate.reliability.exp3.20260828220239",
+    "routing_key": "exp3.outbox",
+    "message_count": 1,
+    "properties": {
+      "delivery_mode": 2,
+      "headers": {
+        "__debezium.context.connectorLogicalName": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"planmate-exp3-detect\"}",
+        "__debezium.context.connectorName": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"postgresql\"}",
+        "__debezium.context.runId": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"01a04877-4e60-70a8-8eef-b1f7ada1bced\"}",
+        "__debezium.context.taskId": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"0\"}",
+        "aggregateType": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"ITINERARY_GENERATION\"}",
+        "eventType": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"ITINERARY_GENERATION_REQUESTED\"}",
+        "id": "{\"schema\":{\"type\":\"string\",\"optional\":false,\"name\":\"io.debezium.data.Uuid\",\"version\":1},\"payload\":\"ad6dc987-07ef-4963-9852-6c116e47df00\"}",
+        "traceparent": "00-5ab3823b2c1f4d3e093473b4b1c3e917-b57a192a56dfac45-01"
+      }
+    },
+    "payload": "{\"tripId\":900001,\"userId\":1,\"generationId\":900001}",
+    "payload_encoding": "string"
+  },
+  {
+    "payload_bytes": 50,
+    "redelivered": false,
+    "exchange": "planmate.reliability.exp3.20260828220239",
+    "routing_key": "exp3.outbox",
+    "message_count": 0,
+    "properties": {
+      "delivery_mode": 2,
+      "headers": {
+        "__debezium.context.connectorLogicalName": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"planmate-exp3-detect\"}",
+        "__debezium.context.connectorName": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"postgresql\"}",
+        "__debezium.context.runId": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"01a04877-9645-7ca4-a403-7e2d0eb84fc1\"}",
+        "__debezium.context.taskId": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"0\"}",
+        "aggregateType": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"ITINERARY_GENERATION\"}",
+        "eventType": "{\"schema\":{\"type\":\"string\",\"optional\":false},\"payload\":\"ITINERARY_GENERATION_REQUESTED\"}",
+        "id": "{\"schema\":{\"type\":\"string\",\"optional\":false,\"name\":\"io.debezium.data.Uuid\",\"version\":1},\"payload\":\"d86fe743-bef7-4cd1-b922-a32c84763cf5\"}",
+        "traceparent": "00-e0b3e3d763465c7f781cf131694de746-5b7b5e449a730445-01"
+      }
+    },
+    "payload": "{\"tripId\":900002,\"userId\":1,\"generationId\":900002}",
+    "payload_encoding": "string"
+  }
+]
