@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AuthUser } from '../../../api/auth'
 import { ApiError } from '../../../api/client'
 import {
@@ -52,6 +52,10 @@ export function TripWorkspacePage({
   const [generationFetchFailed, setGenerationFetchFailed] = useState(false)
   const [generationNotice, setGenerationNotice] = useState('')
   const [latestChatMessage, setLatestChatMessage] = useState<ChatMessageSentPayload | null>(null)
+  const [chatConnected, setChatConnected] = useState(true)
+  const [chatReconnectedAt, setChatReconnectedAt] = useState(0)
+  const hasConnectedBeforeRef = useRef(false)
+  const disconnectTimerRef = useRef<number | null>(null)
 
   const loadTripDetail = useCallback(async () => {
     try {
@@ -137,7 +141,25 @@ export function TripWorkspacePage({
       tripId,
       onConnect: () => {
         setGenerationNotice('실시간 상태 업데이트에 연결되었습니다.')
+        if (disconnectTimerRef.current !== null) {
+          window.clearTimeout(disconnectTimerRef.current)
+          disconnectTimerRef.current = null
+        }
+        setChatConnected(true)
+        if (hasConnectedBeforeRef.current) {
+          setChatReconnectedAt(Date.now())
+        }
+        hasConnectedBeforeRef.current = true
         void loadGeneration()
+      },
+      onDisconnected: () => {
+        // spec §4 "연결 상태": only surface a disconnect after a 2s grace period so a
+        // momentary blip doesn't flash the composer-gating UI.
+        if (disconnectTimerRef.current !== null) return
+        disconnectTimerRef.current = window.setTimeout(() => {
+          setChatConnected(false)
+          disconnectTimerRef.current = null
+        }, 2000)
       },
       onError: () => {
         if (active) {
@@ -187,6 +209,10 @@ export function TripWorkspacePage({
 
     return () => {
       active = false
+      if (disconnectTimerRef.current !== null) {
+        window.clearTimeout(disconnectTimerRef.current)
+        disconnectTimerRef.current = null
+      }
       connection.disconnect()
     }
   }, [accessToken, loadGeneration, loadTripData, tripId, user?.id])
@@ -227,6 +253,8 @@ export function TripWorkspacePage({
       <a className="trip-detail-skip-link" href="#trip-detail-workspace">일정으로 바로가기</a>
       <TripWorkspace
         accessToken={accessToken}
+        chatConnected={chatConnected}
+        chatReconnectedAt={chatReconnectedAt}
         currentUser={user}
         generation={generation}
         generationFetchFailed={generationFetchFailed}
@@ -251,6 +279,8 @@ function TripWorkspace({
   generationFetchFailed,
   generationNotice,
   latestChatMessage,
+  chatConnected,
+  chatReconnectedAt,
   accessToken,
   currentUser,
   onBackToMain,
@@ -264,6 +294,8 @@ function TripWorkspace({
   generationFetchFailed: boolean
   generationNotice: string
   latestChatMessage: ChatMessageSentPayload | null
+  chatConnected: boolean
+  chatReconnectedAt: number
   accessToken: string
   currentUser: AuthUser | null
   onBackToMain: () => void
@@ -382,6 +414,8 @@ function TripWorkspace({
           accessToken={accessToken}
           activeDay={resolvedDay}
           ariaLabelledBy="workspace-pane-tab-ROOM"
+          chatConnected={chatConnected}
+          chatReconnectedAt={chatReconnectedAt}
           className={mobilePane === 'ROOM' ? 'mobile-active' : ''}
           currentUser={currentUser}
           id={panelIds.ROOM}

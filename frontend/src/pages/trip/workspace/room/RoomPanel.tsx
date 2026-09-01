@@ -8,8 +8,10 @@ import { VotePanel } from './vote/VotePanel'
 
 const demoPreviewEnabled = import.meta.env.VITE_WORKSPACE_DEMO_PREVIEW === 'true'
 
-export function RoomPanel({ accessToken, className, id, panelRole, ariaLabelledBy, latestChatMessage, members, currentUser, activeDay, selectedPlace, tripId }: {
+export function RoomPanel({ accessToken, chatConnected, chatReconnectedAt, className, id, panelRole, ariaLabelledBy, latestChatMessage, members, currentUser, activeDay, selectedPlace, tripId }: {
   accessToken: string
+  chatConnected: boolean
+  chatReconnectedAt: number
   className?: string
   id?: string
   panelRole?: string
@@ -42,6 +44,8 @@ export function RoomPanel({ accessToken, className, id, panelRole, ariaLabelledB
       {view === 'CHAT' ? (
         <ChatPanel
           accessToken={accessToken}
+          chatConnected={chatConnected}
+          chatReconnectedAt={chatReconnectedAt}
           currentUser={currentUser}
           latestChatMessage={latestChatMessage}
           members={members}

@@ -46,6 +46,17 @@ public class ChatHistoryService {
         return new Page(page, nextCursor);
     }
 
+    /**
+     * Gap recovery after a reconnect: everything strictly newer than {@code sinceId}, ascending,
+     * capped at {@link #MAX_PAGE_SIZE} — a gap that large means something else needs attention,
+     * not an unbounded query.
+     */
+    @Transactional(readOnly = true)
+    public List<ChatMessageEntity> listSince(Long userId, Long tripId, Long sinceId) {
+        tripAccessChecker.checkAccessible(userId, tripId);
+        return chatMessageRepository.findByTripIdAndIdGreaterThanOrderByIdAsc(tripId, sinceId, PageRequest.of(0, MAX_PAGE_SIZE));
+    }
+
     private int normalizeSize(Integer size) {
         if (size == null || size <= 0) {
             return DEFAULT_PAGE_SIZE;

@@ -13,4 +13,6 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessageEntity, 
     List<ChatMessageEntity> findByTripIdOrderByIdDesc(Long tripId, Pageable pageable);
 
     List<ChatMessageEntity> findByTripIdAndIdLessThanOrderByIdDesc(Long tripId, Long cursor, Pageable pageable);
+
+    List<ChatMessageEntity> findByTripIdAndIdGreaterThanOrderByIdAsc(Long tripId, Long sinceId, Pageable pageable);
 }

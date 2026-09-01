@@ -2932,8 +2932,38 @@
   cursor: not-allowed;
 }
 
-.trip-chat-error {
-  margin: 0 16px 12px;
+/* WP-D chat phase 2: per-message send status and the connection-recovery notice. */
+.chat-message-status {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.68rem;
+  color: #7f8899;
+}
+
+.chat-message-status.failed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   color: #b73443;
-  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.chat-message-status.failed button {
+  border: 0;
+  padding: 0;
+  color: #315fea;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-decoration: underline;
+  background: transparent;
+  cursor: pointer;
+}
+
+.trip-chat-connection-notice {
+  margin: 0 16px 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  color: #9d5f08;
+  font-size: 0.75rem;
+  background: #fff0cc;
 }

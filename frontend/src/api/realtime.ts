@@ -51,6 +51,8 @@ type TripRealtimeConnectionOptions = {
   accessToken: string
   tripId: string
   onConnect?: () => void
+  /** An involuntary drop (network, server restart) — never fired for this connection's own `disconnect()`. */
+  onDisconnected?: () => void
   onError?: (message: string) => void
   onEvent: (event: TripRealtimeEvent) => void
 }
@@ -63,10 +65,12 @@ export function connectTripRealtimeEvents({
   accessToken,
   tripId,
   onConnect,
+  onDisconnected,
   onError,
   onEvent,
 }: TripRealtimeConnectionOptions): TripRealtimeConnection {
   let subscription: StompSubscription | null = null
+  let deliberatelyClosed = false
   const client = new Client({
     brokerURL: websocketUrl('/ws/events'),
     connectHeaders: {
@@ -80,6 +84,11 @@ export function connectTripRealtimeEvents({
       })
       onConnect?.()
     },
+    onWebSocketClose: () => {
+      if (!deliberatelyClosed) {
+        onDisconnected?.()
+      }
+    },
     onStompError: (frame) => {
       onError?.(frame.headers.message ?? frame.body ?? 'Realtime connection failed.')
     },
@@ -92,6 +101,7 @@ export function connectTripRealtimeEvents({
 
   return {
     disconnect: () => {
+      deliberatelyClosed = true
       subscription?.unsubscribe()
       subscription = null
       void client.deactivate()

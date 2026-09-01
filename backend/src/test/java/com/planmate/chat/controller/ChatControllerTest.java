@@ -166,6 +166,32 @@ class ChatControllerTest {
                 .andExpect(jsonPath("$.nextCursor").doesNotExist());
     }
 
+    @Test
+    void sinceReturnsOnlyNewerMessagesAscendingForGapRecovery() throws Exception {
+        UserEntity owner = createUser();
+        TripEntity trip = createTrip(owner);
+        long[] ids = new long[5];
+        for (int i = 0; i < 5; i++) {
+            String response = mockMvc.perform(post("/api/trips/{tripId}/chat/messages", trip.getId())
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken(owner))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(new SendBody(UUID.randomUUID().toString(), "메시지 " + i))))
+                    .andExpect(status().isCreated())
+                    .andReturn().getResponse().getContentAsString();
+            ids[i] = objectMapper.readTree(response).get("id").asLong();
+        }
+
+        mockMvc.perform(get("/api/trips/{tripId}/chat/messages", trip.getId())
+                        .param("since", String.valueOf(ids[1]))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken(owner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.messages.length()").value(3))
+                .andExpect(jsonPath("$.messages[0].body").value("메시지 2"))
+                .andExpect(jsonPath("$.messages[1].body").value("메시지 3"))
+                .andExpect(jsonPath("$.messages[2].body").value("메시지 4"))
+                .andExpect(jsonPath("$.nextCursor").doesNotExist());
+    }
+
     private TripEntity createTrip(UserEntity owner) {
         Instant now = Instant.now();
         TripEntity trip = tripRepository.save(TripEntity.create(

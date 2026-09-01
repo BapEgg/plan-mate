@@ -48,8 +48,15 @@ public class ChatController {
             @AuthenticationPrincipal AuthenticatedUser user,
             @PathVariable Long tripId,
             @RequestParam(required = false) Long cursor,
-            @RequestParam(required = false) Integer size
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) Long since
     ) {
+        if (since != null) {
+            return new ChatHistoryResponse(
+                    chatHistoryService.listSince(user.userId(), tripId, since).stream().map(ChatMessageResponse::from).toList(),
+                    null
+            );
+        }
         ChatHistoryService.Page page = chatHistoryService.listHistory(user.userId(), tripId, cursor, size);
         return new ChatHistoryResponse(
                 page.messages().stream().map(ChatMessageResponse::from).toList(),
