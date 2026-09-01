@@ -364,6 +364,7 @@ function TripWorkspace({
               ? { lat: trip.destinationInfo.latitude, lng: trip.destinationInfo.longitude }
               : null}
             places={activePlaces}
+            selectedPlace={selectedPlace}
             selectedPlaceId={selectedPlace?.id ?? ''}
             onSelectPlace={setSelectedPlaceId}
           />

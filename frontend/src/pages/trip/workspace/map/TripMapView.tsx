@@ -15,30 +15,11 @@ type GoogleMapsNamespace = typeof globalThis & {
     maps: {
       Map: new (element: HTMLElement, options: Record<string, unknown>) => GoogleMap
       Marker: new (options: Record<string, unknown>) => GoogleMarker
-      InfoWindow: new (options?: Record<string, unknown>) => GoogleInfoWindow
       LatLngBounds: new () => GoogleLatLngBounds
       SymbolPath: { CIRCLE: number }
       event: { clearInstanceListeners: (instance: unknown) => void }
-      places: {
-        PlacesService: new (map: GoogleMap) => GooglePlacesService
-      }
     }
   }
-}
-
-type GooglePlaceResult = {
-  rating?: number
-  user_ratings_total?: number
-  formatted_address?: string
-  opening_hours?: { isOpen?: () => boolean }
-  photos?: Array<{ getUrl: (options: { maxWidth: number }) => string }>
-}
-
-type GooglePlacesService = {
-  getDetails: (
-    request: { placeId: string; fields: string[] },
-    callback: (result: GooglePlaceResult | null, status: string) => void,
-  ) => void
 }
 
 type GoogleMap = {
@@ -53,13 +34,6 @@ type GoogleMarker = {
   setIcon: (icon: Record<string, unknown>) => void
   setLabel: (label: Record<string, unknown>) => void
   setZIndex: (zIndex: number) => void
-  addListener: (event: string, handler: () => void) => void
-}
-
-type GoogleInfoWindow = {
-  setContent: (content: string) => void
-  open: (options: { map: GoogleMap; anchor: GoogleMarker }) => void
-  close: () => void
   addListener: (event: string, handler: () => void) => void
 }
 
@@ -113,48 +87,6 @@ export type MapMarkerPlace = {
   longitude: number
 }
 
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
-
-function infoWindowContent(place: MapMarkerPlace, details?: GooglePlaceResult) {
-  const ratingRow = details?.rating
-    ? `<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:#9d5f08;margin-bottom:4px">
-        <strong>★ ${details.rating.toFixed(1)}</strong>
-        ${details.user_ratings_total ? `<span style="color:#7f8899">리뷰 ${details.user_ratings_total.toLocaleString('ko-KR')}개</span>` : ''}
-      </div>`
-    : ''
-  const openRow = details?.opening_hours?.isOpen
-    ? `<div style="font-size:10px;font-weight:700;color:${details.opening_hours.isOpen() ? '#08764e' : '#b73443'};margin-bottom:4px">${details.opening_hours.isOpen() ? '영업 중' : '영업 종료'}</div>`
-    : ''
-  const addressRow = details?.formatted_address
-    ? `<div style="font-size:10px;color:#7f8899;margin-bottom:6px">${escapeHtml(details.formatted_address)}</div>`
-    : ''
-  const photoUrl = details?.photos?.[0]?.getUrl({ maxWidth: 260 })
-  const photoRow = photoUrl
-    ? `<img src="${photoUrl}" alt="" style="display:block;width:100%;height:110px;object-fit:cover;border-radius:8px;margin-bottom:8px" />`
-    : ''
-
-  return `
-    <div style="font-family:Pretendard,'Noto Sans KR',sans-serif;padding:2px 2px;min-width:200px;max-width:240px">
-      <div style="font-size:11px;font-weight:700;color:#5b7fc9;margin-bottom:2px">${place.order}번째 장소</div>
-      <div style="font-size:14px;font-weight:800;color:#17384a;margin-bottom:6px">${escapeHtml(place.title)}</div>
-      ${photoRow}
-      ${ratingRow}
-      ${openRow}
-      ${addressRow}
-      <div style="display:flex;gap:10px;font-size:11px;color:#345568">
-        <span><strong style="color:#17384a">${escapeHtml(place.startTime)}</strong> 방문</span>
-        <span>${escapeHtml(place.duration)} 머물기</span>
-      </div>
-    </div>
-  `
-}
-
 type TripMapViewProps = {
   places: MapMarkerPlace[]
   selectedPlaceId: string
@@ -187,15 +119,10 @@ export function TripMapView({ places, selectedPlaceId, fitSignal, fallbackCenter
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<GoogleMap | null>(null)
   const markersRef = useRef<Map<string, GoogleMarker>>(new Map())
-  const infoWindowRef = useRef<GoogleInfoWindow | null>(null)
-  const placesServiceRef = useRef<GooglePlacesService | null>(null)
-  const placeDetailsCacheRef = useRef<Map<string, GooglePlaceResult>>(new Map())
   const onSelectPlaceRef = useRef(onSelectPlace)
-  const selectedPlaceIdRef = useRef(selectedPlaceId)
   const lastFitRef = useRef<{ signal: string | null; locatedCount: number }>({ signal: null, locatedCount: 0 })
   useEffect(() => {
     onSelectPlaceRef.current = onSelectPlace
-    selectedPlaceIdRef.current = selectedPlaceId
   })
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined
   const [status, setStatus] = useState<MapStatus>(() => (apiKey ? 'loading' : 'unconfigured'))
@@ -219,13 +146,6 @@ export function TripMapView({ places, selectedPlaceId, fitSignal, fallbackCenter
           mapTypeControl: false,
           clickableIcons: false,
         })
-        infoWindowRef.current = new google.maps.InfoWindow()
-        infoWindowRef.current.addListener('closeclick', () => onSelectPlaceRef.current(''))
-        try {
-          placesServiceRef.current = new google.maps.places.PlacesService(mapRef.current)
-        } catch {
-          placesServiceRef.current = null
-        }
         setStatus('ready')
       })
       .catch(() => {
@@ -270,30 +190,7 @@ export function TripMapView({ places, selectedPlaceId, fitSignal, fallbackCenter
       marker.setIcon(markerIcon(google, isSelected, markerColor))
       marker.setLabel(markerLabel(place.order, isSelected))
       marker.setZIndex(isSelected ? 10 : 1)
-
-      if (isSelected && infoWindowRef.current) {
-        const cachedDetails = place.placeId ? placeDetailsCacheRef.current.get(place.placeId) : undefined
-        infoWindowRef.current.setContent(infoWindowContent(place, cachedDetails))
-        infoWindowRef.current.open({ map, anchor: marker })
-
-        if (place.placeId && !cachedDetails && placesServiceRef.current) {
-          placesServiceRef.current.getDetails(
-            { placeId: place.placeId, fields: ['rating', 'user_ratings_total', 'formatted_address', 'opening_hours', 'photos'] },
-            (result, requestStatus) => {
-              if (requestStatus !== 'OK' || !result) return
-              placeDetailsCacheRef.current.set(place.placeId as string, result)
-              if (selectedPlaceIdRef.current === place.id && infoWindowRef.current) {
-                infoWindowRef.current.setContent(infoWindowContent(place, result))
-              }
-            },
-          )
-        }
-      }
     })
-
-    if (!places.some((place) => place.id === selectedPlaceId)) {
-      infoWindowRef.current?.close()
-    }
   }, [places, selectedPlaceId, status, markerColor])
 
   useEffect(() => {

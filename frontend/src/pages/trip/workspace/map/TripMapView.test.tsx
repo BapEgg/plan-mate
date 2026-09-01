@@ -1,12 +1,53 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { TripMapView } from './TripMapView'
+import type { MapMarkerPlace } from './TripMapView'
 
 const noop = () => {}
+
+const place: MapMarkerPlace = {
+  id: 'p1',
+  order: 1,
+  title: '한라수목원',
+  startTime: '09:00',
+  duration: '1시간 30분',
+  placeId: 'place-1',
+  latitude: 33.5,
+  longitude: 126.5,
+}
+
+class MockMap {
+  fitBounds = vi.fn()
+  setCenter = vi.fn()
+  setZoom = vi.fn()
+  getZoom = vi.fn(() => 10)
+}
+
+class MockMarker {
+  static instances: MockMarker[] = []
+  listeners: Record<string, () => void> = {}
+  setMap = vi.fn()
+  setIcon = vi.fn()
+  setLabel = vi.fn()
+  setZIndex = vi.fn()
+  constructor() {
+    MockMarker.instances.push(this)
+  }
+  addListener(event: string, handler: () => void) {
+    this.listeners[event] = handler
+  }
+}
+
+class MockLatLngBounds {
+  extend = vi.fn()
+  isEmpty = vi.fn(() => false)
+}
 
 describe('TripMapView', () => {
   afterEach(() => {
     vi.unstubAllEnvs()
+    delete (window as { google?: unknown }).google
+    MockMarker.instances = []
   })
 
   it('renders an honest unconfigured fallback when no map key is set, instead of a blank or broken map', () => {
@@ -41,5 +82,35 @@ describe('TripMapView', () => {
     )
 
     expect(screen.getByText('지도를 불러오고 있습니다.')).toBeInTheDocument()
+  })
+
+  it('creates a marker per place and calls onSelectPlace when it is clicked', async () => {
+    vi.stubEnv('VITE_GOOGLE_MAPS_API_KEY', 'test-key')
+    ;(window as unknown as { google: unknown }).google = {
+      maps: {
+        Map: MockMap,
+        Marker: MockMarker,
+        LatLngBounds: MockLatLngBounds,
+        SymbolPath: { CIRCLE: 0 },
+        event: { clearInstanceListeners: vi.fn() },
+      },
+    }
+    const onSelectPlace = vi.fn()
+
+    render(
+      <TripMapView
+        places={[place]}
+        selectedPlaceId=""
+        fitSignal="1:0"
+        fallbackCenter={null}
+        markerColor="#e0483e"
+        onSelectPlace={onSelectPlace}
+      />,
+    )
+
+    await waitFor(() => expect(MockMarker.instances).toHaveLength(1))
+    MockMarker.instances[0].listeners.click()
+
+    expect(onSelectPlace).toHaveBeenCalledWith('p1')
   })
 })

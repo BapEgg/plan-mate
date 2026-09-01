@@ -1,15 +1,17 @@
 import { useMemo, useState } from 'react'
 import { TripMapView } from './TripMapView'
 import type { MapMarkerPlace } from './TripMapView'
+import { PlacePanel } from './PlacePanel'
 import type { ItineraryPlace } from '../workspaceTypes'
 import { formatFullDate } from '../workspaceFormatters'
 
-export function TripMapCanvas({ activeDay, activeDate, destination, destinationCenter, places, selectedPlaceId, onSelectPlace }: {
+export function TripMapCanvas({ activeDay, activeDate, destination, destinationCenter, places, selectedPlace, selectedPlaceId, onSelectPlace }: {
   activeDay: number
   activeDate: string | null
   destination: string
   destinationCenter: { lat: number; lng: number } | null
   places: ItineraryPlace[]
+  selectedPlace: ItineraryPlace | null
   selectedPlaceId: string
   onSelectPlace: (placeId: string) => void
 }) {
@@ -56,6 +58,7 @@ export function TripMapCanvas({ activeDay, activeDate, destination, destinationC
             <span><strong>장소 위치 확인 중</strong>{unresolvedCount}곳은 지도 위치를 아직 확인하지 못했습니다.</span>
           </div>
         )}
+        <PlacePanel place={selectedPlace} />
       </div>
     </section>
   )

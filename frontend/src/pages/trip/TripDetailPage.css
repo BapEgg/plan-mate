@@ -2863,3 +2863,63 @@
   color: #08764e;
   font-size: 0.85rem;
 }
+
+/* WP-C place panel: rating/photo/address enrichment, relocated from the old
+   InfoWindow into the docked panel. The base .place-detail-panel grid only
+   ever had 3 rows in column 1 (heading/h2/dl); bound its height and let the
+   link span the full height so it stays vertically centered as rows grow. */
+.trip-map-canvas > .place-detail-panel {
+  max-height: calc(100% - 32px);
+  overflow-y: auto;
+}
+
+.trip-map-canvas > .place-detail-panel > a,
+.trip-map-canvas > .place-detail-panel > .place-fallback-message {
+  grid-row: 1 / -1;
+}
+
+.trip-map-canvas > .place-detail-panel > .place-detail-photo,
+.trip-map-canvas > .place-detail-panel > .place-detail-rating-row,
+.trip-map-canvas > .place-detail-panel > .place-detail-address {
+  grid-column: 1;
+}
+
+.place-detail-photo {
+  display: block;
+  width: 100%;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 10px;
+  margin-top: 6px;
+}
+
+.place-detail-rating-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  font-size: 0.72rem;
+}
+
+.place-detail-rating {
+  font-weight: 800;
+  color: #9d5f08;
+}
+
+.place-detail-open-status {
+  font-weight: 800;
+}
+
+.place-detail-open-status.open {
+  color: #08764e;
+}
+
+.place-detail-open-status.closed {
+  color: #b73443;
+}
+
+.place-detail-address {
+  margin: 6px 0 0;
+  font-size: 0.7rem;
+  color: #7f8899;
+}
