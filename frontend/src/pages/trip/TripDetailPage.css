@@ -2314,39 +2314,6 @@
   display: block;
 }
 
-@media (max-width: 1260px) {
-  .planning-layout {
-    grid-template-columns: minmax(320px, 0.78fr) minmax(480px, 1.22fr);
-  }
-
-  .trip-chat-panel {
-    position: static;
-    min-height: 430px;
-    max-height: none;
-    grid-column: 1 / -1;
-    grid-template-rows: auto auto minmax(120px, 1fr) auto;
-  }
-}
-
-@media (max-width: 860px) {
-  .planning-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .itinerary-schedule {
-    min-height: 0;
-    max-height: none;
-  }
-
-  .trip-map-canvas {
-    min-height: 430px;
-  }
-
-  .trip-chat-panel {
-    grid-column: auto;
-  }
-}
-
 @media (max-width: 620px) {
   .trip-map-heading,
   .trip-chat-heading {
@@ -2737,4 +2704,162 @@
     flex-direction: column;
     gap: 3px;
   }
+}
+
+/* WP-B: membership manage drawer + roster action button */
+
+.member-roster-action {
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px 12px;
+  border: 1px solid rgba(32, 63, 80, 0.16);
+  border-radius: 10px;
+  background: #fffdf8;
+  color: #17384a;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.member-roster-action:hover,
+.member-roster-action:focus-visible {
+  background: #eef3f5;
+  outline: 2px solid #9fd1e8;
+}
+
+.membership-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 26, 33, 0.42);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 60;
+}
+
+.membership-drawer {
+  width: min(420px, 100vw);
+  height: 100%;
+  overflow-y: auto;
+  background: #fffdf8;
+  box-shadow: -18px 0 36px rgba(15, 26, 33, 0.22);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.membership-drawer:focus,
+.membership-drawer:focus-visible {
+  outline: none;
+}
+
+.membership-drawer-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.membership-drawer-close {
+  border: 0;
+  background: transparent;
+  font-size: 1.1rem;
+  color: #5b7480;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+}
+
+.membership-drawer-close:hover,
+.membership-drawer-close:focus-visible {
+  background: #eef3f5;
+  outline: 2px solid #9fd1e8;
+}
+
+.membership-drawer section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.membership-drawer h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.membership-drawer form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.membership-drawer label {
+  font-size: 0.8rem;
+  color: #5b7480;
+}
+
+.membership-drawer input,
+.membership-drawer select {
+  padding: 9px 10px;
+  border: 1px solid rgba(32, 63, 80, 0.16);
+  border-radius: 8px;
+  font: inherit;
+}
+
+.membership-drawer button[type='submit'] {
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: #17384a;
+  color: #fffdf8;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.membership-drawer button[type='submit']:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.membership-drawer-member-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.membership-drawer-member-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border: 1px solid rgba(32, 63, 80, 0.12);
+  border-radius: 10px;
+}
+
+.membership-drawer-member-list button {
+  border: 1px solid rgba(183, 52, 67, 0.3);
+  background: transparent;
+  color: #b73443;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.membership-drawer-empty {
+  color: #5b7480;
+  font-size: 0.85rem;
+}
+
+.membership-drawer-error {
+  color: #b73443;
+  font-size: 0.85rem;
+}
+
+.membership-drawer-success {
+  color: #08764e;
+  font-size: 0.85rem;
 }

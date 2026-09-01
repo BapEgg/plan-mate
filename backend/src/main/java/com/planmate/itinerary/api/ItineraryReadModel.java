@@ -9,6 +9,7 @@ public record ItineraryReadModel(
         Long id,
         Long generationId,
         Instant createdAt,
+        int version,
         List<Day> days
 ) {
 

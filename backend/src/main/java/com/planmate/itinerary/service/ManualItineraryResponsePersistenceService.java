@@ -112,7 +112,11 @@ public class ManualItineraryResponsePersistenceService {
             NormalizedAiItineraryDraft normalizedDraft,
             Instant now
     ) {
-        ItineraryEntity itinerary = itineraryRepository.save(ItineraryEntity.create(generation, now));
+        int nextVersion = itineraryRepository.findMaxVersionByTripId(generation.getTripId()) + 1;
+        ItineraryEntity itinerary = itineraryRepository.save(ItineraryEntity.create(generation, now, nextVersion));
+        // ADR-0002: 저장 즉시 이 itinerary가 trip의 current pointer가 된다 — 기존
+        // "createdAt desc가 항상 최신을 가리킨다"는 동작과 동일하게 유지한다.
+        itineraryRepository.markAsCurrentForTrip(generation.getTripId(), itinerary.getId());
         for (NormalizedAiItineraryDraft.Day responseDay : normalizedDraft.days()) {
             ItineraryDayEntity day = itineraryDayRepository.save(ItineraryDayEntity.create(
                     itinerary,

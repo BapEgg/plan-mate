@@ -2,6 +2,7 @@ package com.planmate.auth.local;
 
 import com.planmate.auth.entity.LocalCredentialEntity;
 import com.planmate.auth.repository.LocalCredentialRepository;
+import com.planmate.trip.entity.MembershipStatus;
 import com.planmate.trip.entity.TripEntity;
 import com.planmate.trip.entity.TripMemberEntity;
 import com.planmate.trip.repository.TripMemberRepository;
@@ -64,7 +65,7 @@ public class LocalTestTripMembershipInitializer implements ApplicationRunner {
                             "Local test membership account not found: " + loginId
                     ));
             UserEntity user = credential.getUser();
-            if (tripMemberRepository.existsByTrip_IdAndUser_Id(trip.getId(), user.getId())) {
+            if (tripMemberRepository.existsByTrip_IdAndUser_IdAndStatus(trip.getId(), user.getId(), MembershipStatus.ACTIVE)) {
                 log.info("Local test trip membership already exists: tripId={}, loginId={}", trip.getId(), loginId);
                 continue;
             }

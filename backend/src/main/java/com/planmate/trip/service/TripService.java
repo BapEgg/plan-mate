@@ -12,6 +12,7 @@ import com.planmate.trip.domain.ResolvedSchedulePreference;
 import com.planmate.trip.dto.TripCreateRequest;
 import com.planmate.trip.dto.TripStatus;
 import com.planmate.trip.dto.TripSummaryResponse;
+import com.planmate.trip.entity.MembershipStatus;
 import com.planmate.trip.entity.TripEntity;
 import com.planmate.trip.entity.TripMemberEntity;
 import com.planmate.trip.entity.TripPlanningProfileEntity;
@@ -122,11 +123,11 @@ public class TripService implements TripDetailTripReader {
 
     @Transactional(readOnly = true)
     public List<TripSummaryResponse> listMine(Long userId) {
-        return tripMemberRepository.findByUser_IdOrderByTrip_CreatedAtDesc(userId)
+        return tripMemberRepository.findByUser_IdAndStatusOrderByTrip_CreatedAtDesc(userId, MembershipStatus.ACTIVE)
                 .stream()
                 .map(member -> {
                     TripEntity trip = member.getTrip();
-                    return toSummaryResponse(trip, tripMemberRepository.countByTrip_Id(trip.getId()));
+                    return toSummaryResponse(trip, tripMemberRepository.countByTrip_IdAndStatus(trip.getId(), MembershipStatus.ACTIVE));
                 })
                 .toList();
     }
@@ -143,7 +144,7 @@ public class TripService implements TripDetailTripReader {
     public TripDetailTrip getAccessibleTrip(Long userId, Long tripId) {
         TripEntity trip = tripRepository.findAccessibleTrip(tripId, userId)
                 .orElseThrow(TripNotFoundException::new);
-        List<TripMemberEntity> members = tripMemberRepository.findByTrip_IdOrderByCreatedAtAsc(trip.getId());
+        List<TripMemberEntity> members = tripMemberRepository.findByTrip_IdAndStatusOrderByCreatedAtAsc(trip.getId(), MembershipStatus.ACTIVE);
         List<TripDetailTrip.Member> memberResponses = members.stream()
                 .map(member -> new TripDetailTrip.Member(
                         member.getUser().getId(),
@@ -167,7 +168,8 @@ public class TripService implements TripDetailTripReader {
                 toDestinationInfo(trip),
                 tripPlanningProfileRepository.findByTrip_Id(trip.getId())
                         .map(this::toPlanningProfile)
-                        .orElse(null)
+                        .orElse(null),
+                trip.getTimezone()
         );
     }
 

@@ -5,7 +5,9 @@ import org.springframework.http.HttpStatus;
 public enum CommonErrorCode implements ErrorCode {
 
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Invalid request."),
-    DATA_CONFLICT(HttpStatus.CONFLICT, "DATA_CONFLICT", "Data conflict.");
+    FORBIDDEN(HttpStatus.FORBIDDEN, "FORBIDDEN", "This action requires a different role."),
+    DATA_CONFLICT(HttpStatus.CONFLICT, "DATA_CONFLICT", "Data conflict."),
+    RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "RATE_LIMITED", "Too many requests.");
 
     private final HttpStatus status;
     private final String code;

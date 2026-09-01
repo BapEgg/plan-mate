@@ -3,10 +3,10 @@ import type { IMessage, StompSubscription } from '@stomp/stompjs'
 import { API_BASE_URL } from './client'
 import type { GenerationStatus } from './trips'
 
-export type RealtimeEventEnvelope<TPayload> = {
+export type RealtimeEventEnvelope<TType extends string, TPayload> = {
   eventId: string
   schemaVersion: number
-  type: string
+  type: TType
   tripId: string
   occurredAt: string
   payload: TPayload
@@ -21,10 +21,20 @@ export type ItineraryGenerationStatusChangedPayload = {
   updatedAt: string
 }
 
-export type TripRealtimeEvent =
-  RealtimeEventEnvelope<ItineraryGenerationStatusChangedPayload>
+export type MembershipChangeType = 'REMOVED' | 'LEFT' | 'JOINED' | 'OWNER_TRANSFERRED' | 'TITLE_UPDATED'
+
+export type MembershipChangedPayload = {
+  affectedUserId: number | null
+  changeType: MembershipChangeType
+}
 
 export const ITINERARY_GENERATION_STATUS_CHANGED = 'ITINERARY_GENERATION_STATUS_CHANGED'
+export const MEMBERSHIP_CHANGED = 'MEMBERSHIP_CHANGED'
+
+// `type` is a literal discriminant per variant so `event.type === X` narrows `event.payload`.
+export type TripRealtimeEvent =
+  | RealtimeEventEnvelope<typeof ITINERARY_GENERATION_STATUS_CHANGED, ItineraryGenerationStatusChangedPayload>
+  | RealtimeEventEnvelope<typeof MEMBERSHIP_CHANGED, MembershipChangedPayload>
 
 type TripRealtimeConnectionOptions = {
   accessToken: string

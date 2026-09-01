@@ -1,6 +1,7 @@
 package com.planmate.realtime.itinerary;
 
 import com.planmate.common.realtime.RealtimeEventEnvelope;
+import com.planmate.common.realtime.RealtimeEventType;
 import com.planmate.itinerary.api.event.ItineraryGenerationStatusChangedEvent;
 import java.time.Clock;
 import java.time.Instant;
@@ -8,8 +9,6 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class ItineraryGenerationRealtimeEventMapper {
-
-    public static final String ITINERARY_GENERATION_STATUS_CHANGED = "ITINERARY_GENERATION_STATUS_CHANGED";
 
     private final Clock clock;
 
@@ -21,7 +20,7 @@ public class ItineraryGenerationRealtimeEventMapper {
             ItineraryGenerationStatusChangedEvent event
     ) {
         return RealtimeEventEnvelope.create(
-                ITINERARY_GENERATION_STATUS_CHANGED,
+                RealtimeEventType.ITINERARY_GENERATION_STATUS_CHANGED,
                 event.tripId(),
                 Instant.now(clock),
                 new ItineraryGenerationStatusChangedPayload(

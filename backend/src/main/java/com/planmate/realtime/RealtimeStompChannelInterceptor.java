@@ -11,6 +11,7 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+import org.springframework.context.event.EventListener;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.security.access.AccessDeniedException;
@@ -21,6 +22,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
 @Component
 public class RealtimeStompChannelInterceptor implements ChannelInterceptor {
@@ -31,15 +33,18 @@ public class RealtimeStompChannelInterceptor implements ChannelInterceptor {
     private final JwtDecoder jwtDecoder;
     private final PlanMateJwtAuthenticationConverter jwtAuthenticationConverter;
     private final TripMembershipChecker tripMembershipChecker;
+    private final RealtimeSessionRegistry sessionRegistry;
 
     public RealtimeStompChannelInterceptor(
             JwtDecoder jwtDecoder,
             PlanMateJwtAuthenticationConverter jwtAuthenticationConverter,
-            TripMembershipChecker tripMembershipChecker
+            TripMembershipChecker tripMembershipChecker,
+            RealtimeSessionRegistry sessionRegistry
     ) {
         this.jwtDecoder = jwtDecoder;
         this.jwtAuthenticationConverter = jwtAuthenticationConverter;
         this.tripMembershipChecker = tripMembershipChecker;
+        this.sessionRegistry = sessionRegistry;
     }
 
     @Override
@@ -61,6 +66,9 @@ public class RealtimeStompChannelInterceptor implements ChannelInterceptor {
         }
         if (StompCommand.SEND.equals(command)) {
             rejectBrokerTopicSend(accessor);
+        }
+        if (StompCommand.DISCONNECT.equals(command)) {
+            sessionRegistry.removeSession(accessor.getSessionId());
         }
         return message;
     }
@@ -101,6 +109,7 @@ public class RealtimeStompChannelInterceptor implements ChannelInterceptor {
         if (!tripMembershipChecker.isMember(user.userId(), tripId)) {
             throw new AccessDeniedException("Trip membership is required to subscribe");
         }
+        sessionRegistry.registerSubscription(accessor.getSessionId(), user.userId(), tripId);
     }
 
     private void rejectBrokerTopicSend(StompHeaderAccessor accessor) {
@@ -108,6 +117,15 @@ public class RealtimeStompChannelInterceptor implements ChannelInterceptor {
         if (StringUtils.hasText(destination) && destination.startsWith("/topic/")) {
             throw new AccessDeniedException("Clients cannot send directly to broker topics");
         }
+    }
+
+    /**
+     * 정상 STOMP DISCONNECT 없이 끊기는 경우(네트워크 단절, 브라우저 종료 등)에도 registry가
+     * 정확하게 유지되도록, transport 레벨 종료 이벤트에서도 session을 제거한다.
+     */
+    @EventListener
+    public void onSessionDisconnect(SessionDisconnectEvent event) {
+        sessionRegistry.removeSession(event.getSessionId());
     }
 
     private AuthenticatedUser authenticatedUser(Principal principal) {

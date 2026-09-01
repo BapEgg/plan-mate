@@ -156,14 +156,14 @@ class AiItineraryDraftNormalizerTest {
     private ItineraryEntity persistedItinerary(List<ItineraryDayEntity> days) {
         ItineraryGenerationEntity generation = ItineraryGenerationEntity.create(45L, "test", NOW);
         ReflectionTestUtils.setField(generation, "id", 10L);
-        ItineraryEntity itinerary = ItineraryEntity.create(generation, NOW);
+        ItineraryEntity itinerary = ItineraryEntity.create(generation, NOW, 1);
         ReflectionTestUtils.setField(itinerary, "days", days);
         return itinerary;
     }
 
     private ItineraryDayEntity persistedDay(int day, List<ItineraryItemEntity> items) {
         ItineraryGenerationEntity generation = ItineraryGenerationEntity.create(45L, "test", NOW);
-        ItineraryEntity itinerary = ItineraryEntity.create(generation, NOW);
+        ItineraryEntity itinerary = ItineraryEntity.create(generation, NOW, 1);
         ItineraryDayEntity entity = ItineraryDayEntity.create(itinerary, day, LocalDate.of(2026, 10, 8).plusDays(day));
         ReflectionTestUtils.setField(entity, "items", items);
         items.forEach(item -> ReflectionTestUtils.setField(item, "day", entity));
@@ -173,7 +173,7 @@ class AiItineraryDraftNormalizerTest {
     private ItineraryItemEntity persistedItem(int sequence, String placeId, String startTime, int durationMinutes) {
         ItineraryGenerationEntity generation = ItineraryGenerationEntity.create(45L, "test", NOW);
         ItineraryDayEntity day = ItineraryDayEntity.create(
-                ItineraryEntity.create(generation, NOW),
+                ItineraryEntity.create(generation, NOW, 1),
                 1,
                 LocalDate.of(2026, 10, 9)
         );

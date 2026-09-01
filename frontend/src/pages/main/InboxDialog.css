@@ -1,0 +1,174 @@
+.inbox-trigger-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(32, 63, 80, 0.16);
+  border-radius: 12px;
+  background: #fffdf8;
+  color: #17384a;
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+
+.inbox-trigger-button:hover,
+.inbox-trigger-button:focus-visible {
+  background: #eef3f5;
+  outline: 2px solid #9fd1e8;
+}
+
+.inbox-trigger-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #b73443;
+  color: #fffdf8;
+  font-size: 0.65rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inbox-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 26, 33, 0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 70;
+  padding: 20px;
+}
+
+.inbox-dialog {
+  width: min(480px, 100%);
+  max-height: min(640px, 100%);
+  overflow-y: auto;
+  background: #fffdf8;
+  border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(15, 26, 33, 0.32);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.inbox-dialog:focus,
+.inbox-dialog:focus-visible {
+  outline: none;
+}
+
+.inbox-dialog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.inbox-dialog-close {
+  border: 0;
+  background: transparent;
+  font-size: 1.1rem;
+  color: #5b7480;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+}
+
+.inbox-dialog-close:hover,
+.inbox-dialog-close:focus-visible {
+  background: #eef3f5;
+  outline: 2px solid #9fd1e8;
+}
+
+.inbox-dialog-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 4px;
+  border-radius: 12px;
+  background: #eef3f5;
+}
+
+.inbox-dialog-tabs button {
+  border: 0;
+  border-radius: 9px;
+  padding: 8px 6px;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #5b7480;
+  background: transparent;
+  cursor: pointer;
+}
+
+.inbox-dialog-tabs button.active {
+  color: #17384a;
+  background: #fffdf8;
+  box-shadow: 0 4px 10px rgba(23, 56, 74, 0.14);
+}
+
+.inbox-dialog-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inbox-dialog-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(32, 63, 80, 0.12);
+  border-radius: 12px;
+  font-size: 0.88rem;
+}
+
+.inbox-dialog-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.inbox-dialog-actions button {
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  background: #17384a;
+  color: #fffdf8;
+}
+
+.inbox-dialog-actions button.secondary {
+  background: transparent;
+  color: #5b7480;
+  border: 1px solid rgba(32, 63, 80, 0.16);
+}
+
+.inbox-dialog-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.inbox-dialog-empty {
+  color: #5b7480;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 12px 0;
+}
+
+.inbox-dialog-error {
+  color: #b73443;
+  font-size: 0.85rem;
+}

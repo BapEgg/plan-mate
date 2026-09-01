@@ -50,9 +50,9 @@ class ItineraryEntityIntegrationTest {
     @Test
     void enforcesSingleItineraryPerGeneration() {
         ItineraryGenerationEntity generation = createGeneration();
-        itineraryRepository.saveAndFlush(ItineraryEntity.create(generation, NOW));
+        itineraryRepository.saveAndFlush(ItineraryEntity.create(generation, NOW, 1));
 
-        assertThatThrownBy(() -> itineraryRepository.saveAndFlush(ItineraryEntity.create(generation, NOW.plusSeconds(1))))
+        assertThatThrownBy(() -> itineraryRepository.saveAndFlush(ItineraryEntity.create(generation, NOW.plusSeconds(1), 2)))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
@@ -63,8 +63,8 @@ class ItineraryEntityIntegrationTest {
                 ItineraryGenerationEntity.create(first.getTripId(), "test", NOW)
         );
 
-        itineraryRepository.saveAndFlush(ItineraryEntity.create(first, NOW));
-        itineraryRepository.saveAndFlush(ItineraryEntity.create(second, NOW.plusSeconds(1)));
+        itineraryRepository.saveAndFlush(ItineraryEntity.create(first, NOW, 1));
+        itineraryRepository.saveAndFlush(ItineraryEntity.create(second, NOW.plusSeconds(1), 2));
 
         assertThat(itineraryRepository.findByGeneration_Id(first.getId())).isPresent();
         assertThat(itineraryRepository.findByGeneration_Id(second.getId())).isPresent();
@@ -128,7 +128,7 @@ class ItineraryEntityIntegrationTest {
     @Test
     void deletesItineraryWhenGenerationIsDeleted() {
         ItineraryGenerationEntity generation = createGeneration();
-        itineraryRepository.saveAndFlush(ItineraryEntity.create(generation, NOW));
+        itineraryRepository.saveAndFlush(ItineraryEntity.create(generation, NOW, 1));
 
         entityManager.clear();
         generationRepository.deleteById(generation.getId());

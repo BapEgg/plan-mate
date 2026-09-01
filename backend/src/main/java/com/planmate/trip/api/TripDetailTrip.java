@@ -30,7 +30,8 @@ public record TripDetailTrip(
         Instant createdAt,
         List<Member> members,
         DestinationInfo destinationInfo,
-        PlanningProfile planningProfile
+        PlanningProfile planningProfile,
+        String timezone
 ) {
 
     public record Member(

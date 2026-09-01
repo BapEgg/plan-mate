@@ -35,6 +35,12 @@ public class OutboxEventEntity {
     @Column(nullable = false)
     private Instant createdAt;
 
+    @Column(name = "dispatched_at")
+    private Instant dispatchedAt;
+
+    @Column(name = "dispatch_attempts", nullable = false)
+    private int dispatchAttempts;
+
     protected OutboxEventEntity() {
     }
 
@@ -85,5 +91,22 @@ public class OutboxEventEntity {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public Instant getDispatchedAt() {
+        return dispatchedAt;
+    }
+
+    public int getDispatchAttempts() {
+        return dispatchAttempts;
+    }
+
+    /**
+     * ADR-0004: realtime fan-out publish가 성공했음을 기록한다. WP-A는 이 mutator를 제공만
+     * 하고 호출자(reconciliation)는 WP-B/D가 두 번째 realtime event type을 추가할 때 배선한다.
+     */
+    public void markDispatched(Instant dispatchedAt) {
+        this.dispatchedAt = dispatchedAt;
+        this.dispatchAttempts++;
     }
 }

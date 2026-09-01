@@ -63,7 +63,7 @@ class LocalTestTripMembershipInitializerTest {
         given(credential.getUser()).willReturn(local1);
         given(tripRepository.findById(1530L)).willReturn(Optional.of(trip));
         given(localCredentialRepository.findByLoginId("local1")).willReturn(Optional.of(credential));
-        given(tripMemberRepository.existsByTrip_IdAndUser_Id(1530L, 2623L)).willReturn(true);
+        given(tripMemberRepository.existsByTrip_IdAndUser_IdAndStatus(1530L, 2623L, com.planmate.trip.entity.MembershipStatus.ACTIVE)).willReturn(true);
 
         initializer(properties(1530L, "local1")).run(null);
 

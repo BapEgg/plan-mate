@@ -20,6 +20,7 @@ public record TripDetailResponse(
         List<TripDetailTrip.Member> members,
         TripDetailTrip.DestinationInfo destinationInfo,
         TripDetailTrip.PlanningProfile planningProfile,
+        String timezone,
         List<Itinerary> itineraries
 ) {
 
@@ -27,6 +28,7 @@ public record TripDetailResponse(
             Long id,
             Long generationId,
             Instant createdAt,
+            int version,
             List<Day> days
     ) {
     }

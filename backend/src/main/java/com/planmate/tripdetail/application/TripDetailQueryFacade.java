@@ -42,6 +42,7 @@ public class TripDetailQueryFacade {
                 trip.members(),
                 trip.destinationInfo(),
                 trip.planningProfile(),
+                trip.timezone(),
                 itineraries
         );
     }
@@ -51,6 +52,7 @@ public class TripDetailQueryFacade {
                 itinerary.id(),
                 itinerary.generationId(),
                 itinerary.createdAt(),
+                itinerary.version(),
                 itinerary.days().stream()
                         .map(this::toDayResponse)
                         .toList()

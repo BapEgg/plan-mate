@@ -40,6 +40,9 @@ public class ItineraryEntity {
     @Column(nullable = false)
     private Instant createdAt;
 
+    @Column(nullable = false)
+    private int version;
+
     @OneToMany(mappedBy = "itinerary")
     @OrderBy("day ASC")
     private List<ItineraryDayEntity> days = new ArrayList<>();
@@ -47,14 +50,19 @@ public class ItineraryEntity {
     protected ItineraryEntity() {
     }
 
-    private ItineraryEntity(ItineraryGenerationEntity generation, Instant createdAt) {
+    private ItineraryEntity(ItineraryGenerationEntity generation, Instant createdAt, int version) {
         this.tripId = generation.getTripId();
         this.generation = generation;
         this.createdAt = createdAt;
+        this.version = version;
     }
 
-    public static ItineraryEntity create(ItineraryGenerationEntity generation, Instant createdAt) {
-        return new ItineraryEntity(generation, createdAt);
+    /**
+     * ADR-0002: version은 trip 내 단조 증가하는 순번이다. 호출자가 "현재 trip의 최대 version + 1"을
+     * 계산해 넘겨야 한다 (예: {@code ItineraryRepository.findMaxVersionByTripId}).
+     */
+    public static ItineraryEntity create(ItineraryGenerationEntity generation, Instant createdAt, int version) {
+        return new ItineraryEntity(generation, createdAt, version);
     }
 
     public Long getId() {
@@ -71,6 +79,10 @@ public class ItineraryEntity {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public int getVersion() {
+        return version;
     }
 
     public List<ItineraryDayEntity> getDays() {

@@ -20,6 +20,10 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "trips")
 public class TripEntity {
 
+    // ADR-0005: 목적지별 timezone 조회(WP-C/F)가 나오기 전까지 모든 신규 trip은 국내 여행으로
+    // 취급한다. 기존 trip은 V24 migration이 같은 값으로 백필한다.
+    private static final String DEFAULT_TIMEZONE = "Asia/Seoul";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -77,6 +81,12 @@ public class TripEntity {
     @Column(nullable = false)
     private Instant updatedAt;
 
+    @Column(nullable = false, length = 64)
+    private String timezone;
+
+    @Column(name = "current_itinerary_id")
+    private Long currentItineraryId;
+
     protected TripEntity() {
     }
 
@@ -115,6 +125,7 @@ public class TripEntity {
         this.createdBy = createdBy;
         this.createdAt = now;
         this.updatedAt = now;
+        this.timezone = DEFAULT_TIMEZONE;
     }
 
     public static TripEntity create(
@@ -225,6 +236,19 @@ public class TripEntity {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public void updateTitle(String title, Instant now) {
+        this.title = title;
+        this.updatedAt = now;
+    }
+
+    public String getTimezone() {
+        return timezone;
+    }
+
+    public Long getCurrentItineraryId() {
+        return currentItineraryId;
     }
 
 }

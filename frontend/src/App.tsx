@@ -4,7 +4,7 @@ import { useRef } from 'react'
 import './App.css'
 import { MainPage } from './pages/main/MainPage'
 import { TripCreatePage } from './pages/trip/TripCreatePage'
-import { TripDetailPage } from './pages/trip/TripDetailPage'
+import { TripWorkspacePage } from './pages/trip/workspace/TripWorkspacePage'
 import {
   ApiError,
   confirmEmail,
@@ -414,7 +414,7 @@ function App() {
 
   if (page === 'tripDetail') {
     return (
-      <TripDetailPage
+      <TripWorkspacePage
         accessToken={accessToken}
         key={window.location.pathname}
         tripId={window.location.pathname.split('/').filter(Boolean)[1] ?? ''}

@@ -41,14 +41,17 @@ class RealtimeStompChannelInterceptorTest {
     @Mock
     private TripMembershipChecker tripMembershipChecker;
 
+    private RealtimeSessionRegistry sessionRegistry;
     private RealtimeStompChannelInterceptor interceptor;
 
     @BeforeEach
     void setUp() {
+        sessionRegistry = new RealtimeSessionRegistry();
         interceptor = new RealtimeStompChannelInterceptor(
                 jwtDecoder,
                 new PlanMateJwtAuthenticationConverter(),
-                tripMembershipChecker
+                tripMembershipChecker,
+                sessionRegistry
         );
     }
 
@@ -138,6 +141,35 @@ class RealtimeStompChannelInterceptorTest {
 
         assertThatThrownBy(() -> interceptor.preSend(message(accessor), mock(MessageChannel.class)))
                 .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void subscribeRegistersSessionForRevocation() {
+        given(tripMembershipChecker.isMember(7L, 45L)).willReturn(true);
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
+        accessor.setSessionId("session-1");
+        accessor.setDestination("/topic/trips/45/events");
+        accessor.setUser(authentication(7L));
+
+        interceptor.preSend(message(accessor), mock(MessageChannel.class));
+
+        assertThat(sessionRegistry.findSessionIds(45L, 7L)).containsExactly("session-1");
+    }
+
+    @Test
+    void disconnectRemovesSessionFromRegistry() {
+        given(tripMembershipChecker.isMember(7L, 45L)).willReturn(true);
+        StompHeaderAccessor subscribe = StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
+        subscribe.setSessionId("session-1");
+        subscribe.setDestination("/topic/trips/45/events");
+        subscribe.setUser(authentication(7L));
+        interceptor.preSend(message(subscribe), mock(MessageChannel.class));
+
+        StompHeaderAccessor disconnect = StompHeaderAccessor.create(StompCommand.DISCONNECT);
+        disconnect.setSessionId("session-1");
+        interceptor.preSend(message(disconnect), mock(MessageChannel.class));
+
+        assertThat(sessionRegistry.findSessionIds(45L, 7L)).isEmpty();
     }
 
     private Jwt jwt(Long userId) {

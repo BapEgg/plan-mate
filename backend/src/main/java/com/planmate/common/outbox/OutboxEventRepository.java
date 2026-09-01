@@ -24,4 +24,10 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEventEntity, 
             @Param("cutoff") Instant cutoff,
             @Param("batchSize") int batchSize
     );
+
+    /**
+     * ADR-0004: crash 복구 reconciliation이 사용할 조회. 기본적으로 비활성 상태인
+     * {@link OutboxReconciliationScheduler}만 이 메서드를 호출한다.
+     */
+    long countByDispatchedAtIsNullAndCreatedAtBefore(Instant cutoff);
 }

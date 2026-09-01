@@ -26,21 +26,21 @@ class TripMembershipQueryServiceTest {
 
     @Test
     void isMemberReturnsTrueWhenTripMemberExists() {
-        given(tripMemberRepository.existsByTrip_IdAndUser_Id(45L, 7L)).willReturn(true);
+        given(tripMemberRepository.existsByTrip_IdAndUser_IdAndStatus(45L, 7L, com.planmate.trip.entity.MembershipStatus.ACTIVE)).willReturn(true);
 
         boolean result = service.isMember(7L, 45L);
 
         assertThat(result).isTrue();
-        verify(tripMemberRepository).existsByTrip_IdAndUser_Id(45L, 7L);
+        verify(tripMemberRepository).existsByTrip_IdAndUser_IdAndStatus(45L, 7L, com.planmate.trip.entity.MembershipStatus.ACTIVE);
     }
 
     @Test
     void isMemberReturnsFalseWhenTripMemberDoesNotExist() {
-        given(tripMemberRepository.existsByTrip_IdAndUser_Id(45L, 7L)).willReturn(false);
+        given(tripMemberRepository.existsByTrip_IdAndUser_IdAndStatus(45L, 7L, com.planmate.trip.entity.MembershipStatus.ACTIVE)).willReturn(false);
 
         boolean result = service.isMember(7L, 45L);
 
         assertThat(result).isFalse();
-        verify(tripMemberRepository).existsByTrip_IdAndUser_Id(45L, 7L);
+        verify(tripMemberRepository).existsByTrip_IdAndUser_IdAndStatus(45L, 7L, com.planmate.trip.entity.MembershipStatus.ACTIVE);
     }
 }

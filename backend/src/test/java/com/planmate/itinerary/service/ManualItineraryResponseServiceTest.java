@@ -587,7 +587,7 @@ class ManualItineraryResponseServiceTest {
     }
 
     private ItineraryEntity persistedItinerary(List<ItineraryDayEntity> days) {
-        ItineraryEntity itinerary = ItineraryEntity.create(generation, Instant.now(clock));
+        ItineraryEntity itinerary = ItineraryEntity.create(generation, Instant.now(clock), 1);
         ReflectionTestUtils.setField(itinerary, "days", days);
         return itinerary;
     }
@@ -598,7 +598,7 @@ class ManualItineraryResponseServiceTest {
 
     private ItineraryDayEntity persistedDay(int day, List<ItineraryItemEntity> items) {
         ItineraryDayEntity entity = ItineraryDayEntity.create(
-                ItineraryEntity.create(generation, Instant.now(clock)),
+                ItineraryEntity.create(generation, Instant.now(clock), 1),
                 day,
                 LocalDate.of(2026, 10, 8).plusDays(day)
         );
@@ -609,7 +609,7 @@ class ManualItineraryResponseServiceTest {
 
     private ItineraryItemEntity persistedItem(int sequence, String placeId, String startTime, int durationMinutes) {
         return ItineraryItemEntity.create(
-                ItineraryDayEntity.create(ItineraryEntity.create(generation, Instant.now(clock)), 1, LocalDate.of(2026, 10, 9)),
+                ItineraryDayEntity.create(ItineraryEntity.create(generation, Instant.now(clock), 1), 1, LocalDate.of(2026, 10, 9)),
                 sequence,
                 placeId,
                 LocalTime.parse(startTime),

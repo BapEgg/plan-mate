@@ -23,7 +23,10 @@ public class ItineraryQueryService implements LatestItineraryReader {
     @Override
     @Transactional(readOnly = true)
     public Optional<ItineraryReadModel> findLatestByTripId(Long tripId) {
-        return itineraryRepository.findFirstByTripIdOrderByCreatedAtDesc(tripId)
+        // ADR-0002: current pointer(trips.current_itinerary_id)가 진짜 소스다. 백필이
+        // 모든 trip에 포인터를 채워두므로 fallback은 방어적 상황에서만 쓰인다.
+        return itineraryRepository.findCurrentByTripId(tripId)
+                .or(() -> itineraryRepository.findFirstByTripIdOrderByCreatedAtDesc(tripId))
                 .map(this::toReadModel);
     }
 
@@ -32,6 +35,7 @@ public class ItineraryQueryService implements LatestItineraryReader {
                 itinerary.getId(),
                 itinerary.getGeneration().getId(),
                 itinerary.getCreatedAt(),
+                itinerary.getVersion(),
                 itinerary.getDays().stream()
                         .sorted(Comparator.comparingInt(ItineraryDayEntity::getDay))
                         .map(this::toDayReadModel)

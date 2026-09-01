@@ -32,7 +32,8 @@ public class RealtimeWebSocketConfig implements WebSocketMessageBrokerConfigurer
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        registry.enableSimpleBroker("/topic");
+        // ADR-0003: /queue는 개인 destination(/user/{userId}/queue/...)에 필요하다.
+        registry.enableSimpleBroker("/topic", "/queue");
         registry.setApplicationDestinationPrefixes("/app");
     }
 

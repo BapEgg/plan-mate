@@ -32,12 +32,12 @@ class RealtimeWebSocketConfigTest {
     }
 
     @Test
-    void configureMessageBrokerKeepsTopicBrokerAndApplicationPrefix() {
+    void configureMessageBrokerEnablesTopicAndQueueBrokerAndApplicationPrefix() {
         MessageBrokerRegistry registry = mock(MessageBrokerRegistry.class);
 
         config.configureMessageBroker(registry);
 
-        verify(registry).enableSimpleBroker("/topic");
+        verify(registry).enableSimpleBroker("/topic", "/queue");
         verify(registry).setApplicationDestinationPrefixes("/app");
     }
 

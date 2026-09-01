@@ -1,7 +1,7 @@
 # PlanMate 협업형 여행 상세 워크스페이스 실행 명세
 
-> 상태: 요구사항 검증 완료 / API 계약 작성 전  
-> 문서 버전: 1.0  
+> 상태: 요구사항 검증 완료 / 대형 work package 실행 계획 포함 / API 계약 작성 전
+> 문서 버전: 1.1
 > 대상 화면: `/trips/{tripId}`  
 > 기준 데이터: `tripId=1530`, `generationId=1415`, `itineraryId=505`  
 > 최종 검토일: 2026-08-31  
@@ -90,16 +90,17 @@ archive는 결정 배경을 확인할 때만 사용한다. archive의 반복 문
 
 ### 3.2 일부만 구현됨
 
-- 중앙 지도는 좌표를 CSS/SVG에 배치한 prototype이며 지도 SDK가 아니다.
-- route 선은 실제 provider geometry가 아니다.
-- 우측 채팅·투표는 empty UI뿐이며 저장·전송 API가 없다.
+- 중앙 지도는 Google Maps JavaScript SDK와 실제 place 좌표 marker를 사용하고 DAY·timeline 선택을 동기화한다. 다만 Places library loading, 좌표 지연 도착 뒤 bounds 갱신, 장소 상세 panel과 provider 오류 복구는 안정화 전이다.
+- route 선·이동 시간·거리는 아직 표시하지 않으며 화면용 provider geometry API도 없다. 기존 Google Routes adapter는 AI 일정 validation용 duration/distance 경계다.
+- 우측 채팅·투표는 고정 preview UI뿐이며 저장·전송 API가 없다. 기본 production 화면에서 실제 데이터로 오인되지 않도록 demo fixture 격리 또는 명확한 미연결 상태가 필요하다.
+- WIDE 3열과 NARROW 단일 pane은 구현됐지만 MEDIUM의 `일정 | 지도 | 여행방` 전환 동작과 tab 접근성은 보완 전이다.
 - 실시간 권한은 `SUBSCRIBE` 시점만 검사하며 이미 연결된 session의 멤버십 상실을 무효화하지 못한다.
 - 최신 일정은 `createdAt desc`로 선택하며 명시적 current pointer·version guard가 없다.
 
 ### 3.3 구현되지 않음
 
 - 제품용 초대·친구·나가기·내보내기·방장 이전
-- 실제 지도 SDK·polyline·route cache
+- 실제 route polyline·route snapshot/cache·후보 detour
 - itinerary proposal, immutable version history와 current pointer
 - 투표·ballot·마감 scheduler·자동 적용
 - 채팅·읽음·reply·reaction·typing·presence·검색·알림
@@ -166,7 +167,7 @@ archive는 결정 배경을 확인할 때만 사용한다. archive의 반복 문
 - 채팅처럼 append-only인 데이터만 event payload를 즉시 merge하고 재연결 시 REST로 gap을 복구한다.
 - 공통 envelope는 `eventId`, `schemaVersion`, `type`, `tripId`, `occurredAt`, `payload`를 유지한다.
 - client는 알 수 없는 schema/type을 무시하고 전체 화면을 실패시키지 않는다.
-- DB 변경과 외부 event 발행은 기존 outbox 경계를 재사용한다.
+- DB 변경과 외부 event 발행은 기존 outbox 저장 경계를 재사용하되, 현재 없는 dispatcher·retry·delivery checkpoint를 C3/outbox ADR에 따라 추가한다.
 - event 순서만 신뢰하지 않고 entity version·sequence로 중복과 역전을 처리한다.
 
 ## 5. 화면 기능 명세
@@ -438,24 +439,62 @@ migration 전 현재 fixture `1530/1415/505`와 기존 여행 조회가 유지�
 
 ## 10. 의존성·중복·병목 리뷰
 
-### 10.1 교차 기능 병목
+### 10.1 먼저 고정해야 하는 공통 기반
 
-| 기반 계약 | 의존 기능 | 잘못 병렬화할 때 문제 |
-| --- | --- | --- |
-| membership interval | 내보내기, 채팅 visibility, unread, vote voter, presence | 재가입 권한·과거 대화가 서로 다르게 계산됨 |
-| itinerary current version | proposal, vote 적용, 복원, 전체·부분 재생성 | 오래된 proposal이 최신 일정을 덮어씀 |
-| route provider | 좌측 이동 정보, map polyline, 후보 +N분, 부분 일정 validation | 화면마다 다른 추정 시간 사용 |
-| timezone model | 여행 상태, edit lock, chat cutoff, TRANSIT | server와 client가 서로 다른 날짜로 판단 |
-| realtime/event registry | generation, membership, chat, vote, invite, presence | event type 충돌·누락·중복 처리 |
-| shared selection state | DAY, timeline, marker, mobile pane | 좌측과 지도가 다른 item을 선택 |
+기능 번호 순서가 아니라 아래 계약의 의존성을 기준으로 구현한다. `HARD` 기반이 고정되지 않은 소비 기능은 production code를 만들지 않고 contract test·interface까지만 준비한다.
 
-이 기반 계약은 소비 기능보다 먼저 한 명의 contract owner가 확정한다.
+| 기반 ID | 공통 계약 | HARD 의존 기능 | 먼저 잘못 구현할 때 생기는 문제 |
+| --- | --- | --- | --- |
+| C0 | API/error/idempotency/event registry | 모든 command·실시간 기능 | endpoint·error·event 이름이 기능마다 달라지고 reconnect 복구가 불가능해짐 |
+| C1 | membership interval·단일 OWNER·현재 권한 판정 | 내보내기, 나가기, 초대, 채팅 visibility, unread, vote voter, presence | 재가입 사용자가 과거 대화·투표 권한을 되찾거나 제거된 사용자가 event를 계속 수신함 |
+| C2 | immutable itinerary version·current pointer·conditional apply | proposal, vote 적용, 복원, 전체·부분 재생성, route snapshot | 오래된 변경안이 최신 일정을 덮어쓰고 timeline·map이 다른 version을 표시함 |
+| C3 | private realtime destination·session registry·gap recovery | 초대함, chat ack, unread, membership revocation, vote notice, presence | trip topic에 개인 정보가 노출되거나 기존 session을 끊지 못함 |
+| C4 | UTC instant·여행 lifecycle zone | chat cutoff, edit lock, vote deadline, TRANSIT | client·server·사용자 위치마다 다른 날짜에 잠김 |
+| C5 | route provider·mode mapping·cache key·geometry 형식 | 좌측 이동 구간, map polyline, 후보 detour, 부분 재생성 validation | 같은 구간의 시간·경로가 화면마다 달라지고 provider 장애가 전체 일정을 가림 |
+| C6 | frontend workspace state·itemId selection | DAY, timeline, marker, mobile pane, editor | 선택·loading·error가 panel마다 따로 움직이고 event 반영 중 화면이 깨짐 |
 
-### 10.2 현재 코드 병목
+필수 결정 순서:
 
-- `TripDetailPage.tsx` 약 871줄, `TripDetailPage.css` 약 2324줄, `frontend/src/api/trips.ts` 약 317줄이다.
-- 여러 에이전트가 이 세 파일에서 map·chat·vote·membership을 동시에 구현하면 merge conflict와 상태 결합이 발생한다.
-- 기능 구현 전에 동작을 바꾸지 않는 분해 작업이 필요하다.
+1. C0, C1, C2, C3, C4의 ADR·API skeleton과 회귀 테스트를 같은 Foundation package에서 고정한다.
+2. C5는 별도 provider spike 결과로 결정하되 실제 route 숫자·polyline 소비 기능보다 먼저 merge한다.
+3. C6는 읽기 전용 화면 동작을 유지하는 frontend 분해에서 고정한다.
+4. 이후 membership·map/route·chat은 서로 다른 package 경계에서 병렬화할 수 있다.
+5. proposal/vote는 C1·C2·C5가 통과한 뒤, regeneration은 proposal apply가 통과한 뒤 시작한다.
+
+### 10.2 구현 의존 그래프
+
+```text
+WP-A Foundation + Workspace 안정화
+  ├─ WP-B Membership + Invitation/Friend + live revocation
+  ├─ WP-C Map + Route + place proposal entry
+  └─ WP-D Chat core schema/history/send contract
+
+WP-B membership visibility/revocation
+  └─ WP-D unread/presence/rejoin visibility 완료
+
+WP-B + WP-C + C2
+  └─ WP-E Proposal + Vote + Revision apply
+
+WP-C + WP-E
+  └─ WP-F Full/Partial Regeneration + editor
+
+WP-B + WP-C + WP-D + WP-E + WP-F
+  └─ WP-G 통합 안정화·접근성·관측성
+```
+
+`WP-B`와 `WP-C`는 완전히 병렬이다. `WP-D`의 schema·history·send 계약은 WP-A 뒤 시작할 수 있지만 membership visibility·unread·presence 완료는 WP-B의 remove/rejoin 계약을 소비한다. 단일 agent가 수행할 때도 하나를 끝낸 뒤 다음을 시작하되 공통 계약을 임의 변경하지 않는다. 공통 계약 변경이 필요하면 WP-A 문서와 contract test를 먼저 수정하고 모든 소비 package를 다시 검증한다.
+
+### 10.3 현재 코드와 UI 병목
+
+- 현재 `TripDetailPage.tsx`는 약 801줄이며 `TripDetailPage.css` 약 2707줄과 `TripWorkspacePortfolio.css` 약 1712줄을 동시에 import한다.
+- `TripMapView.tsx`가 실제 Google marker를 렌더링하지만 Places library loading과 비동기 좌표 도착 뒤 bounds 갱신을 보완해야 한다.
+- 우측 고정 chat/vote preview는 production에서 실제 데이터로 오인될 수 있다. demo fixture는 명시적 local/portfolio flag로 격리하고 기본값은 honest empty/disabled state다.
+- MEDIUM switcher는 세 pane 중 선택한 pane을 일관되게 표시해야 하며 `tab/tabpanel` keyboard·ARIA 계약을 맞춰야 한다.
+- `frontend/src/api/trips.ts`, `RealtimeWebSocketConfig`, `RealtimeStompChannelInterceptor`, security config, migration 번호와 workspace root state는 공통 충돌 지점이다.
+- 현재 outbox는 event row 저장과 retention 정리만 있고 relay/dispatcher가 없다. 실시간 발행은 같은 process의 `AFTER_COMMIT` listener와 in-memory simple broker를 사용하므로 process crash·다중 instance에서 전달 보장이 달라진다.
+- frontend에는 자동 unit/component test runner가 없다. 새 dev dependency가 필요하면 라이선스를 먼저 확인하고 WP-A에서 한 번만 도입한다.
+- 최신 generation 조회 실패가 전체 trip 조회 실패로 번지지 않도록 read concern을 분리한다.
+- 한 agent가 feature 구현과 대규모 formatting·rename을 같이 수행하지 않는다.
 
 목표 frontend 경계:
 
@@ -463,6 +502,7 @@ migration 전 현재 fixture `1530/1415/505`와 기존 여행 조회가 유지�
 frontend/src/pages/trip/workspace/
   TripWorkspacePage.tsx
   workspaceState.ts
+  workspaceEvents.ts
   components/WorkspaceHeader.tsx
   schedule/
   map/
@@ -480,173 +520,142 @@ frontend/src/api/
   revisions.ts
 ```
 
-backend는 기존 package 규칙을 유지하되 membership, route, chat, proposal/vote와 revision의 application/service/repository 경계를 분리한다. 하나의 거대한 TripDetail response에 모든 실시간·pagination 데이터를 넣지 않는다.
+backend는 기존 package 규칙을 유지하되 `membership`, `route`, `chat`, `proposal`, `vote`, `revision`의 application/service/repository 경계를 분리한다. 실시간 pagination 데이터까지 하나의 거대한 TripDetail response에 넣지 않는다.
 
-### 10.3 외부 공급자 차단점
+### 10.4 공용 파일 소유권과 merge 규칙
 
-- 지도 표시·Places 검색은 Google 기준으로 진행할 수 있다.
-- 국내 자동차 route는 현재 Google Routes 검증에서 성공 응답 안에 route가 없었던 사례가 있다.
-- Phase 3 전에 Kakao Mobility 또는 NAVER route를 실제 거제 좌표로 검증하고 라이선스·요금·quota·polyline 지원을 기록해야 한다.
-- 공급자 확정 전 route 숫자·polyline·후보 추가 이동시간을 구현하지 않는다.
-- frontend용 browser map key와 backend용 server key를 분리하고 referrer/IP/API restriction을 적용한다. key 값을 문서·log·commit에 넣지 않는다.
-
-### 10.4 실시간 보안 차단점
-
-- 현재 interceptor는 SUBSCRIBE 시점만 멤버십을 검사한다.
-- MEMBER 제거 transaction 뒤 해당 사용자의 기존 trip subscription/session을 서버가 무효화하고 client가 `MEMBERSHIP_LOST`로 전환해야 0-2가 완료된다.
-- invite inbox는 trip topic이 아니라 인증된 사용자 private destination이 필요하다.
-- presence는 persistent member count와 분리하고 Redis TTL 또는 동등한 ephemeral store를 사용한다.
-
-### 10.5 범위 과대화 방지
-
-- 친구·초대 전체를 map보다 먼저 완성하면 상세 핵심 읽기·지도 검증이 지연된다. 개발 중에는 격리된 local membership을 사용하고 production membership은 독립 workstream으로 진행한다.
-- 채팅 reply·reaction·typing·검색·browser 알림은 확정 요구사항이지만 저장·전송·history·gap recovery가 통과한 뒤 순차 추가한다.
-- 개인 길찾기·대체 route·CUSTOM_PIN·TRANSIT는 shared map·route와 proposal 기반이 먼저 통과한 뒤 추가한다.
-- 전체·부분 재생성 UI는 immutable version·proposal 적용이 없으면 구현하지 않는다.
-
-## 11. 에이전트 작업 분할
-
-contract owner가 shared schema/API/event를 먼저 확정한 뒤 아래 workstream을 병렬화할 수 있다.
-
-| workstream | 책임 | 선행 조건 |
+| 공용 지점 | 단일 소유 package | 소비 package 규칙 |
 | --- | --- | --- |
-| Foundation | migration 순서, API/error/event registry, workspace state | 없음 |
-| Shell/Schedule | frontend 분해, header, DAY/timeline, selection | Foundation read contract |
-| Map/Route | map adapter, marker, route API/cache | route provider 결정 |
-| Membership | remove/leave/invite/friend/transfer, live revocation | membership interval |
-| Chat | message/history/reconnect 후 확장 기능 | membership interval, event registry |
-| Proposal/Vote | proposal, ballot, current version 적용 | itinerary version, route validation |
-| Generation | 전체·부분 재생성과 proposal review | itinerary version, proposal |
-| QA | E2E, responsive, accessibility, failure injection | 각 phase deliverable |
+| Flyway migration 번호·schema baseline | WP-A | 다른 package는 예약된 번호만 사용하고 기존 migration 수정 금지 |
+| error code·command header·event type registry | WP-A | 새 값은 registry와 contract test를 먼저 변경 |
+| WebSocket config·interceptor·session registry | WP-A, 이후 WP-B handoff | WP-D/E는 공개된 publisher/subscriber port만 사용 |
+| itinerary current pointer | WP-A | WP-C/E/F는 repository를 직접 우회하지 않음 |
+| workspace root state·App route | WP-A | 하위 panel은 domain hook과 callback으로만 연결 |
+| provider key·application config | WP-C | key 값은 commit/log/document에 넣지 않음 |
 
-충돌 방지 규칙:
+각 work package 시작 전 dirty diff와 이전 package handoff를 읽는다. 검증 전 package를 섞어 커밋하지 않는다. 사용자 승인 전 commit·push하지 않으며, 승인된 checkpoint 뒤 다음 package를 시작한다.
 
-- DB migration 번호는 Foundation owner 한 명만 배정한다.
-- 공통 `application.yaml`, security config, realtime envelope, `App.tsx`와 workspace root state는 동시에 수정하지 않는다.
-- 공용 contract 변경은 소비 agent 작업 전에 먼저 merge한다.
-- agent는 할당 범위 밖의 대규모 rename·formatting을 하지 않는다.
-- dirty worktree의 기존 변경은 사용자 소유로 간주하고 덮어쓰지 않는다.
+### 10.5 외부 공급자와 보안 차단점
+
+- 지도 표시·Places 검색은 Google 경계를 유지한다. browser map key와 backend server key를 분리하고 referrer/IP/API restriction을 적용한다.
+- 국내 자동차 route는 Google의 기존 duration validation 성공 여부만으로 결정하지 않는다. 거제 기준 좌표로 Kakao Mobility 또는 NAVER의 license·요금·quota·geometry·mode 지원을 기록한 provider spike가 C5의 종료 조건이다.
+- provider 확정 전 route 숫자·polyline·후보 `+N분`을 UI에 넣지 않는다.
+- MEMBER 제거 transaction 뒤 기존 trip subscription/session을 서버가 무효화하고 client가 private cache를 지운 뒤 `MEMBERSHIP_LOST`로 전환해야 C1/C3가 완료된다.
+- invite inbox·chat ack·개인 unread는 인증된 사용자 private destination을 사용한다. trip topic에 email·token·개인 위치를 싣지 않는다.
+- local/단일 instance는 simple broker를 유지할 수 있지만 production 다중 instance를 목표로 하면 broker relay 또는 outbox dispatcher와 instance 간 event fan-out 방식을 ADR로 고정한다. durable state는 항상 REST/DB snapshot으로 복구 가능해야 한다.
+- presence는 DB member count와 분리한 TTL 기반 ephemeral state다.
+- exact CUSTOM_PIN, message body, AI draft, email, token과 API key는 log·metric·outbox payload에 원문으로 남기지 않는다.
+
+### 10.6 범위 팽창 방지
+
+- WP 하나는 작게 찢은 endpoint 하나가 아니라 사용자에게 검증 가능한 수직 기능 묶음이다. 반대로 WP 두 개의 공통 기반을 동시에 임의 변경하는 거대 diff는 금지한다.
+- 채팅 확장 기능은 같은 WP-D 안에서 구현하되 `저장/history/send → reconnect → unread → delete/reply/reaction → typing/search/notification` 내부 순서를 지킨다.
+- 개인 길찾기·대체 route·CUSTOM_PIN·TRANSIT는 shared route와 proposal apply가 통과한 뒤 WP-C/F의 후반 checkpoint에서 연다.
+- 전체·부분 재생성은 current version·proposal review/apply 없이 직접 current itinerary를 교체하지 않는다.
+- browser notification은 core collaboration을 차단하지 않는 후반 기능이다. HTTPS·permission·service worker가 준비되지 않으면 명시적으로 후속 상태를 유지한다.
+
+## 11. 대형 work package
+
+| package | 큰 작업 범위 | HARD 선행 | package 종료 조건 |
+| --- | --- | --- | --- |
+| WP-A Foundation + Workspace | API gap/error/event registry, C1~C4 ADR·migration skeleton, current pointer backfill, private realtime/session port, outbox/broker delivery ADR, frontend workspace 분해, 현재 map/UI 안정화, test harness | 없음 | 기존 `1530/1415/505` 회귀, lint/build/test, 읽기·지도·세션 오류 화면 유지, 소비 package가 사용할 contract 고정 |
+| WP-B Membership + Invitation | interval, OWNER/MEMBER 권한, remove/leave/transfer, friend·email lookup, inbox, invite accept/decline/cancel, 기존 session revocation | WP-A C0/C1/C3 | 세 계정 권한 E2E, 재가입 boundary, 제거 즉시 REST·새/기존 STOMP 차단, 최대 인원·만료·중복 초대 검증 |
+| WP-C Map + Route | map adapter 안정화, place panel, provider spike/선택, DAY route snapshot/cache/polyline, 이동 구간, search/detour, provider fallback | WP-A C2/C6; package 초반 C5 provider spike | 실제 provider 결과만 표시, 일정·marker·route 동기화, 실패 시 일정/marker 유지, quota/cache test |
+| WP-D Chat + Presence | message schema, history/send/idempotency, private ack, reconnect gap, unread/visibility, delete/reply/reaction, typing/presence/mention/search, notification boundary | WP-A C0/C1/C3/C4; WP-B membership contract | 두 계정 새로고침·재접속·중복 전송·재가입 visibility·종료 후 read-only 검증 |
+| WP-E Proposal + Vote + Revision | current version, proposal validation, 직접/투표 결정, voter snapshot/ballot/deadline, conditional one-time apply, history/restore proposal | WP-A C2; WP-B; WP-C route validation | stale base 409, 동시 apply 1회, MEMBER 직접 적용 거절, 투표 기준·멤버 제거 재계산 검증 |
+| WP-F Generation + Editor | OWNER 전체/부분 재생성, fixed anchor·연속 범위, review/apply/reject, CUSTOM_PIN, 필요한 TRANSIT | WP-C; WP-E | 생성 중 current 유지, 실패 current 보존, 범위 밖 item 불변, 적용 시 새 version 1회 |
+| WP-G Integration + Release | 전체 상태 우선순위, reconnect/failure injection, responsive/accessibility, session expiry, 성능·관측성, docs 정합성 | WP-B~F | 13장의 통합 gate와 사용자 시나리오 전부 통과, production default에서 demo/fixture 비활성 |
+
+work package 내부 구현 순서는 `contract test → migration/domain → service → controller/realtime → frontend API/state → UI → integration test`다. API만 만들고 화면이 없거나 화면만 있고 저장되지 않는 상태는 package 완료가 아니다.
 
 필수 handoff:
 
 ```text
-목표 / 완료 상태
-조사한 기존 계약
-변경 파일
-API·DB·event 변경
-feature flag·환경 변수(값 제외)
-실행한 테스트와 결과
+package / 목표 / 완료 여부
+읽은 기준 문서와 기존 계약
+변경 파일과 소유 경계
+API·DB·event·환경 변수 변경(값 제외)
+자동 테스트 명령과 결과
 직접 검증 URL·계정·시나리오
-미검증 항목과 위험
-다음 작업의 정확한 선행 조건
+미검증 항목·known risk·fallback
+다음 package가 의존할 정확한 contract와 version
 ```
 
-## 12. 구현 순서와 단계 종료 조건
+## 12. 실행 웨이브와 통합 순서
 
-기존 0~8단계 방향을 유지한다.
+기존 0~8단계의 제품 방향은 유지하되 agent 명령은 아래 웨이브 단위로 크게 내린다.
 
-### Phase 0 — 기반 계약
+### Wave 1 — WP-A 단독
 
-완료됨:
+- 현재 dirty UI diff를 보존하고 실제 동작 기준선을 먼저 고정한다.
+- `docs/api/collaboration-workspace-api.md`와 필요한 ADR을 작성한다.
+- workspace를 기능 경계로 분해하고 기존 read-only 일정·실제 marker 동작을 유지한다.
+- C0~C4 contract test와 migration/backfill 전략을 만든다.
+- outbox dispatcher/broker topology와 단일·다중 instance 전달 보장 범위를 ADR로 고정한다.
+- 이 웨이브가 검증·checkpoint 되기 전 다른 domain migration을 시작하지 않는다.
 
-- 0-1 기준 여행 `1530/1415/505`, 4 DAY·23 item 검증
-- 0-2A `test` OWNER, `local1/local2` MEMBER 개발 기준선
+### Wave 2 — WP-B·WP-C·WP-D
 
-남은 순서:
+- WP-B와 WP-C는 WP-A 뒤 병렬이며, WP-D core도 시작할 수 있다. 다만 WP-D의 unread·presence·재가입 visibility 종료 gate는 WP-B 완료 뒤 닫는다.
+- 병렬 agent를 사용할 때 migration 번호, WebSocket config, workspace root state를 공유 편집하지 않는다.
+- 단일 agent는 `WP-B → WP-C → WP-D` 또는 `WP-C → WP-B → WP-D` 순서로 완료 checkpoint를 남긴다. WP-D는 membership visibility 때문에 WP-B 계약을 먼저 소비해야 한다.
+- 각 package 완료 뒤 전체 backend test와 frontend build를 다시 돌려 공통 계약 drift를 잡는다.
 
-1. API gap matrix와 error/event registry 문서
-2. frontend workspace/API 파일 무동작 분해
-3. membership interval ADR와 migration
-4. OWNER 전용 MEMBER 내보내기 API
-5. REST·새 STOMP 구독 차단
-6. 기존 STOMP session 무효화와 열린 화면의 메인 이동
-7. workspace 상태 모델과 event gap recovery
+### Wave 3 — WP-E
 
-종료 조건:
+- proposal·vote·revision을 하나의 수직 package로 구현한다.
+- 투표 통과가 current pointer를 바꾸는 유일한 자동 경로이며 direct OWNER apply도 같은 validation·conditional apply service를 사용한다.
+- 지도 후보·timeline proposal이 같은 affected range와 base version을 사용한다.
 
-- 세 계정 role과 접근이 일치한다.
-- 비회원·제거된 MEMBER는 REST·신규/기존 실시간 접근이 모두 종료된다.
-- session 만료·empty itinerary·partial error에서 shell이 깨지지 않는다.
+### Wave 4 — WP-F
 
-### Phase 1 — 읽기 전용 일정
+- 기존 generation pipeline을 재사용하되 결과를 current에 직접 저장하지 않고 proposal/review 경계로 연결한다.
+- 전체·부분 재생성, CUSTOM_PIN, restore와 TRANSIT는 공통 version/apply 규칙을 우회하지 않는다.
 
-- API 데이터만으로 DAY·timeline·item selection을 구현한다.
-- place display 부분 실패를 격리한다.
-- desktop/mobile selection 복원을 검증한다.
+### Wave 5 — WP-G
 
-### Phase 2 — 실제 지도
+- 기능 추가를 멈추고 전체 장애·권한·responsive·accessibility·quota·성능 검증만 수행한다.
+- demo fixture, manual handoff와 local initializer가 production 기본 동작에 영향을 주지 않는지 확인한다.
+- 문서의 baseline·endpoint·event·migration 번호를 실제 코드와 최종 동기화한다.
 
-- map SDK adapter, DAY marker, bounds와 양방향 item selection
-- 장소 compact panel과 attribution
-- 추정 route는 아직 표시하지 않는다.
+## 13. 검증 gate
 
-### Phase 3 — 실제 route
+### 13.1 모든 package 공통
 
-- 국내 provider 검증·결정
-- server route API/cache, polyline, 좌측 이동 구간
-- provider failure에도 일정·marker 조회 유지
+1. 작업 전 관련 code·migration·test·dirty diff와 직전 handoff를 조사한다.
+2. 구현 전 API·DB·event·파일 소유 영향과 변경 목록을 보고한다.
+3. backend는 변경 domain test와 `backend\\gradlew.bat test`를 통과한다.
+4. frontend는 test harness가 있으면 unit/component test, 항상 `npm.cmd run lint`, `npm.cmd run build`를 통과한다.
+5. UI는 browser에서 WIDE/MEDIUM/NARROW와 loading/empty/error/success/disabled/focus를 확인한다.
+6. migration은 빈 DB와 기존 V21 데이터 upgrade, fixture `1530/1415/505` 보존을 확인한다.
+7. 실제 확인하지 못한 상태를 성공으로 보고하지 않는다.
+8. 검증 agent가 diff와 실행 결과를 승인하기 전 다음 package와 섞어 commit·push하지 않는다.
 
-### Phase 4 — 실시간 채팅
+### 13.2 package별 필수 gate
 
-순서:
+- WP-A: 기존 여행 상세·일정 생성·manual/fixture 흐름 회귀, session expiry와 latest generation 부분 실패 격리
+- WP-B: OWNER/MEMBER/비회원 matrix, 초대 만료·중복·20명 제한, remove 중 열린 REST/STOMP 차단
+- WP-C: 실제 거제 DAY route, route empty/timeout/quota, 장소 좌표 일부 실패, map key 미설정
+- WP-D: 두 계정 동시 전송, 같은 `clientMessageId`, reconnect gap, unread `2→1→없음`, 나감·재가입 visibility
+- WP-E: concurrent ballot/apply, stale base, deadline, member removal voter 재계산, apply idempotency
+- WP-F: 생성 중 current 조회, full/partial 실패, fixed anchor conflict, 범위 밖 item hash 동일
+- WP-G: 200% zoom, keyboard/screen reader, reduced motion, mobile keyboard, token refresh 실패, provider/Redis/Rabbit 장애
 
-1. 저장·history·plain text 전송·idempotency
-2. STOMP event와 reconnect gap recovery
-3. unread recipient/read receipt와 membership visibility
-4. delete·reply·reaction
-5. typing·presence·mention·search·notification
-
-각 하위 단계는 두 계정 새로고침·재접속과 비회원 거절 테스트를 통과한다.
-
-### Phase 5 — proposal·투표·적용
-
-- current itinerary version과 proposal validation
-- 지도/좌측 장소 제안
-- vote snapshot·deadline·ballot·cancel
-- 통과 결과의 단 한 번 새 version 적용
-
-### Phase 6 — OWNER 전체 일정 다시 만들기
-
-- 기존 generation pipeline을 재사용한다.
-- 생성 중 current 일정은 계속 사용한다.
-- 성공 결과는 proposal/review 뒤 새 version, 실패는 current 유지다.
-
-### Phase 7 — 부분 일정 다시 만들기와 고급 편집
-
-- 연속 범위·fixed anchor·±30분·경계 route validation
-- CUSTOM_PIN, version restore와 필요 시 TRANSIT
-- 범위 밖 item은 동일하게 보존한다.
-
-### Phase 8 — 통합 안정화
-
-- optimistic conflict, duplicate command, disconnect와 session expiry
-- WIDE/MEDIUM/NARROW와 editor resize
-- keyboard, screen reader, reduced motion와 200% zoom
-- 성능, provider quota, event lag와 failure metric
-
-## 13. 검증 기준
-
-모든 마이크로 단위:
-
-1. 작업 전 관련 code·migration·test와 dirty diff를 조사한다.
-2. API/DB/event 영향과 변경 파일을 먼저 기록한다.
-3. 가장 작은 backend test를 실행하고 범위가 넓으면 전체 suite를 실행한다.
-4. frontend는 `npm.cmd run lint`, `npm.cmd run build`를 통과한다.
-5. UI 변경은 browser에서 desktop과 mobile, loading/empty/error/success/disabled/focus를 확인한다.
-6. 실제 확인하지 못한 상태를 성공으로 보고하지 않는다.
-7. 실행 결과와 남은 위험을 이 문서의 진행 기록 또는 별도 handoff에 남긴다.
-
-필수 통합 시나리오:
+### 13.3 필수 통합 시나리오
 
 1. OWNER와 두 MEMBER가 같은 거제 여행방과 23개 item을 본다.
-2. DAY 3 장소를 timeline과 map에서 번갈아 선택한다.
-3. 두 사용자가 message를 주고받고 한쪽 새로고침 뒤 같은 history를 본다.
+2. DAY 3 장소를 timeline과 map에서 번갈아 선택하고 실제 route를 같은 version으로 본다.
+3. 두 사용자가 message를 주고받고 한쪽 새로고침 뒤 같은 history와 unread를 본다.
 4. MEMBER가 장소를 제안하고 유권자가 투표한다.
-5. 결과가 새 itinerary version으로 한 번만 적용되고 timeline·map이 같은 version을 본다.
-6. OWNER가 부분 재생성을 요청하고 범위 밖 일정이 유지된다.
+5. 결과가 새 itinerary version으로 한 번만 적용되고 timeline·map·route가 같은 version을 본다.
+6. OWNER가 부분 재생성을 요청하고 범위 밖 일정이 동일하게 유지된다.
 7. MEMBER의 OWNER command가 거절된다.
 8. MEMBER를 내보내면 열린 REST·STOMP·private cache 접근이 끝난다.
 9. WebSocket을 끊었다 복구해 message·vote·itinerary가 REST와 일치한다.
+10. route provider 실패 중에도 current 일정·marker·chat은 사용할 수 있다.
+11. session refresh가 실패하면 private state를 지우고 로그인으로 이동한다.
+12. MEDIUM/NARROW 전환과 회전 뒤 DAY·selected item·draft·room tab을 복원한다.
+13. production profile에서 fixture·demo message·manual 개발 도구가 노출되지 않는다.
 
 ## 14. 출시 전 관측 지표
 
@@ -660,30 +669,32 @@ feature flag·환경 변수(값 제외)
 
 message body, draft, exact CUSTOM_PIN, email, token과 API key는 log·metric에 기록하지 않는다.
 
-## 15. 현재 미결정·차단 항목
+## 15. 결정 gate와 차단 항목
 
-제품 행동 요구사항은 상단·좌측·중앙·우측·반응형까지 확정됐다. 남은 것은 구현 기술 계약이다.
+| gate | 결정 시점 | 결정 전 허용 | 결정 전 금지 |
+| --- | --- | --- | --- |
+| membership interval ADR | WP-A | read query·interface·fixture | remove/leave/invite/chat visibility production migration |
+| itinerary version/current ADR | WP-A | 기존 read-only itinerary | proposal/vote/regeneration apply |
+| private WebSocket/session revocation | WP-A | 현재 generation topic | invite/chat ack/unread와 제거된 session 유지 |
+| outbox/broker delivery topology | WP-A | 단일 instance generation 알림 | 다중 instance 전달 보장 주장·복구 불가능 event payload |
+| timezone/lifecycle ADR | WP-A | 국내 read-only LocalTime 표시 | chat cutoff·edit lock·TRANSIT 판단 |
+| route provider ADR | WP-C 시작 | Google marker·place display | route 숫자·polyline·detour |
+| browser notification 범위 | WP-D 후반 | 앱 안 unread | 권한 prompt·service worker·background push |
 
-1. 국내 자동차 route provider: Kakao Mobility 또는 NAVER 실제 검증 뒤 결정
-2. membership interval을 기존 table 확장으로 할지 별도 history table로 할지 ADR
-3. itinerary current pointer/version schema ADR
-4. 사용자 private WebSocket destination과 기존 session 강제 무효화 방식
-5. production browser notification의 HTTPS·permission·service worker 범위
+ADR에는 선택안, 기각안, 기존 데이터 backfill, rollback/복구, 동시성 방식과 테스트를 포함한다. 차단 항목을 임시 boolean·mock 숫자·직선 route로 숨기지 않는다.
 
-이 다섯 항목을 임의 구현으로 숨기지 않는다. 관련 phase 시작 전에 API/ADR와 테스트 기준을 먼저 작성한다.
+## 16. 바로 다음 실행: WP-A
 
-## 16. 바로 다음 작업
+다음 agent에게 MEMBER 내보내기 endpoint 하나가 아니라 `WP-A Foundation + Workspace` 전체를 맡긴다.
 
-코드 기능을 추가하기 전에 다음 문서를 작성한다.
+필수 산출물:
 
-`docs/api/collaboration-workspace-api.md`
+1. `docs/api/collaboration-workspace-api.md`
+2. membership interval, itinerary current version, private realtime/session revocation, outbox/broker delivery, timezone lifecycle ADR
+3. 기존 V21과 fixture `1530/1415/505`를 보존하는 migration/backfill·회귀 테스트
+4. error/idempotency/event registry와 contract test
+5. frontend workspace/API 분해와 shared selection/state 경계
+6. 실제 map loader/bounds, honest chat/vote state, MEDIUM pane와 접근성 안정화
+7. backend 전체 test, frontend lint/build/test와 WIDE/MEDIUM/NARROW browser 결과
 
-첫 계약 범위는 `0-2B MEMBER 내보내기`다.
-
-- OWNER 전용 remove command
-- OWNER/self/비소속 대상 거절
-- membership 종료 결과와 event
-- 대상의 REST·새 STOMP 구독 차단
-- 다음 단위에서 기존 subscription 무효화에 필요한 session/event 정보
-
-API 계약 승인 후 migration·service·controller·security test 순으로 구현한다.
+WP-A에서는 제품용 membership/chat/vote/route command를 끝까지 구현하지 않는다. 대신 다음 package가 공통 파일을 다시 설계하지 않고 바로 수직 기능을 구현할 만큼 계약·migration 경계·test fixture·frontend slot을 완성한다.

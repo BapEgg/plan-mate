@@ -6,6 +6,8 @@ import { deleteTrip, listMyTrips } from '../../api/trips'
 import type { TripStatus, TripSummary } from '../../api/trips'
 import { clearMyProfileImage, getMe, updateMyNickname, updateMyProfileImage } from '../../api/users'
 import type { MeProfile } from '../../api/users'
+import { getInboxSummary } from '../../api/inbox'
+import { InboxDialog } from './InboxDialog'
 import './MainPage.css'
 import './MainPageEmphasis.css'
 
@@ -45,6 +47,9 @@ export function MainPage({ accessToken, user, onLogout, onCreateTrip, onOpenTrip
   const profileDialogRef = useRef<HTMLElement>(null)
   const profileButtonRef = useRef<HTMLButtonElement>(null)
   const deleteDialogRef = useRef<HTMLDialogElement>(null)
+  const [isInboxOpen, setIsInboxOpen] = useState(false)
+  const [inboxCount, setInboxCount] = useState(0)
+  const inboxButtonRef = useRef<HTMLButtonElement>(null)
 
   const displayName = profile?.nickname ?? user?.nickname ?? '여행자'
   const tripCounts = useMemo(() => ({
@@ -95,6 +100,25 @@ export function MainPage({ accessToken, user, onLogout, onCreateTrip, onOpenTrip
       window.clearTimeout(timeoutId)
     }
   }, [accessToken])
+
+  useEffect(() => {
+    if (!accessToken) {
+      return
+    }
+    let ignore = false
+    void getInboxSummary(accessToken)
+      .then((summary) => {
+        if (!ignore) {
+          setInboxCount(summary.tripInvitationCount + summary.friendRequestCount + summary.ownerTransferRequestCount)
+        }
+      })
+      .catch(() => {
+        // 봉투 badge는 부가 정보다 — 실패해도 나머지 대시보드를 막지 않는다.
+      })
+    return () => {
+      ignore = true
+    }
+  }, [accessToken, isInboxOpen])
 
   useEffect(() => {
     if (!isProfileOpen) {
@@ -325,6 +349,9 @@ export function MainPage({ accessToken, user, onLogout, onCreateTrip, onOpenTrip
           isProfileOpen={isProfileOpen}
           onCreateTrip={onCreateTrip}
           onOpenProfile={() => setIsProfileOpen(true)}
+          inboxButtonRef={inboxButtonRef}
+          inboxCount={inboxCount}
+          onOpenInbox={() => setIsInboxOpen(true)}
         />
 
         <section className="dashboard-shell" aria-labelledby="dashboard-title">
@@ -368,6 +395,15 @@ export function MainPage({ accessToken, user, onLogout, onCreateTrip, onOpenTrip
           />
         </section>
       </div>
+
+      {isInboxOpen && accessToken && (
+        <InboxDialog
+          accessToken={accessToken}
+          onClose={() => setIsInboxOpen(false)}
+          onTripInvitationAccepted={() => handleReloadTrips()}
+          triggerRef={inboxButtonRef}
+        />
+      )}
 
       {isProfileOpen && (
         <div
@@ -459,6 +495,9 @@ function MainHeader({
   isProfileOpen,
   onCreateTrip,
   onOpenProfile,
+  inboxButtonRef,
+  inboxCount,
+  onOpenInbox,
 }: {
   displayName: string
   profileImageUrl: string | null
@@ -466,6 +505,9 @@ function MainHeader({
   isProfileOpen: boolean
   onCreateTrip: () => void
   onOpenProfile: () => void
+  inboxButtonRef: RefObject<HTMLButtonElement | null>
+  inboxCount: number
+  onOpenInbox: () => void
 }) {
   return (
     <nav className="dashboard-nav" aria-label="메인 내비게이션">
@@ -476,6 +518,16 @@ function MainHeader({
         <a className="header-create-button" href="/trips/new" onClick={(event) => handleSpaNavigation(event, onCreateTrip)}>
           새 여행 <span aria-hidden="true">+</span>
         </a>
+        <button
+          aria-label={inboxCount > 0 ? `초대함 열기, 안 읽은 항목 ${inboxCount}개` : '초대함 열기'}
+          className="inbox-trigger-button"
+          onClick={onOpenInbox}
+          ref={inboxButtonRef}
+          type="button"
+        >
+          <span aria-hidden="true">✉</span>
+          {inboxCount > 0 && <span className="inbox-trigger-badge">{inboxCount > 9 ? '9+' : inboxCount}</span>}
+        </button>
         <button
           className="profile-menu-button"
           ref={profileButtonRef}

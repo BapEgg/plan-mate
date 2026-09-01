@@ -24,7 +24,7 @@ class ItineraryTripIdMappingTest {
         ItineraryGenerationEntity generation = ItineraryGenerationEntity.create(45L, "test", NOW);
         ReflectionTestUtils.setField(generation, "id", 123L);
 
-        ItineraryEntity itinerary = ItineraryEntity.create(generation, NOW);
+        ItineraryEntity itinerary = ItineraryEntity.create(generation, NOW, 1);
 
         assertThat(itinerary.getTripId()).isEqualTo(generation.getTripId());
         assertThat(itinerary.getGeneration()).isSameAs(generation);

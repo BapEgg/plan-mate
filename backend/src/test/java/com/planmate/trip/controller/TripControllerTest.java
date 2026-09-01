@@ -135,7 +135,7 @@ class TripControllerTest {
         JsonNode response = objectMapper.readTree(result.getResponse().getContentAsString());
         Long tripId = response.get("id").asLong();
 
-        assertThat(tripMemberRepository.findByUser_IdOrderByTrip_CreatedAtDesc(user.getId()))
+        assertThat(tripMemberRepository.findByUser_IdAndStatusOrderByTrip_CreatedAtDesc(user.getId(), com.planmate.trip.entity.MembershipStatus.ACTIVE))
                 .hasSize(1)
                 .first()
                 .extracting(member -> member.getRole())
@@ -382,7 +382,7 @@ class TripControllerTest {
         entityManager.clear();
 
         assertThat(tripRepository.findById(Long.valueOf(tripId))).isEmpty();
-        assertThat(tripMemberRepository.countByTrip_Id(Long.valueOf(tripId))).isZero();
+        assertThat(tripMemberRepository.countByTrip_IdAndStatus(Long.valueOf(tripId), com.planmate.trip.entity.MembershipStatus.ACTIVE)).isZero();
         assertThat(tripPlanningProfileRepository.findByTrip_Id(Long.valueOf(tripId))).isEmpty();
     }
 
@@ -543,8 +543,9 @@ class TripControllerTest {
         generation.markCollecting(createdAt);
         generation.markReady(createdAt);
         generation.markCompleted(createdAt);
+        int nextVersion = itineraryRepository.findMaxVersionByTripId(trip.getId()) + 1;
         ItineraryEntity itinerary = itineraryRepository.save(
-                ItineraryEntity.create(generation, createdAt)
+                ItineraryEntity.create(generation, createdAt, nextVersion)
         );
         ItineraryDayEntity day = itineraryDayRepository.save(
                 ItineraryDayEntity.create(itinerary, 1, trip.getStartDate())
