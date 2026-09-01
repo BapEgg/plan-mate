@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../../../../../api/client'
-import { getChatMessageByClientId, listChatHistory, listChatSince, sendChatMessage } from '../../../../../api/chat'
+import { getChatMessageByClientId, listChatHistory, listChatSince, markChatRead, sendChatMessage } from '../../../../../api/chat'
 import type { ChatMessage } from '../../../../../api/chat'
 import type { ChatMessageSentPayload } from '../../../../../api/realtime'
 import type { AuthUser } from '../../../../../api/auth'
@@ -14,6 +14,7 @@ type ChatPanelProps = {
   latestChatMessage: ChatMessageSentPayload | null
   chatConnected: boolean
   chatReconnectedAt: number
+  onChatRead: () => void
 }
 
 type MessageStatus = 'sent' | 'sending' | 'unknown' | 'failed'
@@ -33,13 +34,17 @@ function formatTime(iso: string) {
  * 자동 재전송은 하지 않는다 — 전송 실패(또는 확인 불가) 뒤 사용자가 message별로 직접 다시 보낸다.
  * unread·삭제/답장/반응·typing/search/notification은 이후 phase.
  */
-export function ChatPanel({ accessToken, tripId, members, currentUser, latestChatMessage, chatConnected, chatReconnectedAt }: ChatPanelProps) {
+export function ChatPanel({ accessToken, tripId, members, currentUser, latestChatMessage, chatConnected, chatReconnectedAt, onChatRead }: ChatPanelProps) {
   const [messages, setMessages] = useState<DisplayMessage[]>([])
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [draft, setDraft] = useState('')
   const lastHandledEventId = useRef<number | null>(null)
   const messagesRef = useRef<DisplayMessage[]>([])
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
+  const onChatReadRef = useRef(onChatRead)
+  useEffect(() => {
+    onChatReadRef.current = onChatRead
+  })
 
   const scrollToBottom = useCallback(() => {
     const container = scrollContainerRef.current
@@ -66,6 +71,14 @@ export function ChatPanel({ accessToken, tripId, members, currentUser, latestCha
     return () => observer.disconnect()
   }, [scrollToBottom])
 
+  // spec §4 "읽음과 visibility": 채팅 tab이 열려 있는 동안은 이 device 기준으로 최신 message까지
+  // 즉시 읽음 처리한다 — 뷰포트 단위 정교한 노출 추적은 이후 phase.
+  const markLatestRead = useCallback((messageId: number) => {
+    markChatRead(accessToken, tripId, messageId)
+      .then(() => onChatReadRef.current())
+      .catch(() => {})
+  }, [accessToken, tripId])
+
   useEffect(() => {
     let ignore = false
     listChatHistory(accessToken, tripId)
@@ -73,6 +86,9 @@ export function ChatPanel({ accessToken, tripId, members, currentUser, latestCha
         if (ignore) return
         setMessages([...page.messages].reverse().map((message) => ({ ...message, status: 'sent' as const })))
         setStatus('success')
+        if (page.messages.length > 0) {
+          markLatestRead(Math.max(...page.messages.map((message) => message.id)))
+        }
       })
       .catch(() => {
         if (ignore) return
@@ -81,7 +97,7 @@ export function ChatPanel({ accessToken, tripId, members, currentUser, latestCha
     return () => {
       ignore = true
     }
-  }, [accessToken, tripId])
+  }, [accessToken, tripId, markLatestRead])
 
   useEffect(() => {
     if (!latestChatMessage || latestChatMessage.messageId === lastHandledEventId.current) {
@@ -106,7 +122,8 @@ export function ChatPanel({ accessToken, tripId, members, currentUser, latestCha
         },
       ]
     })
-  }, [latestChatMessage, tripId])
+    markLatestRead(latestChatMessage.messageId)
+  }, [latestChatMessage, tripId, markLatestRead])
 
   // Reconnect recovery (spec §4 "연결 상태"): fill the REST gap for whatever the trip topic
   // missed while disconnected, and resolve any message whose send outcome was left UNKNOWN

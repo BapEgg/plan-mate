@@ -3,17 +3,19 @@ package com.planmate.trip.service;
 import com.planmate.common.exception.CommonErrorCode;
 import com.planmate.common.exception.CommonException;
 import com.planmate.trip.api.TripMembershipChecker;
+import com.planmate.trip.api.TripMembershipIntervalReader;
 import com.planmate.trip.api.TripRoleChecker;
 import com.planmate.trip.entity.MembershipStatus;
 import com.planmate.trip.entity.TripMemberEntity;
 import com.planmate.trip.entity.TripMemberRole;
 import com.planmate.trip.exception.TripNotFoundException;
 import com.planmate.trip.repository.TripMemberRepository;
+import java.time.Instant;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class TripMembershipQueryService implements TripMembershipChecker, TripRoleChecker {
+public class TripMembershipQueryService implements TripMembershipChecker, TripRoleChecker, TripMembershipIntervalReader {
 
     private final TripMemberRepository tripMemberRepository;
 
@@ -36,5 +38,23 @@ public class TripMembershipQueryService implements TripMembershipChecker, TripRo
         if (member.getRole() != TripMemberRole.OWNER) {
             throw new CommonException(CommonErrorCode.FORBIDDEN);
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Instant currentIntervalStartedAt(Long userId, Long tripId) {
+        return activeMember(userId, tripId).getJoinedAt();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Long currentLastReadChatMessageId(Long userId, Long tripId) {
+        return activeMember(userId, tripId).getLastReadChatMessageId();
+    }
+
+    private TripMemberEntity activeMember(Long userId, Long tripId) {
+        return tripMemberRepository
+                .findByTrip_IdAndUser_IdAndStatus(tripId, userId, MembershipStatus.ACTIVE)
+                .orElseThrow(TripNotFoundException::new);
     }
 }

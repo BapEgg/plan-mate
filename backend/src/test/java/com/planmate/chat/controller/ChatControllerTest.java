@@ -100,7 +100,8 @@ class ChatControllerTest {
                 .andExpect(jsonPath("$.id").value(firstId))
                 .andExpect(jsonPath("$.body").value("첫 메시지"));
 
-        assertThat(chatMessageRepository.findByTripIdOrderByIdDesc(trip.getId(), org.springframework.data.domain.PageRequest.of(0, 10)))
+        assertThat(chatMessageRepository.findByTripIdAndSentAtAfterOrderByIdDesc(
+                trip.getId(), java.time.Instant.EPOCH, org.springframework.data.domain.PageRequest.of(0, 10)))
                 .hasSize(1);
     }
 

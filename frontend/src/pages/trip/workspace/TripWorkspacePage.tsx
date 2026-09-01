@@ -13,6 +13,7 @@ import type {
 } from '../../../api/trips'
 import { CHAT_MESSAGE_SENT, connectTripRealtimeEvents, ITINERARY_GENERATION_STATUS_CHANGED, MEMBERSHIP_CHANGED } from '../../../api/realtime'
 import type { ChatMessageSentPayload } from '../../../api/realtime'
+import { getChatUnreadCount } from '../../../api/chat'
 import { WorkspaceHeader } from './components/WorkspaceHeader'
 import { GenerationStatusPanel, WorkspaceSetupNotice } from './components/GenerationStatusPanel'
 import { WorkspacePaneSwitcher } from './components/WorkspacePaneSwitcher'
@@ -54,8 +55,18 @@ export function TripWorkspacePage({
   const [latestChatMessage, setLatestChatMessage] = useState<ChatMessageSentPayload | null>(null)
   const [chatConnected, setChatConnected] = useState(true)
   const [chatReconnectedAt, setChatReconnectedAt] = useState(0)
+  const [chatUnreadCount, setChatUnreadCount] = useState(0)
   const hasConnectedBeforeRef = useRef(false)
   const disconnectTimerRef = useRef<number | null>(null)
+
+  const loadChatUnreadCount = useCallback(async () => {
+    try {
+      const { unreadCount } = await getChatUnreadCount(accessToken, tripId)
+      setChatUnreadCount(unreadCount)
+    } catch {
+      // Non-critical: the badge just stays at its last known value until the next trigger.
+    }
+  }, [accessToken, tripId])
 
   const loadTripDetail = useCallback(async () => {
     try {
@@ -125,9 +136,10 @@ export function TripWorkspacePage({
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       void loadTripData()
+      void loadChatUnreadCount()
     }, 0)
     return () => window.clearTimeout(timeoutId)
-  }, [loadTripData])
+  }, [loadTripData, loadChatUnreadCount])
 
   useEffect(() => {
     if (!itineraryGenerationEnabled) {
@@ -184,6 +196,7 @@ export function TripWorkspacePage({
         }
         if (event.type === CHAT_MESSAGE_SENT) {
           setLatestChatMessage(event.payload)
+          void loadChatUnreadCount()
           return
         }
         if (event.type !== ITINERARY_GENERATION_STATUS_CHANGED) {
@@ -215,7 +228,7 @@ export function TripWorkspacePage({
       }
       connection.disconnect()
     }
-  }, [accessToken, loadGeneration, loadTripData, tripId, user?.id])
+  }, [accessToken, loadGeneration, loadTripData, loadChatUnreadCount, tripId, user?.id])
 
   if (tripStatus === 'loading') {
     return (
@@ -255,12 +268,14 @@ export function TripWorkspacePage({
         accessToken={accessToken}
         chatConnected={chatConnected}
         chatReconnectedAt={chatReconnectedAt}
+        chatUnreadCount={chatUnreadCount}
         currentUser={user}
         generation={generation}
         generationFetchFailed={generationFetchFailed}
         generationNotice={generationNotice}
         latestChatMessage={latestChatMessage}
         onBackToMain={onBackToMain}
+        onChatRead={loadChatUnreadCount}
         onLogout={onLogout}
         onRefresh={() => void loadTripData()}
         placeViews={placeViews}
@@ -281,6 +296,8 @@ function TripWorkspace({
   latestChatMessage,
   chatConnected,
   chatReconnectedAt,
+  chatUnreadCount,
+  onChatRead,
   accessToken,
   currentUser,
   onBackToMain,
@@ -296,6 +313,8 @@ function TripWorkspace({
   latestChatMessage: ChatMessageSentPayload | null
   chatConnected: boolean
   chatReconnectedAt: number
+  chatUnreadCount: number
+  onChatRead: () => void
   accessToken: string
   currentUser: AuthUser | null
   onBackToMain: () => void
@@ -416,11 +435,13 @@ function TripWorkspace({
           ariaLabelledBy="workspace-pane-tab-ROOM"
           chatConnected={chatConnected}
           chatReconnectedAt={chatReconnectedAt}
+          chatUnreadCount={chatUnreadCount}
           className={mobilePane === 'ROOM' ? 'mobile-active' : ''}
           currentUser={currentUser}
           id={panelIds.ROOM}
           latestChatMessage={latestChatMessage}
           members={trip.members}
+          onChatRead={onChatRead}
           panelRole="tabpanel"
           selectedPlace={selectedPlace}
           tripId={trip.id}

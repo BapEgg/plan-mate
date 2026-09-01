@@ -6,6 +6,7 @@ import com.planmate.membership.api.event.MembershipChangeType;
 import com.planmate.membership.api.event.TripMembershipChangedEvent;
 import com.planmate.membership.exception.MembershipErrorCode;
 import com.planmate.membership.exception.MembershipException;
+import com.planmate.trip.api.TripMembershipChatReadTracker;
 import com.planmate.trip.entity.LeftReason;
 import com.planmate.trip.entity.MembershipStatus;
 import com.planmate.trip.entity.TripEntity;
@@ -25,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
  * 무관하게 서버가 현재 role을 다시 검사한다(spec §4.1).
  */
 @Service
-public class TripMembershipCommandService {
+public class TripMembershipCommandService implements TripMembershipChatReadTracker {
 
     private final TripRepository tripRepository;
     private final TripMemberRepository tripMemberRepository;
@@ -77,6 +78,13 @@ public class TripMembershipCommandService {
         }
         member.end(LeftReason.LEFT, Instant.now(clock));
         eventPublisher.publishEvent(new TripMembershipChangedEvent(tripId, userId, MembershipChangeType.LEFT));
+    }
+
+    @Override
+    @Transactional
+    public void markChatRead(Long userId, Long tripId, Long messageId) {
+        TripMemberEntity member = requireActiveMember(userId, tripId, null);
+        member.markChatRead(messageId);
     }
 
     /**

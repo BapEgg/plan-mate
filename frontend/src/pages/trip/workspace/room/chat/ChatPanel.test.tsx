@@ -10,12 +10,14 @@ const listChatHistory = vi.fn()
 const listChatSince = vi.fn()
 const sendChatMessage = vi.fn()
 const getChatMessageByClientId = vi.fn()
+const markChatRead = vi.fn().mockResolvedValue(undefined)
 
 vi.mock('../../../../../api/chat', () => ({
   listChatHistory: (...args: unknown[]) => listChatHistory(...args),
   listChatSince: (...args: unknown[]) => listChatSince(...args),
   sendChatMessage: (...args: unknown[]) => sendChatMessage(...args),
   getChatMessageByClientId: (...args: unknown[]) => getChatMessageByClientId(...args),
+  markChatRead: (...args: unknown[]) => markChatRead(...args),
 }))
 
 const members: TripMember[] = [
@@ -35,6 +37,7 @@ function renderChatPanel(overrides: Partial<React.ComponentProps<typeof ChatPane
       latestChatMessage={null}
       chatConnected={true}
       chatReconnectedAt={0}
+      onChatRead={() => {}}
       {...overrides}
     />,
   )
@@ -97,6 +100,7 @@ describe('ChatPanel', () => {
         chatConnected={true}
         chatReconnectedAt={0}
         latestChatMessage={{ messageId: 9, clientMessageId: 'echo-1', authorUserId: 1, type: 'USER_TEXT', body: '실시간 테스트', sentAt: '2026-08-31T00:00:00Z' }}
+        onChatRead={() => {}}
       />,
     )
 
@@ -139,6 +143,7 @@ describe('ChatPanel', () => {
         latestChatMessage={null}
         chatConnected={true}
         chatReconnectedAt={12345}
+        onChatRead={() => {}}
       />,
     )
 

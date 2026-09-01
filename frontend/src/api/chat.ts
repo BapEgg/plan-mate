@@ -1,8 +1,8 @@
 import { bearerHeaders, request } from './client'
 
 /**
- * WP-D phase 1+2: schema/history/send + live broadcast + reconnect gap recovery. unread·삭제/답장/
- * 반응·typing/search/notification은 이후 phase에서 확장한다 — see
+ * WP-D phase 1-3: schema/history/send + live broadcast + reconnect gap recovery + unread count.
+ * 삭제/답장/반응·typing/search/notification은 이후 phase에서 확장한다 — see
  * docs/api/collaboration-workspace-api.md §6/§7.
  */
 
@@ -23,8 +23,7 @@ export type ChatHistoryPage = {
   nextCursor: string | null
 }
 
-export type UnreadSummary = {
-  tripId: string
+export type ChatUnreadCount = {
   unreadCount: number
 }
 
@@ -57,5 +56,20 @@ export function getChatMessageByClientId(accessToken: string, tripId: string, cl
   return request<ChatMessage>(`/api/trips/${tripId}/chat/messages/by-client-id/${encodeURIComponent(clientMessageId)}`, {
     method: 'GET',
     headers: bearerHeaders(accessToken),
+  })
+}
+
+export function getChatUnreadCount(accessToken: string, tripId: string) {
+  return request<ChatUnreadCount>(`/api/trips/${tripId}/chat/unread-count`, {
+    method: 'GET',
+    headers: bearerHeaders(accessToken),
+  })
+}
+
+export function markChatRead(accessToken: string, tripId: string, messageId: number) {
+  return request<void>(`/api/trips/${tripId}/chat/read`, {
+    method: 'POST',
+    headers: bearerHeaders(accessToken),
+    body: JSON.stringify({ messageId }),
   })
 }

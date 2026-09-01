@@ -50,6 +50,9 @@ public class TripMemberEntity {
     @Column(length = 20)
     private LeftReason leftReason;
 
+    @Column(name = "last_read_chat_message_id")
+    private Long lastReadChatMessageId;
+
     protected TripMemberEntity() {
     }
 
@@ -92,6 +95,13 @@ public class TripMemberEntity {
         this.role = role;
     }
 
+    /** 뒤늦게 도착한 오래된 markRead 호출이 최신 읽음 위치를 되돌리지 않는다. */
+    public void markChatRead(Long messageId) {
+        if (lastReadChatMessageId == null || messageId > lastReadChatMessageId) {
+            this.lastReadChatMessageId = messageId;
+        }
+    }
+
     public Long getId() {
         return id;
     }
@@ -126,6 +136,10 @@ public class TripMemberEntity {
 
     public LeftReason getLeftReason() {
         return leftReason;
+    }
+
+    public Long getLastReadChatMessageId() {
+        return lastReadChatMessageId;
     }
 
 }

@@ -8,10 +8,11 @@ import { VotePanel } from './vote/VotePanel'
 
 const demoPreviewEnabled = import.meta.env.VITE_WORKSPACE_DEMO_PREVIEW === 'true'
 
-export function RoomPanel({ accessToken, chatConnected, chatReconnectedAt, className, id, panelRole, ariaLabelledBy, latestChatMessage, members, currentUser, activeDay, selectedPlace, tripId }: {
+export function RoomPanel({ accessToken, chatConnected, chatReconnectedAt, chatUnreadCount, className, id, panelRole, ariaLabelledBy, latestChatMessage, members, currentUser, activeDay, selectedPlace, tripId, onChatRead }: {
   accessToken: string
   chatConnected: boolean
   chatReconnectedAt: number
+  chatUnreadCount: number
   className?: string
   id?: string
   panelRole?: string
@@ -22,6 +23,7 @@ export function RoomPanel({ accessToken, chatConnected, chatReconnectedAt, class
   activeDay: number
   selectedPlace: ItineraryPlace | null
   tripId: string
+  onChatRead: () => void
 }) {
   const [view, setView] = useState<CollaborationView>('CHAT')
 
@@ -38,7 +40,9 @@ export function RoomPanel({ accessToken, chatConnected, chatReconnectedAt, class
         <span className="room-connection-state"><i aria-hidden="true" />{members.length}명 참여</span>
       </div>
       <div className="collaboration-tabs" role="tablist" aria-label="여행방 기능">
-        <button aria-selected={view === 'CHAT'} className={view === 'CHAT' ? 'active' : ''} role="tab" type="button" onClick={() => setView('CHAT')}>대화</button>
+        <button aria-selected={view === 'CHAT'} className={view === 'CHAT' ? 'active' : ''} role="tab" type="button" onClick={() => setView('CHAT')}>
+          대화{chatUnreadCount > 0 && <span className="chat-unread-badge">{chatUnreadCount > 9 ? '9+' : chatUnreadCount}</span>}
+        </button>
         <button aria-selected={view === 'VOTE'} className={view === 'VOTE' ? 'active' : ''} role="tab" type="button" onClick={() => setView('VOTE')}>투표</button>
       </div>
       {view === 'CHAT' ? (
@@ -49,6 +53,7 @@ export function RoomPanel({ accessToken, chatConnected, chatReconnectedAt, class
           currentUser={currentUser}
           latestChatMessage={latestChatMessage}
           members={members}
+          onChatRead={onChatRead}
           tripId={tripId}
         />
       ) : (

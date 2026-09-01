@@ -1094,6 +1094,23 @@
   background: var(--pm-blue-500);
 }
 
+.chat-unread-badge {
+  display: inline-flex;
+  min-width: 16px;
+  height: 16px;
+  margin-left: 5px;
+  padding: 0 4px;
+  border-radius: 999px;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  background: var(--pm-salmon);
+  vertical-align: middle;
+}
+
 .trip-chat-preview {
   flex: 1;
   min-height: 0;
@@ -1536,6 +1553,19 @@
     color: #fff;
     background: var(--pm-navy-900);
   }
+
+  /* .planning-header-actions (member avatars, condition/refresh/account
+     controls) never shrinks below its own content width, so without a wrap
+     point the title block is squeezed to nothing and its CJK text breaks
+     one character per line. Drop the actions row under the title instead. */
+  .planning-header {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  .planning-header-actions {
+    flex-basis: 100%;
+  }
 }
 
 @media (max-width: 780px) {
@@ -1663,6 +1693,19 @@
     left: 12px;
     width: min(280px, calc(100vw - 96px));
     max-height: min(50svh, 420px);
+  }
+
+  /* .planning-header-actions (refresh button, account menu, member avatars)
+     never shrinks below its own content width, so without a wrap point the
+     title block is squeezed to nothing and its CJK text breaks one
+     character per line. Drop the actions row under the title instead. */
+  .planning-header {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  .planning-header-actions {
+    flex-basis: 100%;
   }
 }
 
