@@ -70,6 +70,7 @@ archive는 결정 배경을 확인할 때만 사용한다. archive의 반복 문
 - 여행 조건과 Google Places 후보 수집
 - 일정 생성 요청, 수동 AI handoff/fixture, validation과 저장
 - local `itinerary-fixture` profile은 실제 GPT 호출 지점만 fixture로 대체하며 validation·저장·COMPLETED 처리는 기존 흐름을 통과한다. production 기본값은 비활성이다.
+- portfolio/local 시연용 일정 fixture와 route 통합 시나리오는 국내 여행지만 사용한다. 해외 route·timezone 동작은 production 지원 범위를 별도로 확정하기 전까지 시연 완료 조건에 포함하지 않는다.
 - 최신 generation 조회와 최신 itinerary read model
 - 일정 item별 place display·좌표 조회
 - `/ws/events`, trip topic, JWT 연결 인증과 구독 시 멤버십 검사
@@ -456,7 +457,7 @@ migration 전 현재 fixture `1530/1415/505`와 기존 여행 조회가 유지�
 필수 결정 순서:
 
 1. C0, C1, C2, C3, C4의 ADR·API skeleton과 회귀 테스트를 같은 Foundation package에서 고정한다.
-2. C5는 별도 provider spike 결과로 결정하되 실제 route 숫자·polyline 소비 기능보다 먼저 merge한다.
+2. C5는 Kakao Mobility 자동차 길찾기 API의 계약·quota·cache·geometry ADR을 실제 route 숫자·polyline 소비 기능보다 먼저 merge한다.
 3. C6는 읽기 전용 화면 동작을 유지하는 frontend 분해에서 고정한다.
 4. 이후 membership·map/route·chat은 서로 다른 package 경계에서 병렬화할 수 있다.
 5. proposal/vote는 C1·C2·C5가 통과한 뒤, regeneration은 proposal apply가 통과한 뒤 시작한다.
@@ -538,8 +539,11 @@ backend는 기존 package 규칙을 유지하되 `membership`, `route`, `chat`, 
 ### 10.5 외부 공급자와 보안 차단점
 
 - 지도 표시·Places 검색은 Google 경계를 유지한다. browser map key와 backend server key를 분리하고 referrer/IP/API restriction을 적용한다.
-- 국내 자동차 route는 Google의 기존 duration validation 성공 여부만으로 결정하지 않는다. 거제 기준 좌표로 Kakao Mobility 또는 NAVER의 license·요금·quota·geometry·mode 지원을 기록한 provider spike가 C5의 종료 조건이다.
-- provider 확정 전 route 숫자·polyline·후보 `+N분`을 UI에 넣지 않는다.
+- 공유 일정의 국내 자동차 route provider는 **Kakao Mobility 자동차 길찾기** `GET /v1/directions`로 고정한다. 카카오의 별도 **다중 경유지 길찾기** `POST /v1/waypoints/directions`는 현재 범위에서 제외한다.
+- Kakao가 앱 단위로 기본 적용하는 자동차 길찾기 일일 무료 쿼터 **10,000건**을 provider 최종 차단선으로 사용한다. 추가 쿼터·유료 제휴는 신청하거나 활성화하지 않는다. 이 값은 PlanMate가 콘솔에서 임의로 지정하는 custom limit이 아니므로, 서버에도 프로젝트 전체 호출을 선점하는 원자적 일일 usage guard(`KAKAO_DIRECTIONS_DAILY_LIMIT=10000`)를 둔다. DB/공유 저장소의 `provider + operation + KST date` counter를 외부 호출 전에 증가시켜 재시작·동시 instance에서도 10,000건을 넘기지 않으며 실패 호출과 retry도 각각 사용량으로 센다. 한도 도달 시 외부 호출·Google/NAVER 자동 fallback을 하지 않고 `ROUTE_QUOTA_EXCEEDED`를 반환하며 기존 일정·marker·마지막 검증 route를 유지한다.
+- route는 itinerary version + DAY + mode + 좌표 hash로 cache하고, 일정이 바뀐 DAY만 다시 조회한다. timeout 재시도도 일일 usage에 포함해 무제한 재시도로 한도를 넘기지 않는다.
+- 지도 표시·Places 검색은 현재 Google 경계를 유지하므로 Kakao route geometry를 Google 지도에 표시하는 방식의 약관·출처 표기를 WP-C ADR에서 검증한다. 검증 전에는 provider 이름을 숨기거나 Google route로 오인시키지 않으며, 검증 실패 시 production route overlay를 차단한다.
+- portfolio/local route 시연과 자동화 fixture는 국내 여행지만 사용한다. 해외 일정은 route 없음 상태를 정직하게 표시하며 임의 직선·추정 시간을 만들지 않는다.
 - MEMBER 제거 transaction 뒤 기존 trip subscription/session을 서버가 무효화하고 client가 private cache를 지운 뒤 `MEMBERSHIP_LOST`로 전환해야 C1/C3가 완료된다.
 - invite inbox·chat ack·개인 unread는 인증된 사용자 private destination을 사용한다. trip topic에 email·token·개인 위치를 싣지 않는다.
 - local/단일 instance는 simple broker를 유지할 수 있지만 production 다중 instance를 목표로 하면 broker relay 또는 outbox dispatcher와 instance 간 event fan-out 방식을 ADR로 고정한다. durable state는 항상 REST/DB snapshot으로 복구 가능해야 한다.
@@ -560,7 +564,7 @@ backend는 기존 package 규칙을 유지하되 `membership`, `route`, `chat`, 
 | --- | --- | --- | --- |
 | WP-A Foundation + Workspace | API gap/error/event registry, C1~C4 ADR·migration skeleton, current pointer backfill, private realtime/session port, outbox/broker delivery ADR, frontend workspace 분해, 현재 map/UI 안정화, test harness | 없음 | 기존 `1530/1415/505` 회귀, lint/build/test, 읽기·지도·세션 오류 화면 유지, 소비 package가 사용할 contract 고정 |
 | WP-B Membership + Invitation | interval, OWNER/MEMBER 권한, remove/leave/transfer, friend·email lookup, inbox, invite accept/decline/cancel, 기존 session revocation | WP-A C0/C1/C3 | 세 계정 권한 E2E, 재가입 boundary, 제거 즉시 REST·새/기존 STOMP 차단, 최대 인원·만료·중복 초대 검증 |
-| WP-C Map + Route | map adapter 안정화, place panel, provider spike/선택, DAY route snapshot/cache/polyline, 이동 구간, search/detour, provider fallback | WP-A C2/C6; package 초반 C5 provider spike | 실제 provider 결과만 표시, 일정·marker·route 동기화, 실패 시 일정/marker 유지, quota/cache test |
+| WP-C Map + Route | map adapter 안정화, place panel, Kakao Mobility 자동차 길찾기 adapter, DAY route snapshot/cache/polyline, 이동 구간, search/detour | WP-A C2/C6; package 초반 C5 ADR | 실제 provider 결과만 표시, 일정·marker·route 동기화, 실패 시 일정/marker 유지, 일 10,000건 hard cap·no paid fallback·cache test |
 | WP-D Chat + Presence | message schema, history/send/idempotency, private ack, reconnect gap, unread/visibility, delete/reply/reaction, typing/presence/mention/search, notification boundary | WP-A C0/C1/C3/C4; WP-B membership contract | 두 계정 새로고침·재접속·중복 전송·재가입 visibility·종료 후 read-only 검증 |
 | WP-E Proposal + Vote + Revision | current version, proposal validation, 직접/투표 결정, voter snapshot/ballot/deadline, conditional one-time apply, history/restore proposal | WP-A C2; WP-B; WP-C route validation | stale base 409, 동시 apply 1회, MEMBER 직접 적용 거절, 투표 기준·멤버 제거 재계산 검증 |
 | WP-F Generation + Editor | OWNER 전체/부분 재생성, fixed anchor·연속 범위, review/apply/reject, CUSTOM_PIN, 필요한 TRANSIT | WP-C; WP-E | 생성 중 current 유지, 실패 current 보존, 범위 밖 item 불변, 적용 시 새 version 1회 |
@@ -678,7 +682,7 @@ message body, draft, exact CUSTOM_PIN, email, token과 API key는 log·metric에
 | private WebSocket/session revocation | WP-A | 현재 generation topic | invite/chat ack/unread와 제거된 session 유지 |
 | outbox/broker delivery topology | WP-A | 단일 instance generation 알림 | 다중 instance 전달 보장 주장·복구 불가능 event payload |
 | timezone/lifecycle ADR | WP-A | 국내 read-only LocalTime 표시 | chat cutoff·edit lock·TRANSIT 판단 |
-| route provider ADR | WP-C 시작 | Google marker·place display | route 숫자·polyline·detour |
+| Kakao route ADR·표시 약관 검증 | WP-C 시작 | Google marker·place display, 국내 fixture | route 숫자·polyline·detour의 production 노출 |
 | browser notification 범위 | WP-D 후반 | 앱 안 unread | 권한 prompt·service worker·background push |
 
 ADR에는 선택안, 기각안, 기존 데이터 backfill, rollback/복구, 동시성 방식과 테스트를 포함한다. 차단 항목을 임시 boolean·mock 숫자·직선 route로 숨기지 않는다.
