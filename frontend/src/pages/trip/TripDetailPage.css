@@ -2923,3 +2923,17 @@
   font-size: 0.7rem;
   color: #7f8899;
 }
+
+/* WP-D chat: the composer's send button is real now (was always decoratively
+   "enabled" in the demo mockup), so a disabled state needs to actually read
+   as disabled. */
+.trip-chat-composer button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.trip-chat-error {
+  margin: 0 16px 12px;
+  color: #b73443;
+  font-size: 0.78rem;
+}

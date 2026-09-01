@@ -1,5 +1,5 @@
 import type { TripRealtimeEvent } from '../../../api/realtime'
-import { ITINERARY_GENERATION_STATUS_CHANGED, MEMBERSHIP_CHANGED } from '../../../api/realtime'
+import { CHAT_MESSAGE_SENT, ITINERARY_GENERATION_STATUS_CHANGED, MEMBERSHIP_CHANGED } from '../../../api/realtime'
 import type { GenerationStatus } from '../../../api/trips'
 
 /**
@@ -10,7 +10,7 @@ import type { GenerationStatus } from '../../../api/trips'
  * crashing the page.
  */
 const KNOWN_SCHEMA_VERSION = 1
-const KNOWN_EVENT_TYPES = new Set([ITINERARY_GENERATION_STATUS_CHANGED, MEMBERSHIP_CHANGED])
+const KNOWN_EVENT_TYPES = new Set([ITINERARY_GENERATION_STATUS_CHANGED, MEMBERSHIP_CHANGED, CHAT_MESSAGE_SENT])
 
 export function isKnownWorkspaceEvent(event: TripRealtimeEvent): boolean {
   return event.schemaVersion === KNOWN_SCHEMA_VERSION && KNOWN_EVENT_TYPES.has(event.type)

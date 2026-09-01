@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { AuthUser } from '../../../../api/auth'
+import type { ChatMessageSentPayload } from '../../../../api/realtime'
 import type { TripMember } from '../../../../api/trips'
 import type { CollaborationView, ItineraryPlace } from '../workspaceTypes'
 import { ChatPanel } from './chat/ChatPanel'
@@ -7,15 +8,18 @@ import { VotePanel } from './vote/VotePanel'
 
 const demoPreviewEnabled = import.meta.env.VITE_WORKSPACE_DEMO_PREVIEW === 'true'
 
-export function RoomPanel({ className, id, panelRole, ariaLabelledBy, members, currentUser, activeDay, selectedPlace }: {
+export function RoomPanel({ accessToken, className, id, panelRole, ariaLabelledBy, latestChatMessage, members, currentUser, activeDay, selectedPlace, tripId }: {
+  accessToken: string
   className?: string
   id?: string
   panelRole?: string
   ariaLabelledBy?: string
+  latestChatMessage: ChatMessageSentPayload | null
   members: TripMember[]
   currentUser: AuthUser | null
   activeDay: number
   selectedPlace: ItineraryPlace | null
+  tripId: string
 }) {
   const [view, setView] = useState<CollaborationView>('CHAT')
 
@@ -37,11 +41,11 @@ export function RoomPanel({ className, id, panelRole, ariaLabelledBy, members, c
       </div>
       {view === 'CHAT' ? (
         <ChatPanel
-          members={members}
+          accessToken={accessToken}
           currentUser={currentUser}
-          activeDay={activeDay}
-          selectedPlace={selectedPlace}
-          demoPreviewEnabled={demoPreviewEnabled}
+          latestChatMessage={latestChatMessage}
+          members={members}
+          tripId={tripId}
         />
       ) : (
         <VotePanel

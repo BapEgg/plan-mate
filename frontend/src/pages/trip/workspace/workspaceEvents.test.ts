@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { generationEventMessage, isKnownWorkspaceEvent } from './workspaceEvents'
-import { ITINERARY_GENERATION_STATUS_CHANGED, MEMBERSHIP_CHANGED } from '../../../api/realtime'
+import { CHAT_MESSAGE_SENT, ITINERARY_GENERATION_STATUS_CHANGED, MEMBERSHIP_CHANGED } from '../../../api/realtime'
 import type { TripRealtimeEvent } from '../../../api/realtime'
 
 type GenerationChangedEvent = Extract<TripRealtimeEvent, { type: typeof ITINERARY_GENERATION_STATUS_CHANGED }>
@@ -50,6 +50,25 @@ describe('isKnownWorkspaceEvent', () => {
       payload: { affectedUserId: 2623, changeType: 'REMOVED' },
     }
     expect(isKnownWorkspaceEvent(membershipEvent)).toBe(true)
+  })
+
+  it('also accepts CHAT_MESSAGE_SENT, the third known event type', () => {
+    const chatEvent: TripRealtimeEvent = {
+      eventId: 'event-3',
+      schemaVersion: 1,
+      type: CHAT_MESSAGE_SENT,
+      tripId: '1530',
+      occurredAt: '2026-08-31T00:00:00Z',
+      payload: {
+        messageId: 1,
+        clientMessageId: 'client-1',
+        authorUserId: 2623,
+        type: 'USER_TEXT',
+        body: '안녕하세요',
+        sentAt: '2026-08-31T00:00:00Z',
+      },
+    }
+    expect(isKnownWorkspaceEvent(chatEvent)).toBe(true)
   })
 })
 

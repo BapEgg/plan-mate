@@ -28,13 +28,24 @@ export type MembershipChangedPayload = {
   changeType: MembershipChangeType
 }
 
+export type ChatMessageSentPayload = {
+  messageId: number
+  clientMessageId: string
+  authorUserId: number | null
+  type: 'USER_TEXT' | 'SYSTEM_NOTICE'
+  body: string
+  sentAt: string
+}
+
 export const ITINERARY_GENERATION_STATUS_CHANGED = 'ITINERARY_GENERATION_STATUS_CHANGED'
 export const MEMBERSHIP_CHANGED = 'MEMBERSHIP_CHANGED'
+export const CHAT_MESSAGE_SENT = 'CHAT_MESSAGE_SENT'
 
 // `type` is a literal discriminant per variant so `event.type === X` narrows `event.payload`.
 export type TripRealtimeEvent =
   | RealtimeEventEnvelope<typeof ITINERARY_GENERATION_STATUS_CHANGED, ItineraryGenerationStatusChangedPayload>
   | RealtimeEventEnvelope<typeof MEMBERSHIP_CHANGED, MembershipChangedPayload>
+  | RealtimeEventEnvelope<typeof CHAT_MESSAGE_SENT, ChatMessageSentPayload>
 
 type TripRealtimeConnectionOptions = {
   accessToken: string

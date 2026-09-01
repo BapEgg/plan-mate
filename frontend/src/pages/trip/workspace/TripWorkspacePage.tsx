@@ -11,7 +11,8 @@ import type {
   ItineraryPlaceView,
   TripDetail,
 } from '../../../api/trips'
-import { connectTripRealtimeEvents, ITINERARY_GENERATION_STATUS_CHANGED, MEMBERSHIP_CHANGED } from '../../../api/realtime'
+import { CHAT_MESSAGE_SENT, connectTripRealtimeEvents, ITINERARY_GENERATION_STATUS_CHANGED, MEMBERSHIP_CHANGED } from '../../../api/realtime'
+import type { ChatMessageSentPayload } from '../../../api/realtime'
 import { WorkspaceHeader } from './components/WorkspaceHeader'
 import { GenerationStatusPanel, WorkspaceSetupNotice } from './components/GenerationStatusPanel'
 import { WorkspacePaneSwitcher } from './components/WorkspacePaneSwitcher'
@@ -50,6 +51,7 @@ export function TripWorkspacePage({
   const [tripErrorMessage, setTripErrorMessage] = useState('')
   const [generationFetchFailed, setGenerationFetchFailed] = useState(false)
   const [generationNotice, setGenerationNotice] = useState('')
+  const [latestChatMessage, setLatestChatMessage] = useState<ChatMessageSentPayload | null>(null)
 
   const loadTripDetail = useCallback(async () => {
     try {
@@ -158,6 +160,10 @@ export function TripWorkspacePage({
           }
           return
         }
+        if (event.type === CHAT_MESSAGE_SENT) {
+          setLatestChatMessage(event.payload)
+          return
+        }
         if (event.type !== ITINERARY_GENERATION_STATUS_CHANGED) {
           return
         }
@@ -225,6 +231,7 @@ export function TripWorkspacePage({
         generation={generation}
         generationFetchFailed={generationFetchFailed}
         generationNotice={generationNotice}
+        latestChatMessage={latestChatMessage}
         onBackToMain={onBackToMain}
         onLogout={onLogout}
         onRefresh={() => void loadTripData()}
@@ -243,6 +250,7 @@ function TripWorkspace({
   generation,
   generationFetchFailed,
   generationNotice,
+  latestChatMessage,
   accessToken,
   currentUser,
   onBackToMain,
@@ -255,6 +263,7 @@ function TripWorkspace({
   generation: ItineraryGenerationDetailResponse | null
   generationFetchFailed: boolean
   generationNotice: string
+  latestChatMessage: ChatMessageSentPayload | null
   accessToken: string
   currentUser: AuthUser | null
   onBackToMain: () => void
@@ -370,14 +379,17 @@ function TripWorkspace({
           />
         </div>
         <RoomPanel
+          accessToken={accessToken}
           activeDay={resolvedDay}
           ariaLabelledBy="workspace-pane-tab-ROOM"
           className={mobilePane === 'ROOM' ? 'mobile-active' : ''}
           currentUser={currentUser}
           id={panelIds.ROOM}
+          latestChatMessage={latestChatMessage}
           members={trip.members}
           panelRole="tabpanel"
           selectedPlace={selectedPlace}
+          tripId={trip.id}
         />
       </div>
     </section>

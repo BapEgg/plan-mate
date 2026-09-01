@@ -84,7 +84,10 @@ class ErrorEventRegistryContractTest {
             "ALREADY_FRIENDS",
             "DUPLICATE_PENDING_FRIEND_REQUEST",
             "FRIEND_REQUEST_NOT_FOUND",
-            "FRIEND_REQUEST_ALREADY_RESOLVED"
+            "FRIEND_REQUEST_ALREADY_RESOLVED",
+            // ChatErrorCode
+            "INVALID_MESSAGE_BODY",
+            "MESSAGE_NOT_FOUND"
     );
 
     private static final Set<String> DOCUMENTED_REALTIME_EVENT_TYPES = Set.of(
