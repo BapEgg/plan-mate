@@ -1,7 +1,9 @@
 package com.planmate.chat.api.event;
 
 import com.planmate.chat.entity.ChatMessageType;
+import com.planmate.chat.dto.ChatMentionResponse;
 import java.time.Instant;
+import java.util.List;
 
 /**
  * WP-D: {@code realtime.chat}이 이 event를 받아 trip topic에 새 메시지를 broadcast한다. 같은
@@ -16,6 +18,11 @@ public record ChatMessageSentEvent(
         Long authorUserId,
         ChatMessageType type,
         String body,
-        Instant sentAt
+        Instant sentAt,
+        Long replyToMessageId,
+        Long replyAuthorUserId,
+        String replyBody,
+        boolean replyDeleted,
+        List<ChatMentionResponse> mentions
 ) {
 }

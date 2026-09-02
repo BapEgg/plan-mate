@@ -37,20 +37,59 @@ public class ChatMessageEntity {
     @Column(name = "sent_at", nullable = false)
     private Instant sentAt;
 
+    @Column(name = "reply_to_message_id")
+    private Long replyToMessageId;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
     protected ChatMessageEntity() {
     }
 
-    private ChatMessageEntity(Long tripId, Long authorUserId, ChatMessageType type, String body, String clientMessageId, Instant sentAt) {
+    private ChatMessageEntity(
+            Long tripId,
+            Long authorUserId,
+            ChatMessageType type,
+            String body,
+            String clientMessageId,
+            Instant sentAt,
+            Long replyToMessageId
+    ) {
         this.tripId = tripId;
         this.authorUserId = authorUserId;
         this.type = type;
         this.body = body;
         this.clientMessageId = clientMessageId;
         this.sentAt = sentAt;
+        this.replyToMessageId = replyToMessageId;
     }
 
-    public static ChatMessageEntity userText(Long tripId, Long authorUserId, String body, String clientMessageId, Instant now) {
-        return new ChatMessageEntity(tripId, authorUserId, ChatMessageType.USER_TEXT, body, clientMessageId, now);
+    public static ChatMessageEntity userText(
+            Long tripId,
+            Long authorUserId,
+            String body,
+            String clientMessageId,
+            Instant now,
+            Long replyToMessageId
+    ) {
+        return new ChatMessageEntity(
+                tripId,
+                authorUserId,
+                ChatMessageType.USER_TEXT,
+                body,
+                clientMessageId,
+                now,
+                replyToMessageId
+        );
+    }
+
+    public void delete(Instant now) {
+        this.body = "";
+        this.deletedAt = now;
+    }
+
+    public boolean isDeleted() {
+        return deletedAt != null;
     }
 
     public Long getId() {
@@ -79,5 +118,13 @@ public class ChatMessageEntity {
 
     public Instant getSentAt() {
         return sentAt;
+    }
+
+    public Long getReplyToMessageId() {
+        return replyToMessageId;
+    }
+
+    public Instant getDeletedAt() {
+        return deletedAt;
     }
 }

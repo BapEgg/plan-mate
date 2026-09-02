@@ -1,4 +1,11 @@
 package com.planmate.chat.dto;
 
-public record SendChatMessageRequest(String clientMessageId, String body) {
+import java.util.List;
+
+public record SendChatMessageRequest(
+        String clientMessageId,
+        String body,
+        Long replyToMessageId,
+        List<ChatMentionRequest> mentions
+) {
 }

@@ -4,10 +4,8 @@ import { shouldRefitBounds } from './shouldRefitBounds'
 /**
  * Thin adapter around the Google Maps JavaScript SDK so the rest of the
  * workspace only depends on real resolved coordinates and never has to know
- * about the underlying map provider. No route/polyline rendering here: this
- * adapter only ever draws markers for coordinates the backend has actually
- * resolved, per the product rule against implying a route that was never
- * computed by a routing provider.
+ * about the underlying map provider. It draws markers for resolved places and
+ * a polyline only from verified Kakao route coordinates supplied by the backend.
  */
 
 type GoogleMapsNamespace = typeof globalThis & {
@@ -15,6 +13,7 @@ type GoogleMapsNamespace = typeof globalThis & {
     maps: {
       Map: new (element: HTMLElement, options: Record<string, unknown>) => GoogleMap
       Marker: new (options: Record<string, unknown>) => GoogleMarker
+      Polyline: new (options: Record<string, unknown>) => GooglePolyline
       LatLngBounds: new () => GoogleLatLngBounds
       SymbolPath: { CIRCLE: number }
       event: { clearInstanceListeners: (instance: unknown) => void }
@@ -35,6 +34,10 @@ type GoogleMarker = {
   setLabel: (label: Record<string, unknown>) => void
   setZIndex: (zIndex: number) => void
   addListener: (event: string, handler: () => void) => void
+}
+
+type GooglePolyline = {
+  setMap: (map: GoogleMap | null) => void
 }
 
 type GoogleLatLngBounds = {
@@ -63,7 +66,7 @@ function loadGoogleMaps(apiKey: string): Promise<void> {
     // `libraries=places` is required for `google.maps.places.PlacesService` —
     // without it the places namespace is undefined and place-detail lookups
     // silently no-op.
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places&callback=${MAPS_READY_CALLBACK}`
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&loading=async&callback=${MAPS_READY_CALLBACK}`
     script.async = true
     script.dataset.planmateGoogleMaps = 'true'
     script.onerror = () => reject(new Error('Google Maps 스크립트를 불러오지 못했습니다.'))
@@ -92,7 +95,7 @@ type TripMapViewProps = {
   selectedPlaceId: string
   fitSignal: string
   fallbackCenter: { lat: number; lng: number } | null
-  markerColor: string
+  routePoints: Array<{ latitude: number; longitude: number }>
   onSelectPlace: (placeId: string) => void
 }
 
@@ -115,10 +118,11 @@ function markerIcon(google: GoogleMapsNamespace['google'], selected: boolean, co
   }
 }
 
-export function TripMapView({ places, selectedPlaceId, fitSignal, fallbackCenter, markerColor, onSelectPlace }: TripMapViewProps) {
+export function TripMapView({ places, selectedPlaceId, fitSignal, fallbackCenter, routePoints, onSelectPlace }: TripMapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<GoogleMap | null>(null)
   const markersRef = useRef<Map<string, GoogleMarker>>(new Map())
+  const routeLineRef = useRef<GooglePolyline | null>(null)
   const onSelectPlaceRef = useRef(onSelectPlace)
   const lastFitRef = useRef<{ signal: string | null; locatedCount: number }>({ signal: null, locatedCount: 0 })
   useEffect(() => {
@@ -187,11 +191,37 @@ export function TripMapView({ places, selectedPlaceId, fitSignal, fallbackCenter
         marker.addListener('click', () => onSelectPlaceRef.current(place.id))
         existingMarkers.set(place.id, marker)
       }
-      marker.setIcon(markerIcon(google, isSelected, markerColor))
+      marker.setIcon(markerIcon(google, isSelected, '#5f7fd0'))
       marker.setLabel(markerLabel(place.order, isSelected))
       marker.setZIndex(isSelected ? 10 : 1)
     })
-  }, [places, selectedPlaceId, status, markerColor])
+  }, [places, selectedPlaceId, status])
+
+  useEffect(() => {
+    if (status !== 'ready') return undefined
+    const google = (window as GoogleMapsNamespace).google
+    const map = mapRef.current
+    if (!google || !map) return undefined
+
+    routeLineRef.current?.setMap(null)
+    routeLineRef.current = null
+    if (routePoints.length < 2) return undefined
+
+    routeLineRef.current = new google.maps.Polyline({
+      path: routePoints.map((point) => ({ lat: point.latitude, lng: point.longitude })),
+      map,
+      strokeColor: '#5879c7',
+      strokeOpacity: 0.88,
+      strokeWeight: 5,
+      geodesic: false,
+      zIndex: 2,
+    })
+
+    return () => {
+      routeLineRef.current?.setMap(null)
+      routeLineRef.current = null
+    }
+  }, [routePoints, status])
 
   useEffect(() => {
     if (status !== 'ready') return
@@ -199,27 +229,29 @@ export function TripMapView({ places, selectedPlaceId, fitSignal, fallbackCenter
     const map = mapRef.current
     if (!google || !map) return
     const located = places.filter((place) => Number.isFinite(place.latitude) && Number.isFinite(place.longitude))
+    const routeLocations = routePoints.map((point) => ({ latitude: point.latitude, longitude: point.longitude }))
+    const visibleLocations = routeLocations.length ? [...located, ...routeLocations] : located
 
-    const shouldFit = shouldRefitBounds(lastFitRef.current.signal, lastFitRef.current.locatedCount, fitSignal, located.length)
-    lastFitRef.current = { signal: fitSignal, locatedCount: located.length }
+    const shouldFit = shouldRefitBounds(lastFitRef.current.signal, lastFitRef.current.locatedCount, fitSignal, visibleLocations.length)
+    lastFitRef.current = { signal: fitSignal, locatedCount: visibleLocations.length }
     if (!shouldFit) return
 
-    if (located.length === 0) {
+    if (visibleLocations.length === 0) {
       if (fallbackCenter) {
         map.setCenter(fallbackCenter)
         map.setZoom(13)
       }
       return
     }
-    if (located.length === 1) {
-      map.setCenter({ lat: located[0].latitude, lng: located[0].longitude })
+    if (visibleLocations.length === 1) {
+      map.setCenter({ lat: visibleLocations[0].latitude, lng: visibleLocations[0].longitude })
       map.setZoom(15)
       return
     }
     const bounds = new google.maps.LatLngBounds()
-    located.forEach((place) => bounds.extend({ lat: place.latitude, lng: place.longitude }))
+    visibleLocations.forEach((place) => bounds.extend({ lat: place.latitude, lng: place.longitude }))
     map.fitBounds(bounds, 56)
-  }, [places, fitSignal, status, fallbackCenter])
+  }, [places, routePoints, fitSignal, status, fallbackCenter])
 
   if (status === 'unconfigured') {
     return (

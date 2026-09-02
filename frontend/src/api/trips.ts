@@ -177,6 +177,7 @@ export type Itinerary = {
   id: number
   generationId: number
   createdAt: string
+  version: number
   days: ItineraryDay[]
 }
 

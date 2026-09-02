@@ -2,34 +2,37 @@ package com.planmate.itinerary.route.kakao;
 
 import com.planmate.itinerary.exception.ItineraryErrorCode;
 import com.planmate.itinerary.exception.ItineraryException;
+import com.planmate.itinerary.route.RouteCoordinate;
 import com.planmate.itinerary.route.RouteLegSnapshotEntity;
 import com.planmate.itinerary.route.RouteLegSnapshotRepository;
-import com.planmate.itinerary.route.RouteProviderDailyUsageRepository;
+import com.planmate.itinerary.route.RoutePath;
+import com.planmate.itinerary.route.RouteProviderQuotaService;
 import com.planmate.itinerary.route.RouteTravelTimePort.RoutePoint;
 import com.planmate.itinerary.route.RouteTravelTimePort.RouteTravelTime;
+import java.net.SocketTimeoutException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
 /**
- * spec §10.5: 국내 자동차 route provider는 Kakao Mobility 자동차 길찾기
- * {@code GET /v1/directions}로 고정한다. 다중 경유지 길찾기는 범위 밖이다.
- * 좌표쌍 단위 cache와 KST 기준 일 10,000건 hard cap(재시도 포함)을 이 클래스가 직접 책임진다 —
- * {@link RouteTravelTimeRouter}가 이 provider를 {@code DRIVE} 전용으로 호출한다.
+ * 국내 자동차 route provider. 표준 Kakao Mobility {@code GET /v1/directions}만
+ * 사용하며 인접한 두 장소 단위의 실제 geometry와 이동 시간을 함께 반환한다.
  */
 @Service
 public class KakaoDrivingRouteProvider {
@@ -38,44 +41,56 @@ public class KakaoDrivingRouteProvider {
     private static final String OPERATION = "DIRECTIONS";
     private static final String TRAVEL_MODE = "DRIVE";
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
-    private static final String BASE_URL = "https://apis-navi.kakaomobility.com";
     private static final String SUCCESS_RESULT_CODE = "0";
 
     private final RestClient restClient;
     private final String apiKey;
     private final int dailyLimit;
+    private final Duration cacheTtl;
     private final RouteLegSnapshotRepository snapshotRepository;
-    private final RouteProviderDailyUsageRepository usageRepository;
+    private final RouteProviderQuotaService quotaService;
     private final Clock clock;
 
     public KakaoDrivingRouteProvider(
-            RestClient.Builder restClientBuilder,
+            @Qualifier("kakaoDirectionsRestClient") RestClient restClient,
             @Value("${app.kakao.directions.api-key:}") String apiKey,
             @Value("${app.kakao.directions.daily-limit:10000}") int dailyLimit,
+            @Value("${app.kakao.directions.cache-ttl:24h}") Duration cacheTtl,
             RouteLegSnapshotRepository snapshotRepository,
-            RouteProviderDailyUsageRepository usageRepository,
+            RouteProviderQuotaService quotaService,
             Clock clock
     ) {
-        this.restClient = restClientBuilder.baseUrl(BASE_URL).build();
+        this.restClient = restClient;
         this.apiKey = apiKey;
         this.dailyLimit = dailyLimit;
+        this.cacheTtl = cacheTtl;
         this.snapshotRepository = snapshotRepository;
-        this.usageRepository = usageRepository;
+        this.quotaService = quotaService;
         this.clock = clock;
     }
 
-    @Transactional
     public Optional<RouteTravelTime> findRoute(RoutePoint origin, RoutePoint destination) {
+        return findRoutePath(origin, destination, false)
+                .map(path -> new RouteTravelTime(
+                        Duration.ofSeconds(path.durationSeconds()),
+                        path.distanceMeters()
+                ));
+    }
+
+    public Optional<RoutePath> findDetailedRoute(RoutePoint origin, RoutePoint destination) {
+        return findRoutePath(origin, destination, true);
+    }
+
+    private Optional<RoutePath> findRoutePath(RoutePoint origin, RoutePoint destination, boolean geometryRequired) {
         assertApiKeyConfigured();
 
         String cacheKey = cacheKey(origin, destination);
         Optional<RouteLegSnapshotEntity> cached = snapshotRepository.findByTravelModeAndCacheKey(TRAVEL_MODE, cacheKey);
-        if (cached.isPresent()) {
-            RouteLegSnapshotEntity snapshot = cached.get();
-            return Optional.of(new RouteTravelTime(
-                    Duration.ofSeconds(snapshot.getDurationSeconds()),
-                    snapshot.getDistanceMeters()
-            ));
+        if (cached.isPresent() && isFresh(cached.get())) {
+            RoutePath cachedPath = toPath(cached.get());
+            if (!geometryRequired || !cachedPath.geometry().isEmpty()) {
+                return Optional.of(cachedPath);
+            }
         }
 
         reserveDailyCall();
@@ -90,23 +105,57 @@ public class KakaoDrivingRouteProvider {
                     .retrieve()
                     .body(KakaoDirectionsResponse.class);
 
-            return extractTravelTime(response)
-                    .map(travelTime -> {
-                        saveSnapshot(cacheKey, origin, destination, travelTime);
-                        return travelTime;
+            return extractPath(response)
+                    .map(path -> {
+                        saveSnapshot(cached.orElse(null), cacheKey, origin, destination, path);
+                        return path;
                     });
         } catch (RestClientResponseException exception) {
+            if (exception.getStatusCode().value() == 429) {
+                throw new ItineraryException(ItineraryErrorCode.ROUTE_QUOTA_EXCEEDED, exception);
+            }
             if (isProviderUnavailable(exception.getStatusCode())) {
                 throw new ItineraryException(ItineraryErrorCode.ROUTE_PROVIDER_UNAVAILABLE, exception);
             }
             throw new ItineraryException(ItineraryErrorCode.ROUTE_PROVIDER_REQUEST_FAILED, exception);
+        } catch (ResourceAccessException exception) {
+            if (hasTimeoutCause(exception)) {
+                throw new ItineraryException(ItineraryErrorCode.ROUTE_PROVIDER_TIMEOUT, exception);
+            }
+            throw new ItineraryException(ItineraryErrorCode.ROUTE_PROVIDER_UNAVAILABLE, exception);
         } catch (RestClientException exception) {
             throw new ItineraryException(ItineraryErrorCode.ROUTE_PROVIDER_UNAVAILABLE, exception);
         }
     }
 
-    private void saveSnapshot(String cacheKey, RoutePoint origin, RoutePoint destination, RouteTravelTime travelTime) {
+    private boolean isFresh(RouteLegSnapshotEntity snapshot) {
+        return !snapshot.getVerifiedAt().isBefore(Instant.now(clock).minus(cacheTtl));
+    }
+
+    private RoutePath toPath(RouteLegSnapshotEntity snapshot) {
+        return new RoutePath(
+                snapshot.getProvider(),
+                snapshot.getDistanceMeters(),
+                snapshot.getDurationSeconds(),
+                decodeGeometry(snapshot.getGeometry()),
+                snapshot.getVerifiedAt()
+        );
+    }
+
+    private void saveSnapshot(
+            RouteLegSnapshotEntity existing,
+            String cacheKey,
+            RoutePoint origin,
+            RoutePoint destination,
+            RoutePath path
+    ) {
         try {
+            String geometry = encodeGeometry(path.geometry());
+            if (existing != null) {
+                existing.refresh(path.distanceMeters(), path.durationSeconds(), path.provider(), path.verifiedAt(), geometry);
+                snapshotRepository.save(existing);
+                return;
+            }
             snapshotRepository.save(RouteLegSnapshotEntity.create(
                     TRAVEL_MODE,
                     cacheKey,
@@ -114,24 +163,23 @@ public class KakaoDrivingRouteProvider {
                     origin.longitude(),
                     destination.latitude(),
                     destination.longitude(),
-                    (int) travelTime.distanceMeters(),
-                    (int) travelTime.duration().getSeconds(),
-                    PROVIDER,
-                    Instant.now(clock)
+                    path.distanceMeters(),
+                    path.durationSeconds(),
+                    path.provider(),
+                    path.verifiedAt(),
+                    geometry
             ));
         } catch (org.springframework.dao.DataIntegrityViolationException raceLoser) {
-            // 동시에 같은 좌표쌍을 처음 조회한 다른 요청이 먼저 cache를 채웠다 — 이미 유효한
-            // 결과를 갖고 있으므로 무시한다.
+            // 동시에 같은 좌표쌍을 먼저 저장한 요청이 있다. 현재 응답은 이미 유효하므로 그대로 사용한다.
         }
     }
 
     private void reserveDailyCall() {
         LocalDate today = Instant.now(clock).atZone(KST).toLocalDate();
-        usageRepository.reserveCall(PROVIDER, OPERATION, today, dailyLimit)
-                .orElseThrow(() -> new ItineraryException(ItineraryErrorCode.ROUTE_PROVIDER_UNAVAILABLE));
+        quotaService.reserve(PROVIDER, OPERATION, today, dailyLimit);
     }
 
-    private Optional<RouteTravelTime> extractTravelTime(KakaoDirectionsResponse response) {
+    private Optional<RoutePath> extractPath(KakaoDirectionsResponse response) {
         if (response == null || response.routes() == null || response.routes().isEmpty()) {
             return Optional.empty();
         }
@@ -139,10 +187,66 @@ public class KakaoDrivingRouteProvider {
         if (route.summary() == null || !SUCCESS_RESULT_CODE.equals(String.valueOf(route.resultCode()))) {
             return Optional.empty();
         }
-        return Optional.of(new RouteTravelTime(
-                Duration.ofSeconds(route.summary().duration()),
-                route.summary().distance()
+        return Optional.of(new RoutePath(
+                PROVIDER,
+                Math.toIntExact(route.summary().distance()),
+                Math.toIntExact(route.summary().duration()),
+                extractGeometry(route.sections()),
+                Instant.now(clock)
         ));
+    }
+
+    private List<RouteCoordinate> extractGeometry(List<KakaoSection> sections) {
+        if (sections == null) {
+            return List.of();
+        }
+        List<RouteCoordinate> geometry = new ArrayList<>();
+        for (KakaoSection section : sections) {
+            if (section == null || section.roads() == null) {
+                continue;
+            }
+            for (KakaoRoad road : section.roads()) {
+                if (road == null || road.vertexes() == null) {
+                    continue;
+                }
+                List<Double> vertexes = road.vertexes();
+                for (int index = 0; index + 1 < vertexes.size(); index += 2) {
+                    RouteCoordinate coordinate = new RouteCoordinate(vertexes.get(index + 1), vertexes.get(index));
+                    if (geometry.isEmpty() || !geometry.getLast().equals(coordinate)) {
+                        geometry.add(coordinate);
+                    }
+                }
+            }
+        }
+        return List.copyOf(geometry);
+    }
+
+    private String encodeGeometry(List<RouteCoordinate> geometry) {
+        if (geometry.isEmpty()) {
+            return null;
+        }
+        return geometry.stream()
+                .map(point -> String.format(Locale.ROOT, "%.6f,%.6f", point.latitude(), point.longitude()))
+                .reduce((left, right) -> left + ";" + right)
+                .orElse(null);
+    }
+
+    private List<RouteCoordinate> decodeGeometry(String encoded) {
+        if (!StringUtils.hasText(encoded)) {
+            return List.of();
+        }
+        List<RouteCoordinate> result = new ArrayList<>();
+        for (String pair : encoded.split(";")) {
+            String[] values = pair.split(",");
+            if (values.length == 2) {
+                try {
+                    result.add(new RouteCoordinate(Double.parseDouble(values[0]), Double.parseDouble(values[1])));
+                } catch (NumberFormatException ignored) {
+                    return List.of();
+                }
+            }
+        }
+        return List.copyOf(result);
     }
 
     private void assertApiKeyConfigured() {
@@ -156,7 +260,6 @@ public class KakaoDrivingRouteProvider {
     }
 
     private String coordinateParam(RoutePoint point) {
-        // Kakao는 "경도,위도" 순서를 요구한다 — 위도/경도(RoutePoint) 순서와 반대다.
         return String.format(Locale.ROOT, "%.6f,%.6f", point.longitude(), point.latitude());
     }
 
@@ -171,19 +274,37 @@ public class KakaoDrivingRouteProvider {
 
     private boolean isProviderUnavailable(HttpStatusCode statusCode) {
         int status = statusCode.value();
-        return status == 401
-                || status == 403
-                || status == 408
-                || status == 429
-                || statusCode.is5xxServerError();
+        return status == 401 || status == 403 || status == 408 || statusCode.is5xxServerError();
+    }
+
+    private boolean hasTimeoutCause(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof SocketTimeoutException) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private record KakaoDirectionsResponse(List<KakaoRoute> routes) {
     }
 
-    private record KakaoRoute(int resultCode, String resultMsg, KakaoSummary summary) {
+    private record KakaoRoute(
+            int resultCode,
+            String resultMsg,
+            KakaoSummary summary,
+            List<KakaoSection> sections
+    ) {
     }
 
     private record KakaoSummary(long distance, long duration) {
+    }
+
+    private record KakaoSection(List<KakaoRoad> roads) {
+    }
+
+    private record KakaoRoad(List<Double> vertexes) {
     }
 }

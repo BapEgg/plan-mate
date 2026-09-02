@@ -10,6 +10,12 @@ const listChatHistory = vi.fn()
 const listChatSince = vi.fn()
 const sendChatMessage = vi.fn()
 const getChatMessageByClientId = vi.fn()
+const getChatMessage = vi.fn()
+const deleteChatMessage = vi.fn()
+const setChatReaction = vi.fn()
+const removeChatReaction = vi.fn()
+const searchChatMessages = vi.fn()
+const getChatMessageContext = vi.fn()
 const markChatRead = vi.fn().mockResolvedValue(undefined)
 
 vi.mock('../../../../../api/chat', () => ({
@@ -17,6 +23,12 @@ vi.mock('../../../../../api/chat', () => ({
   listChatSince: (...args: unknown[]) => listChatSince(...args),
   sendChatMessage: (...args: unknown[]) => sendChatMessage(...args),
   getChatMessageByClientId: (...args: unknown[]) => getChatMessageByClientId(...args),
+  getChatMessage: (...args: unknown[]) => getChatMessage(...args),
+  deleteChatMessage: (...args: unknown[]) => deleteChatMessage(...args),
+  setChatReaction: (...args: unknown[]) => setChatReaction(...args),
+  removeChatReaction: (...args: unknown[]) => removeChatReaction(...args),
+  searchChatMessages: (...args: unknown[]) => searchChatMessages(...args),
+  getChatMessageContext: (...args: unknown[]) => getChatMessageContext(...args),
   markChatRead: (...args: unknown[]) => markChatRead(...args),
 }))
 
@@ -35,6 +47,7 @@ function renderChatPanel(overrides: Partial<React.ComponentProps<typeof ChatPane
       members={members}
       currentUser={currentUser}
       latestChatMessage={null}
+      latestChatChange={null}
       chatConnected={true}
       chatReconnectedAt={0}
       onChatRead={() => {}}
@@ -99,7 +112,19 @@ describe('ChatPanel', () => {
         currentUser={currentUser}
         chatConnected={true}
         chatReconnectedAt={0}
-        latestChatMessage={{ messageId: 9, clientMessageId: 'echo-1', authorUserId: 1, type: 'USER_TEXT', body: '실시간 테스트', sentAt: '2026-08-31T00:00:00Z' }}
+        latestChatMessage={{
+          messageId: 9,
+          clientMessageId: 'echo-1',
+          authorUserId: 1,
+          type: 'USER_TEXT',
+          body: '실시간 테스트',
+          sentAt: '2026-08-31T00:00:00Z',
+          replyToMessageId: null,
+          replyAuthorUserId: null,
+          replyBody: null,
+          replyDeleted: false,
+        }}
+        latestChatChange={null}
         onChatRead={() => {}}
       />,
     )
@@ -118,7 +143,7 @@ describe('ChatPanel', () => {
     await waitFor(() => expect(screen.getByText('읽기는 계속 됨')).toBeInTheDocument())
     expect(screen.getByPlaceholderText('메시지를 입력하세요…')).toBeDisabled()
     expect(screen.getByRole('button', { name: '메시지 보내기' })).toBeDisabled()
-    expect(screen.getByRole('status')).toHaveTextContent('실시간 연결이 끊겼습니다')
+    expect(screen.getByRole('status')).toHaveTextContent('연결을 다시 확인하고 있습니다')
   })
 
   it('fills the REST gap on reconnect without duplicating already-rendered messages', async () => {
@@ -141,6 +166,7 @@ describe('ChatPanel', () => {
         members={members}
         currentUser={currentUser}
         latestChatMessage={null}
+        latestChatChange={null}
         chatConnected={true}
         chatReconnectedAt={12345}
         onChatRead={() => {}}
@@ -172,5 +198,227 @@ describe('ChatPanel', () => {
 
     await waitFor(() => expect(sendChatMessage).toHaveBeenCalledTimes(2))
     await waitFor(() => expect(screen.queryByText('전송 실패')).not.toBeInTheDocument())
+  })
+
+  it('sends a one-level reply with the selected message id', async () => {
+    listChatHistory.mockResolvedValueOnce({
+      messages: [{ id: 12, tripId: '1530', authorUserId: 2, type: 'USER_TEXT', body: '카페는 어디로 갈까요?', clientMessageId: 'reply-origin', sentAt: new Date().toISOString() }],
+      nextCursor: null,
+    })
+    sendChatMessage.mockResolvedValueOnce({
+      id: 13,
+      tripId: '1530',
+      authorUserId: 1,
+      type: 'USER_TEXT',
+      body: '바다 보이는 곳이 좋아요.',
+      clientMessageId: 'reply-sent',
+      sentAt: new Date().toISOString(),
+      replyTo: { messageId: 12, authorUserId: 2, body: '카페는 어디로 갈까요?', deleted: false },
+      deleted: false,
+      deletedAt: null,
+      deletableUntil: new Date(Date.now() + 300_000).toISOString(),
+      reactions: [],
+    })
+
+    renderChatPanel()
+    const user = userEvent.setup()
+    await waitFor(() => expect(screen.getByText('카페는 어디로 갈까요?')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: '답장' }))
+    expect(screen.getByRole('status')).toHaveTextContent('서윤에게 답장')
+    await user.type(screen.getByPlaceholderText('메시지를 입력하세요…'), '바다 보이는 곳이 좋아요.')
+    await user.click(screen.getByRole('button', { name: '메시지 보내기' }))
+
+    await waitFor(() => expect(sendChatMessage).toHaveBeenCalledWith(
+      'token',
+      '1530',
+      expect.objectContaining({ replyToMessageId: 12, body: '바다 보이는 곳이 좋아요.' }),
+    ))
+  })
+
+  it('replaces the current user reaction instead of stacking another one', async () => {
+    const sentAt = new Date().toISOString()
+    listChatHistory.mockResolvedValueOnce({
+      messages: [{ id: 21, tripId: '1530', authorUserId: 2, type: 'USER_TEXT', body: '매미성 먼저 가요', clientMessageId: 'reaction-origin', sentAt }],
+      nextCursor: null,
+    })
+    setChatReaction.mockResolvedValueOnce({
+      id: 21,
+      tripId: '1530',
+      authorUserId: 2,
+      type: 'USER_TEXT',
+      body: '매미성 먼저 가요',
+      clientMessageId: 'reaction-origin',
+      sentAt,
+      replyTo: null,
+      deleted: false,
+      deletedAt: null,
+      deletableUntil: new Date(Date.now() + 300_000).toISOString(),
+      reactions: [{ reaction: 'ACKNOWLEDGED', count: 1, memberNames: ['민준'], reactedByMe: true }],
+    })
+
+    renderChatPanel()
+    const user = userEvent.setup()
+    await waitFor(() => expect(screen.getByText('매미성 먼저 가요')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: '확인했어요 반응' }))
+
+    await waitFor(() => expect(setChatReaction).toHaveBeenCalledWith('token', '1530', 21, 'ACKNOWLEDGED'))
+    expect(screen.getByRole('button', { pressed: true })).toHaveTextContent('1')
+  })
+
+  it('turns an own message into a tombstone after inline confirmation', async () => {
+    const sentAt = new Date().toISOString()
+    listChatHistory.mockResolvedValueOnce({
+      messages: [{ id: 31, tripId: '1530', authorUserId: 1, type: 'USER_TEXT', body: '지울 메시지', clientMessageId: 'delete-origin', sentAt }],
+      nextCursor: null,
+    })
+    deleteChatMessage.mockResolvedValueOnce({
+      id: 31,
+      tripId: '1530',
+      authorUserId: 1,
+      type: 'USER_TEXT',
+      body: '삭제된 메시지입니다.',
+      clientMessageId: 'delete-origin',
+      sentAt,
+      replyTo: null,
+      deleted: true,
+      deletedAt: new Date().toISOString(),
+      deletableUntil: new Date(Date.now() + 300_000).toISOString(),
+      reactions: [],
+    })
+
+    renderChatPanel()
+    const user = userEvent.setup()
+    await waitFor(() => expect(screen.getByText('지울 메시지')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: '삭제' }))
+    expect(screen.getByText('이 메시지를 삭제할까요?')).toBeInTheDocument()
+    await user.click(screen.getAllByRole('button', { name: '삭제' })[1])
+
+    await waitFor(() => expect(deleteChatMessage).toHaveBeenCalledWith('token', '1530', 31))
+    expect(screen.getByText('삭제된 메시지입니다.')).toBeInTheDocument()
+  })
+
+  it('refreshes one authoritative message snapshot after a realtime change signal', async () => {
+    const sentAt = new Date().toISOString()
+    listChatHistory.mockResolvedValueOnce({
+      messages: [{ id: 41, tripId: '1530', authorUserId: 2, type: 'USER_TEXT', body: '변경 전', clientMessageId: 'changed-message', sentAt }],
+      nextCursor: null,
+    })
+    getChatMessage.mockResolvedValueOnce({
+      id: 41,
+      tripId: '1530',
+      authorUserId: 2,
+      type: 'USER_TEXT',
+      body: '삭제된 메시지입니다.',
+      clientMessageId: 'changed-message',
+      sentAt,
+      replyTo: null,
+      deleted: true,
+      deletedAt: new Date().toISOString(),
+      deletableUntil: new Date(Date.now() + 300_000).toISOString(),
+      reactions: [],
+    })
+
+    const { rerender } = renderChatPanel()
+    await waitFor(() => expect(screen.getByText('변경 전')).toBeInTheDocument())
+    rerender(
+      <ChatPanel
+        accessToken="token"
+        tripId="1530"
+        members={members}
+        currentUser={currentUser}
+        latestChatMessage={null}
+        latestChatChange={{ messageId: 41, deletedAt: new Date().toISOString() }}
+        chatConnected={true}
+        chatReconnectedAt={0}
+        onChatRead={() => {}}
+      />,
+    )
+
+    await waitFor(() => expect(getChatMessage).toHaveBeenCalledWith('token', '1530', 41))
+    expect(await screen.findByText('삭제된 메시지입니다.')).toBeInTheDocument()
+  })
+
+  it('shows at most the confirmed remote typing member name', async () => {
+    listChatHistory.mockResolvedValueOnce({ messages: [], nextCursor: null })
+    renderChatPanel({
+      latestChatTyping: {
+        memberId: 2,
+        active: true,
+        expiresAtUtc: new Date(Date.now() + 5000).toISOString(),
+        eventSequence: 1,
+      },
+    })
+
+    expect(await screen.findByRole('status', { name: '서윤님이 입력 중' })).toHaveTextContent('서윤님이 입력 중')
+  })
+
+  it('selects an active member mention and sends code-point ranges', async () => {
+    listChatHistory.mockResolvedValueOnce({ messages: [], nextCursor: null })
+    sendChatMessage.mockResolvedValueOnce({
+      id: 30,
+      tripId: '1530',
+      authorUserId: 1,
+      type: 'USER_TEXT',
+      body: '@서윤 거제 카페 어때요?',
+      clientMessageId: 'mention-1',
+      sentAt: '2026-09-02T00:00:00Z',
+      mentions: [{ memberId: 2, displayNameSnapshot: '서윤', startCodePoint: 0, endCodePoint: 3 }],
+    })
+    renderChatPanel({ sendChatTyping: vi.fn(() => true) })
+    const user = userEvent.setup()
+    const composer = await screen.findByPlaceholderText('메시지를 입력하세요…')
+    await user.type(composer, '@서')
+    await user.click(screen.getByRole('option', { name: /서윤/ }))
+    await user.type(composer, '거제 카페 어때요?')
+    await user.click(screen.getByRole('button', { name: '메시지 보내기' }))
+
+    await waitFor(() => expect(sendChatMessage).toHaveBeenCalledWith(
+      'token',
+      '1530',
+      expect.objectContaining({
+        body: '@서윤 거제 카페 어때요?',
+        mentions: [{ memberId: 2, startCodePoint: 0, endCodePoint: 3 }],
+      }),
+    ))
+  })
+
+  it('searches messages and moves to a server context result', async () => {
+    listChatHistory.mockResolvedValueOnce({ messages: [], nextCursor: null })
+    searchChatMessages.mockResolvedValueOnce({
+      query: '거제',
+      results: [{
+        messageId: 40,
+        sequence: 40,
+        senderSnapshot: '서윤',
+        createdAtUtc: '2026-09-02T00:00:00Z',
+        snippet: '거제 카페에서 만나요',
+        matchedRanges: [{ startCodePoint: 0, endCodePoint: 2 }],
+      }],
+      nextCursor: null,
+      hasMore: false,
+      searchSnapshotSequence: 40,
+    })
+    getChatMessageContext.mockResolvedValueOnce({
+      messages: [{
+        id: 40,
+        tripId: '1530',
+        authorUserId: 2,
+        type: 'USER_TEXT',
+        body: '거제 카페에서 만나요',
+        clientMessageId: 'search-40',
+        sentAt: '2026-09-02T00:00:00Z',
+        mentions: [],
+      }],
+      nextCursor: null,
+    })
+
+    renderChatPanel()
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: '대화 검색' }))
+    await user.type(screen.getByLabelText('대화에서 찾기'), '거제')
+    await user.click(await screen.findByRole('button', { name: /서윤.*거제 카페에서 만나요/ }))
+
+    expect(await screen.findByText('거제 카페에서 만나요')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '검색 결과로 돌아가기' })).toBeInTheDocument()
   })
 })

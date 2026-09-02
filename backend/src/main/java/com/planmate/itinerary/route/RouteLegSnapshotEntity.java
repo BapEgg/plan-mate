@@ -46,6 +46,9 @@ public class RouteLegSnapshotEntity {
     @Column(name = "verified_at", nullable = false)
     private Instant verifiedAt;
 
+    @Column(name = "geometry", columnDefinition = "TEXT")
+    private String geometry;
+
     protected RouteLegSnapshotEntity() {
     }
 
@@ -59,7 +62,8 @@ public class RouteLegSnapshotEntity {
             int distanceMeters,
             int durationSeconds,
             String provider,
-            Instant verifiedAt
+            Instant verifiedAt,
+            String geometry
     ) {
         this.travelMode = travelMode;
         this.cacheKey = cacheKey;
@@ -71,6 +75,7 @@ public class RouteLegSnapshotEntity {
         this.durationSeconds = durationSeconds;
         this.provider = provider;
         this.verifiedAt = verifiedAt;
+        this.geometry = geometry;
     }
 
     public static RouteLegSnapshotEntity create(
@@ -83,7 +88,8 @@ public class RouteLegSnapshotEntity {
             int distanceMeters,
             int durationSeconds,
             String provider,
-            Instant verifiedAt
+            Instant verifiedAt,
+            String geometry
     ) {
         return new RouteLegSnapshotEntity(
                 travelMode,
@@ -95,8 +101,17 @@ public class RouteLegSnapshotEntity {
                 distanceMeters,
                 durationSeconds,
                 provider,
-                verifiedAt
+                verifiedAt,
+                geometry
         );
+    }
+
+    public void refresh(int distanceMeters, int durationSeconds, String provider, Instant verifiedAt, String geometry) {
+        this.distanceMeters = distanceMeters;
+        this.durationSeconds = durationSeconds;
+        this.provider = provider;
+        this.verifiedAt = verifiedAt;
+        this.geometry = geometry;
     }
 
     public Long getId() {
@@ -125,5 +140,9 @@ public class RouteLegSnapshotEntity {
 
     public Instant getVerifiedAt() {
         return verifiedAt;
+    }
+
+    public String getGeometry() {
+        return geometry;
     }
 }

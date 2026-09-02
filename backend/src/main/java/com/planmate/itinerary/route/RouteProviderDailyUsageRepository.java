@@ -8,6 +8,12 @@ import org.springframework.data.repository.query.Param;
 
 public interface RouteProviderDailyUsageRepository extends JpaRepository<RouteProviderDailyUsageEntity, Long> {
 
+    Optional<RouteProviderDailyUsageEntity> findByProviderAndOperationAndUsageDate(
+            String provider,
+            String operation,
+            LocalDate usageDate
+    );
+
     /**
      * spec §10.5: DB의 (provider, operation, KST date) counter를 외부 호출 전에 원자적으로
      * 증가시켜 재시작·동시 instance에서도 일일 한도를 넘기지 않는다. {@code call_count}가 이미

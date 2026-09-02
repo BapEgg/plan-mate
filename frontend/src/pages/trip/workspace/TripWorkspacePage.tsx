@@ -11,9 +11,13 @@ import type {
   ItineraryPlaceView,
   TripDetail,
 } from '../../../api/trips'
-import { CHAT_MESSAGE_SENT, connectTripRealtimeEvents, ITINERARY_GENERATION_STATUS_CHANGED, MEMBERSHIP_CHANGED } from '../../../api/realtime'
-import type { ChatMessageSentPayload } from '../../../api/realtime'
+import { CHAT_MESSAGE_DELETED, CHAT_MESSAGE_SENT, CHAT_REACTION_CHANGED, CHAT_TYPING_UPDATED, connectTripRealtimeEvents, ITINERARY_GENERATION_STATUS_CHANGED, MEMBER_PRESENCE_CHANGED, MEMBERSHIP_CHANGED } from '../../../api/realtime'
+import type { ChatMessageChangedPayload, ChatMessageSentPayload, ChatTypingChangedPayload, TripRealtimeConnection } from '../../../api/realtime'
 import { getChatUnreadCount } from '../../../api/chat'
+import { getTripPresence } from '../../../api/presence'
+import type { PresenceStatus } from '../../../api/presence'
+import { getDayRoute } from '../../../api/routes'
+import type { DayRoute } from '../../../api/routes'
 import { WorkspaceHeader } from './components/WorkspaceHeader'
 import { GenerationStatusPanel, WorkspaceSetupNotice } from './components/GenerationStatusPanel'
 import { WorkspacePaneSwitcher } from './components/WorkspacePaneSwitcher'
@@ -36,6 +40,7 @@ type TripWorkspacePageProps = {
 }
 
 const itineraryGenerationEnabled = import.meta.env.VITE_ITINERARY_GENERATION_ENABLED === 'true'
+const dayRouteEnabled = import.meta.env.DEV || import.meta.env.VITE_DAY_ROUTE_ENABLED === 'true'
 
 export function TripWorkspacePage({
   accessToken,
@@ -53,11 +58,16 @@ export function TripWorkspacePage({
   const [generationFetchFailed, setGenerationFetchFailed] = useState(false)
   const [generationNotice, setGenerationNotice] = useState('')
   const [latestChatMessage, setLatestChatMessage] = useState<ChatMessageSentPayload | null>(null)
+  const [latestChatChange, setLatestChatChange] = useState<ChatMessageChangedPayload | null>(null)
+  const [latestChatTyping, setLatestChatTyping] = useState<ChatTypingChangedPayload | null>(null)
+  const [presenceByMember, setPresenceByMember] = useState<Record<number, PresenceStatus> | null>(null)
   const [chatConnected, setChatConnected] = useState(true)
   const [chatReconnectedAt, setChatReconnectedAt] = useState(0)
   const [chatUnreadCount, setChatUnreadCount] = useState(0)
   const hasConnectedBeforeRef = useRef(false)
   const disconnectTimerRef = useRef<number | null>(null)
+  const realtimeConnectionRef = useRef<TripRealtimeConnection | null>(null)
+  const presenceVersionRef = useRef(0)
 
   const loadChatUnreadCount = useCallback(async () => {
     try {
@@ -67,6 +77,20 @@ export function TripWorkspacePage({
       // Non-critical: the badge just stays at its last known value until the next trigger.
     }
   }, [accessToken, tripId])
+
+  const loadPresence = useCallback(async () => {
+    try {
+      const snapshot = await getTripPresence(accessToken, tripId)
+      presenceVersionRef.current = snapshot.snapshotVersion
+      setPresenceByMember(Object.fromEntries(snapshot.members.map((member) => [member.memberId, member.status])))
+    } catch {
+      setPresenceByMember(null)
+    }
+  }, [accessToken, tripId])
+
+  const sendChatTyping = useCallback((state: 'STARTED' | 'HEARTBEAT' | 'STOPPED', clientSessionId: string, clientEventId: string) => (
+    realtimeConnectionRef.current?.setTyping(state, clientSessionId, clientEventId) ?? false
+  ), [])
 
   const loadTripDetail = useCallback(async () => {
     try {
@@ -137,22 +161,19 @@ export function TripWorkspacePage({
     const timeoutId = window.setTimeout(() => {
       void loadTripData()
       void loadChatUnreadCount()
+      void loadPresence()
     }, 0)
     return () => window.clearTimeout(timeoutId)
-  }, [loadTripData, loadChatUnreadCount])
+  }, [loadTripData, loadChatUnreadCount, loadPresence])
 
   useEffect(() => {
-    if (!itineraryGenerationEnabled) {
-      return undefined
-    }
-
     let active = true
 
     const connection = connectTripRealtimeEvents({
       accessToken,
       tripId,
       onConnect: () => {
-        setGenerationNotice('실시간 상태 업데이트에 연결되었습니다.')
+        if (itineraryGenerationEnabled) setGenerationNotice('실시간 상태 업데이트에 연결되었습니다.')
         if (disconnectTimerRef.current !== null) {
           window.clearTimeout(disconnectTimerRef.current)
           disconnectTimerRef.current = null
@@ -163,6 +184,7 @@ export function TripWorkspacePage({
         }
         hasConnectedBeforeRef.current = true
         void loadGeneration()
+        void loadPresence()
       },
       onDisconnected: () => {
         // spec §4 "연결 상태": only surface a disconnect after a 2s grace period so a
@@ -199,6 +221,20 @@ export function TripWorkspacePage({
           void loadChatUnreadCount()
           return
         }
+        if (event.type === CHAT_MESSAGE_DELETED || event.type === CHAT_REACTION_CHANGED) {
+          setLatestChatChange({ ...event.payload })
+          return
+        }
+        if (event.type === CHAT_TYPING_UPDATED) {
+          setLatestChatTyping({ ...event.payload })
+          return
+        }
+        if (event.type === MEMBER_PRESENCE_CHANGED) {
+          if (event.payload.eventSequence <= presenceVersionRef.current) return
+          presenceVersionRef.current = event.payload.eventSequence
+          setPresenceByMember((current) => ({ ...(current ?? {}), [event.payload.memberId]: event.payload.status }))
+          return
+        }
         if (event.type !== ITINERARY_GENERATION_STATUS_CHANGED) {
           return
         }
@@ -219,6 +255,7 @@ export function TripWorkspacePage({
         }
       },
     })
+    realtimeConnectionRef.current = connection
 
     return () => {
       active = false
@@ -227,8 +264,9 @@ export function TripWorkspacePage({
         disconnectTimerRef.current = null
       }
       connection.disconnect()
+      realtimeConnectionRef.current = null
     }
-  }, [accessToken, loadGeneration, loadTripData, loadChatUnreadCount, tripId, user?.id])
+  }, [accessToken, loadGeneration, loadTripData, loadChatUnreadCount, loadPresence, tripId, user?.id])
 
   if (tripStatus === 'loading') {
     return (
@@ -274,6 +312,10 @@ export function TripWorkspacePage({
         generationFetchFailed={generationFetchFailed}
         generationNotice={generationNotice}
         latestChatMessage={latestChatMessage}
+        latestChatChange={latestChatChange}
+        latestChatTyping={latestChatTyping}
+        presenceByMember={presenceByMember}
+        sendChatTyping={sendChatTyping}
         onBackToMain={onBackToMain}
         onChatRead={loadChatUnreadCount}
         onLogout={onLogout}
@@ -294,6 +336,10 @@ function TripWorkspace({
   generationFetchFailed,
   generationNotice,
   latestChatMessage,
+  latestChatChange,
+  latestChatTyping,
+  presenceByMember,
+  sendChatTyping,
   chatConnected,
   chatReconnectedAt,
   chatUnreadCount,
@@ -311,6 +357,10 @@ function TripWorkspace({
   generationFetchFailed: boolean
   generationNotice: string
   latestChatMessage: ChatMessageSentPayload | null
+  latestChatChange: ChatMessageChangedPayload | null
+  latestChatTyping: ChatTypingChangedPayload | null
+  presenceByMember: Record<number, PresenceStatus> | null
+  sendChatTyping: (state: 'STARTED' | 'HEARTBEAT' | 'STOPPED', clientSessionId: string, clientEventId: string) => boolean
   chatConnected: boolean
   chatReconnectedAt: number
   chatUnreadCount: number
@@ -327,6 +377,10 @@ function TripWorkspace({
   const [activeDay, setActiveDay] = useState(firstDay)
   const [selectedPlaceId, setSelectedPlaceId] = useState('')
   const [mobilePane, setMobilePane] = useState<MobileWorkspacePane>('SCHEDULE')
+  const [dayRoute, setDayRoute] = useState<DayRoute | null>(null)
+  const [routeStatus, setRouteStatus] = useState<AsyncStatus>('idle')
+  const [routeError, setRouteError] = useState('')
+  const [routeRequestKey, setRouteRequestKey] = useState('')
   const resolvedDay = days.includes(activeDay) ? activeDay : firstDay
   const storedPlaces = useMemo(() => itinerary?.days.flatMap((day) => day.items.map((item) => ({
     id: item.id.toString(),
@@ -355,6 +409,46 @@ function TripWorkspace({
   const activeDate = itinerary?.days.find((day) => day.day === resolvedDay)?.date
     ?? dateForTripDay(trip.startDate, resolvedDay)
   const showGenerationProgress = generation && generation.status !== 'COMPLETED'
+  const routeKey = itinerary ? `${itinerary.id}:${itinerary.version}:${resolvedDay}` : ''
+  const routeNeeded = Boolean(dayRouteEnabled && itinerary && activePlaces.length >= 2)
+  const routeMatchesActiveDay = routeRequestKey === routeKey
+  const activeDayRoute = routeMatchesActiveDay ? dayRoute : null
+  const activeRouteStatus: AsyncStatus = routeNeeded
+    ? (routeMatchesActiveDay ? routeStatus : 'loading')
+    : 'success'
+  const activeRouteError = routeMatchesActiveDay ? routeError : ''
+
+  useEffect(() => {
+    if (!dayRouteEnabled || !itinerary || activePlaces.length < 2) {
+      return undefined
+    }
+
+    let cancelled = false
+    getDayRoute(accessToken, trip.id, resolvedDay)
+      .then((response) => {
+        if (cancelled) return
+        setRouteRequestKey(routeKey)
+        if (response.itineraryId !== itinerary.id || response.itineraryVersion !== itinerary.version) {
+          setDayRoute(null)
+          setRouteStatus('error')
+          setRouteError('일정이 갱신되어 경로를 다시 확인해 주세요.')
+          return
+        }
+        setDayRoute(response)
+        setRouteStatus('success')
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return
+        setRouteRequestKey(routeKey)
+        setDayRoute(null)
+        setRouteStatus('error')
+        setRouteError(routeErrorMessage(error))
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [accessToken, activePlaces.length, itinerary, resolvedDay, routeKey, trip.id])
 
   function handleDayChange(day: number) {
     setActiveDay(day)
@@ -379,6 +473,7 @@ function TripWorkspace({
         onMembershipChanged={onRefresh}
         onRefresh={onRefresh}
         placeCount={places.length}
+        presenceByMember={presenceByMember}
         trip={trip}
       />
       {showGenerationProgress && (
@@ -406,6 +501,9 @@ function TripWorkspace({
           panelRole="tabpanel"
           places={activePlaces}
           placesStatus={placeViewsStatus}
+          route={activeDayRoute}
+          routeError={activeRouteError}
+          routeStatus={activeRouteStatus}
           selectedPlaceId={selectedPlace?.id ?? ''}
           onDayChange={handleDayChange}
           onSelectPlace={setSelectedPlaceId}
@@ -424,6 +522,9 @@ function TripWorkspace({
               ? { lat: trip.destinationInfo.latitude, lng: trip.destinationInfo.longitude }
               : null}
             places={activePlaces}
+            route={activeDayRoute}
+            routeError={activeRouteError}
+            routeStatus={activeRouteStatus}
             selectedPlace={selectedPlace}
             selectedPlaceId={selectedPlace?.id ?? ''}
             onSelectPlace={setSelectedPlaceId}
@@ -440,8 +541,11 @@ function TripWorkspace({
           currentUser={currentUser}
           id={panelIds.ROOM}
           latestChatMessage={latestChatMessage}
+          latestChatChange={latestChatChange}
+          latestChatTyping={latestChatTyping}
           members={trip.members}
           onChatRead={onChatRead}
+          sendChatTyping={sendChatTyping}
           panelRole="tabpanel"
           selectedPlace={selectedPlace}
           tripId={trip.id}
@@ -453,4 +557,11 @@ function TripWorkspace({
 
 function errorMessageFrom(error: unknown) {
   return error instanceof ApiError ? error.message : '요청 처리 중 오류가 발생했습니다.'
+}
+
+function routeErrorMessage(error: unknown) {
+  if (!(error instanceof ApiError)) return '경로를 잠시 확인하지 못했어요. 일정과 장소는 그대로 볼 수 있습니다.'
+  if (error.code === 'ROUTE_QUOTA_EXCEEDED') return '오늘의 경로 조회 한도에 도달했어요. 일정과 장소는 그대로 볼 수 있습니다.'
+  if (error.code === 'ROUTE_PROVIDER_TIMEOUT') return '경로 확인이 지연되고 있어요. 잠시 후 다시 확인해 주세요.'
+  return '경로를 잠시 확인하지 못했어요. 일정과 장소는 그대로 볼 수 있습니다.'
 }

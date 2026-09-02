@@ -35,17 +35,54 @@ export type ChatMessageSentPayload = {
   type: 'USER_TEXT' | 'SYSTEM_NOTICE'
   body: string
   sentAt: string
+  replyToMessageId: number | null
+  replyAuthorUserId: number | null
+  replyBody: string | null
+  replyDeleted: boolean
+  mentions?: Array<{
+    memberId: number
+    displayNameSnapshot: string
+    startCodePoint: number
+    endCodePoint: number
+  }>
+}
+
+export type ChatTypingChangedPayload = {
+  memberId: number
+  active: boolean
+  expiresAtUtc: string | null
+  eventSequence: number
+}
+
+export type MemberPresenceChangedPayload = {
+  memberId: number
+  status: 'ONLINE' | 'OFFLINE'
+  changedAtUtc: string
+  eventSequence: number
+}
+
+export type ChatMessageChangedPayload = {
+  messageId: number
+  deletedAt: string | null
 }
 
 export const ITINERARY_GENERATION_STATUS_CHANGED = 'ITINERARY_GENERATION_STATUS_CHANGED'
 export const MEMBERSHIP_CHANGED = 'MEMBERSHIP_CHANGED'
 export const CHAT_MESSAGE_SENT = 'CHAT_MESSAGE_SENT'
+export const CHAT_MESSAGE_DELETED = 'CHAT_MESSAGE_DELETED'
+export const CHAT_REACTION_CHANGED = 'CHAT_REACTION_CHANGED'
+export const CHAT_TYPING_UPDATED = 'CHAT_TYPING_UPDATED'
+export const MEMBER_PRESENCE_CHANGED = 'MEMBER_PRESENCE_CHANGED'
 
 // `type` is a literal discriminant per variant so `event.type === X` narrows `event.payload`.
 export type TripRealtimeEvent =
   | RealtimeEventEnvelope<typeof ITINERARY_GENERATION_STATUS_CHANGED, ItineraryGenerationStatusChangedPayload>
   | RealtimeEventEnvelope<typeof MEMBERSHIP_CHANGED, MembershipChangedPayload>
   | RealtimeEventEnvelope<typeof CHAT_MESSAGE_SENT, ChatMessageSentPayload>
+  | RealtimeEventEnvelope<typeof CHAT_MESSAGE_DELETED, ChatMessageChangedPayload>
+  | RealtimeEventEnvelope<typeof CHAT_REACTION_CHANGED, ChatMessageChangedPayload>
+  | RealtimeEventEnvelope<typeof CHAT_TYPING_UPDATED, ChatTypingChangedPayload>
+  | RealtimeEventEnvelope<typeof MEMBER_PRESENCE_CHANGED, MemberPresenceChangedPayload>
 
 type TripRealtimeConnectionOptions = {
   accessToken: string
@@ -59,6 +96,7 @@ type TripRealtimeConnectionOptions = {
 
 export type TripRealtimeConnection = {
   disconnect: () => void
+  setTyping: (state: 'STARTED' | 'HEARTBEAT' | 'STOPPED', clientSessionId: string, clientEventId: string) => boolean
 }
 
 export function connectTripRealtimeEvents({
@@ -77,6 +115,8 @@ export function connectTripRealtimeEvents({
       Authorization: `Bearer ${accessToken}`,
     },
     reconnectDelay: 3000,
+    heartbeatIncoming: 10000,
+    heartbeatOutgoing: 10000,
     onConnect: () => {
       subscription?.unsubscribe()
       subscription = client.subscribe(`/topic/trips/${tripId}/events`, (message) => {
@@ -100,6 +140,14 @@ export function connectTripRealtimeEvents({
   client.activate()
 
   return {
+    setTyping: (state, clientSessionId, clientEventId) => {
+      if (!client.connected) return false
+      client.publish({
+        destination: `/app/trips/${tripId}/chat/typing`,
+        body: JSON.stringify({ state, clientSessionId, clientEventId }),
+      })
+      return true
+    },
     disconnect: () => {
       deliberatelyClosed = true
       subscription?.unsubscribe()

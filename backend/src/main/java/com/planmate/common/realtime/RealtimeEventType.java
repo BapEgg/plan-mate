@@ -24,8 +24,20 @@ public final class RealtimeEventType {
     /** WP-D 예약. trip topic(payload는 append-only message만 즉시 merge, 나머지는 REST로 복구). */
     public static final String CHAT_MESSAGE_SENT = "CHAT_MESSAGE_SENT";
 
+    /** WP-D. trip topic, client는 해당 message REST snapshot을 다시 조회한다. */
+    public static final String CHAT_MESSAGE_DELETED = "CHAT_MESSAGE_DELETED";
+
+    /** WP-D. trip topic, client는 사용자별 reactedByMe가 포함된 message REST snapshot을 다시 조회한다. */
+    public static final String CHAT_REACTION_CHANGED = "CHAT_REACTION_CHANGED";
+
     /** WP-D 예약. 개인 destination. */
     public static final String CHAT_UNREAD_CHANGED = "CHAT_UNREAD_CHANGED";
+
+    /** WP-D. trip topic, ephemeral composer activity without message body. */
+    public static final String CHAT_TYPING_UPDATED = "CHAT_TYPING_UPDATED";
+
+    /** WP-D. trip topic, authenticated workspace subscription presence. */
+    public static final String MEMBER_PRESENCE_CHANGED = "MEMBER_PRESENCE_CHANGED";
 
     /** WP-E 예약. trip topic. */
     public static final String VOTE_OPENED = "VOTE_OPENED";

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { API_BASE_URL, ApiError } from '../../../../api/client'
 import { leaveTrip } from '../../../../api/membership'
 import type { TripMember } from '../../../../api/trips'
+import type { PresenceStatus } from '../../../../api/presence'
 import { resolveBackendAssetUrl } from '../workspaceFormatters'
 import { MembershipManageDrawer } from './MembershipManageDrawer'
 
@@ -12,6 +13,7 @@ type MembershipSummaryProps = {
   currentUserId: number | null
   onMembershipChanged: () => void
   onLeftTrip: () => void
+  presenceByMember: Record<number, PresenceStatus> | null
 }
 
 /** 참여자 avatar stack + popover, 그리고 OWNER 관리 drawer / MEMBER 나가기 진입점. */
@@ -22,6 +24,7 @@ export function MembershipSummary({
   currentUserId,
   onMembershipChanged,
   onLeftTrip,
+  presenceByMember,
 }: MembershipSummaryProps) {
   const [manageOpen, setManageOpen] = useState(false)
   const [leaveStatus, setLeaveStatus] = useState<'idle' | 'loading' | 'error'>('idle')
@@ -51,7 +54,7 @@ export function MembershipSummary({
       <details className="member-roster">
         <summary aria-label={`참여자 ${members.length}명 보기`}>
           <span className="member-avatar-stack" aria-hidden="true">
-            {visibleMembers.map((member) => <MemberAvatar member={member} key={member.userId} />)}
+            {visibleMembers.map((member) => <MemberAvatar member={member} key={member.userId} presence={presenceByMember?.[member.userId] ?? null} />)}
             {hiddenMemberCount > 0 && <span className="member-avatar fallback extra">+{hiddenMemberCount}</span>}
           </span>
           <span className="member-total">{members.length}명</span>
@@ -61,8 +64,11 @@ export function MembershipSummary({
           <ul>
             {members.map((member) => (
               <li key={member.userId}>
-                <MemberAvatar member={member} />
-                <span><strong>{member.nickname}</strong><small>{member.role === 'OWNER' ? '방장' : '참여자'}</small></span>
+                <MemberAvatar member={member} presence={presenceByMember?.[member.userId] ?? null} />
+                <span>
+                  <strong>{member.nickname}</strong>
+                  <small>{member.role === 'OWNER' ? '방장' : '참여자'} · {presenceCopy(presenceByMember?.[member.userId] ?? null)}</small>
+                </span>
               </li>
             ))}
           </ul>
@@ -100,8 +106,19 @@ export function MembershipSummary({
   )
 }
 
-export function MemberAvatar({ member }: { member: TripMember }) {
-  return member.profileImageUrl
-    ? <img className="member-avatar" src={resolveBackendAssetUrl(API_BASE_URL, member.profileImageUrl)} alt={`${member.nickname} 프로필`} width="38" height="38" />
-    : <span className="member-avatar fallback" aria-hidden="true">{member.nickname.slice(0, 1)}</span>
+export function MemberAvatar({ member, presence = null }: { member: TripMember; presence?: PresenceStatus | null }) {
+  return (
+    <span className="member-avatar-presence" role="img" aria-label={`${member.nickname}, ${presenceCopy(presence)}`} title={`${member.nickname} · ${presenceCopy(presence)}`}>
+      {member.profileImageUrl
+        ? <img className="member-avatar" src={resolveBackendAssetUrl(API_BASE_URL, member.profileImageUrl)} alt="" width="38" height="38" />
+        : <span className="member-avatar fallback" aria-hidden="true">{member.nickname.slice(0, 1)}</span>}
+      {presence === 'ONLINE' && <i className="member-online-dot" aria-hidden="true" />}
+    </span>
+  )
+}
+
+function presenceCopy(presence: PresenceStatus | null) {
+  if (presence === 'ONLINE') return '접속 중'
+  if (presence === 'OFFLINE') return '오프라인'
+  return '접속 상태 확인 중'
 }

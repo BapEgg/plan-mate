@@ -414,8 +414,8 @@ class TripControllerTest {
                 accessToken,
                 "Detail trip",
                 "Jeju",
-                LocalDate.now(),
-                LocalDate.now().plusDays(1)
+                LocalDate.now().plusDays(1),
+                LocalDate.now().plusDays(2)
         );
 
         mockMvc.perform(get("/api/trips/{tripId}", tripId)
@@ -428,7 +428,7 @@ class TripControllerTest {
                 .andExpect(jsonPath("$.planningProfile.companionCount").value(3))
                 .andExpect(jsonPath("$.planningProfile.interests[0]").value("FOOD"))
                 .andExpect(jsonPath("$.itineraries.length()").value(0))
-                .andExpect(jsonPath("$.status").value("PLANNING"))
+                .andExpect(jsonPath("$.status").value("UPCOMING"))
                 .andExpect(jsonPath("$.memberCount").value(1))
                 .andExpect(jsonPath("$.members.length()").value(1))
                 .andExpect(jsonPath("$.members[0].userId").value(user.getId()))

@@ -29,13 +29,16 @@ public class RealtimeSessionRevocationService {
     private static final Logger log = LoggerFactory.getLogger(RealtimeSessionRevocationService.class);
 
     private final RealtimeSessionRegistry sessionRegistry;
+    private final com.planmate.realtime.presence.PresenceService presenceService;
     private final MessageChannel clientOutboundChannel;
 
     public RealtimeSessionRevocationService(
             RealtimeSessionRegistry sessionRegistry,
+            com.planmate.realtime.presence.PresenceService presenceService,
             org.springframework.messaging.SubscribableChannel clientOutboundChannel
     ) {
         this.sessionRegistry = sessionRegistry;
+        this.presenceService = presenceService;
         this.clientOutboundChannel = clientOutboundChannel;
     }
 
@@ -54,7 +57,7 @@ public class RealtimeSessionRevocationService {
         } catch (RuntimeException exception) {
             log.warn("Failed to force-disconnect realtime session. sessionId={}", sessionId, exception);
         } finally {
-            sessionRegistry.removeSession(sessionId);
+            presenceService.disconnectImmediately(sessionId);
         }
     }
 }

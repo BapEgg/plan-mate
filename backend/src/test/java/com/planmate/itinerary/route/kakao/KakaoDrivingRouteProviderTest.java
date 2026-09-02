@@ -21,7 +21,7 @@ import com.planmate.itinerary.exception.ItineraryErrorCode;
 import com.planmate.itinerary.exception.ItineraryException;
 import com.planmate.itinerary.route.RouteLegSnapshotEntity;
 import com.planmate.itinerary.route.RouteLegSnapshotRepository;
-import com.planmate.itinerary.route.RouteProviderDailyUsageRepository;
+import com.planmate.itinerary.route.RouteProviderQuotaService;
 import com.planmate.itinerary.route.RouteTravelTimePort.RoutePoint;
 import java.time.Clock;
 import java.time.Duration;
@@ -49,13 +49,12 @@ class KakaoDrivingRouteProviderTest {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         RouteLegSnapshotRepository snapshotRepository = mock(RouteLegSnapshotRepository.class);
-        RouteProviderDailyUsageRepository usageRepository = mock(RouteProviderDailyUsageRepository.class);
+        RouteProviderQuotaService quotaService = mock(RouteProviderQuotaService.class);
         when(snapshotRepository.findByTravelModeAndCacheKey(eq("DRIVE"), any())).thenReturn(Optional.empty());
-        when(usageRepository.reserveCall(eq("KAKAO"), eq("DIRECTIONS"), eq(LocalDate.of(2026, 9, 2)), eq(10000)))
-                .thenReturn(Optional.of(1));
 
         KakaoDrivingRouteProvider provider = new KakaoDrivingRouteProvider(
-                builder, "test-key", 10000, snapshotRepository, usageRepository, FIXED_CLOCK
+                builder.baseUrl(KakaoDirectionsClientConfig.BASE_URL).build(), "test-key", 10000,
+                Duration.ofHours(24), snapshotRepository, quotaService, FIXED_CLOCK
         );
 
         server.expect(requestTo(org.hamcrest.Matchers.containsString("/v1/directions")))
@@ -64,16 +63,20 @@ class KakaoDrivingRouteProviderTest {
                 .andExpect(queryParam("origin", "129.000000,35.000000"))
                 .andExpect(queryParam("destination", "129.100000,35.100000"))
                 .andRespond(withSuccess(
-                        "{\"routes\":[{\"result_code\":0,\"result_msg\":\"ok\",\"summary\":{\"distance\":12345,\"duration\":678}}]}",
+                        "{\"routes\":[{\"result_code\":0,\"result_msg\":\"ok\",\"summary\":{\"distance\":12345,\"duration\":678},"
+                                + "\"sections\":[{\"roads\":[{\"vertexes\":[129.0,35.0,129.05,35.05,129.1,35.1]}]}]}]}",
                         MediaType.APPLICATION_JSON
                 ));
 
-        var route = provider.findRoute(ORIGIN, DESTINATION);
+        var route = provider.findDetailedRoute(ORIGIN, DESTINATION);
 
         assertThat(route).isPresent();
         assertThat(route.orElseThrow().distanceMeters()).isEqualTo(12345);
-        assertThat(route.orElseThrow().duration()).isEqualTo(Duration.ofSeconds(678));
+        assertThat(route.orElseThrow().durationSeconds()).isEqualTo(678);
+        assertThat(route.orElseThrow().geometry()).hasSize(3);
+        assertThat(route.orElseThrow().geometry().get(1).latitude()).isEqualTo(35.05);
         server.verify();
+        verify(quotaService).reserve("KAKAO", "DIRECTIONS", LocalDate.of(2026, 9, 2), 10000);
         verify(snapshotRepository, times(1)).save(any(RouteLegSnapshotEntity.class));
     }
 
@@ -82,15 +85,16 @@ class KakaoDrivingRouteProviderTest {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         RouteLegSnapshotRepository snapshotRepository = mock(RouteLegSnapshotRepository.class);
-        RouteProviderDailyUsageRepository usageRepository = mock(RouteProviderDailyUsageRepository.class);
+        RouteProviderQuotaService quotaService = mock(RouteProviderQuotaService.class);
         when(snapshotRepository.findByTravelModeAndCacheKey(eq("DRIVE"), any())).thenReturn(Optional.of(
                 RouteLegSnapshotEntity.create(
-                        "DRIVE", "key", 35.0, 129.0, 35.1, 129.1, 999, 111, "KAKAO", Instant.now()
+                        "DRIVE", "key", 35.0, 129.0, 35.1, 129.1, 999, 111, "KAKAO", Instant.now(), null
                 )
         ));
 
         KakaoDrivingRouteProvider provider = new KakaoDrivingRouteProvider(
-                builder, "test-key", 10000, snapshotRepository, usageRepository, FIXED_CLOCK
+                builder.baseUrl(KakaoDirectionsClientConfig.BASE_URL).build(), "test-key", 10000,
+                Duration.ofHours(24), snapshotRepository, quotaService, FIXED_CLOCK
         );
 
         var route = provider.findRoute(ORIGIN, DESTINATION);
@@ -99,7 +103,7 @@ class KakaoDrivingRouteProviderTest {
         assertThat(route.orElseThrow().distanceMeters()).isEqualTo(999);
         assertThat(route.orElseThrow().duration()).isEqualTo(Duration.ofSeconds(111));
         server.verify();
-        verify(usageRepository, never()).reserveCall(any(), any(), any(), anyInt());
+        verify(quotaService, never()).reserve(any(), any(), any(), anyInt());
     }
 
     @Test
@@ -107,18 +111,20 @@ class KakaoDrivingRouteProviderTest {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         RouteLegSnapshotRepository snapshotRepository = mock(RouteLegSnapshotRepository.class);
-        RouteProviderDailyUsageRepository usageRepository = mock(RouteProviderDailyUsageRepository.class);
+        RouteProviderQuotaService quotaService = mock(RouteProviderQuotaService.class);
         when(snapshotRepository.findByTravelModeAndCacheKey(any(), any())).thenReturn(Optional.empty());
-        when(usageRepository.reserveCall(any(), any(), any(), anyInt())).thenReturn(Optional.empty());
+        org.mockito.Mockito.doThrow(new ItineraryException(ItineraryErrorCode.ROUTE_QUOTA_EXCEEDED))
+                .when(quotaService).reserve(any(), any(), any(), anyInt());
 
         KakaoDrivingRouteProvider provider = new KakaoDrivingRouteProvider(
-                builder, "test-key", 10000, snapshotRepository, usageRepository, FIXED_CLOCK
+                builder.baseUrl(KakaoDirectionsClientConfig.BASE_URL).build(), "test-key", 10000,
+                Duration.ofHours(24), snapshotRepository, quotaService, FIXED_CLOCK
         );
 
         assertThatThrownBy(() -> provider.findRoute(ORIGIN, DESTINATION))
                 .isInstanceOf(ItineraryException.class)
                 .satisfies(exception -> assertThat(((ItineraryException) exception).code())
-                        .isEqualTo(ItineraryErrorCode.ROUTE_PROVIDER_UNAVAILABLE.code()));
+                        .isEqualTo(ItineraryErrorCode.ROUTE_QUOTA_EXCEEDED.code()));
         server.verify();
     }
 
@@ -127,12 +133,12 @@ class KakaoDrivingRouteProviderTest {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         RouteLegSnapshotRepository snapshotRepository = mock(RouteLegSnapshotRepository.class);
-        RouteProviderDailyUsageRepository usageRepository = mock(RouteProviderDailyUsageRepository.class);
+        RouteProviderQuotaService quotaService = mock(RouteProviderQuotaService.class);
         when(snapshotRepository.findByTravelModeAndCacheKey(any(), any())).thenReturn(Optional.empty());
-        when(usageRepository.reserveCall(any(), any(), any(), anyInt())).thenReturn(Optional.of(1));
 
         KakaoDrivingRouteProvider provider = new KakaoDrivingRouteProvider(
-                builder, "test-key", 10000, snapshotRepository, usageRepository, FIXED_CLOCK
+                builder.baseUrl(KakaoDirectionsClientConfig.BASE_URL).build(), "test-key", 10000,
+                Duration.ofHours(24), snapshotRepository, quotaService, FIXED_CLOCK
         );
         server.expect(requestTo(org.hamcrest.Matchers.containsString("/v1/directions")))
                 .andRespond(withSuccess("{\"routes\":[]}", MediaType.APPLICATION_JSON));
@@ -147,12 +153,12 @@ class KakaoDrivingRouteProviderTest {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         RouteLegSnapshotRepository snapshotRepository = mock(RouteLegSnapshotRepository.class);
-        RouteProviderDailyUsageRepository usageRepository = mock(RouteProviderDailyUsageRepository.class);
+        RouteProviderQuotaService quotaService = mock(RouteProviderQuotaService.class);
         when(snapshotRepository.findByTravelModeAndCacheKey(any(), any())).thenReturn(Optional.empty());
-        when(usageRepository.reserveCall(any(), any(), any(), anyInt())).thenReturn(Optional.of(1));
 
         KakaoDrivingRouteProvider provider = new KakaoDrivingRouteProvider(
-                builder, "test-key", 10000, snapshotRepository, usageRepository, FIXED_CLOCK
+                builder.baseUrl(KakaoDirectionsClientConfig.BASE_URL).build(), "test-key", 10000,
+                Duration.ofHours(24), snapshotRepository, quotaService, FIXED_CLOCK
         );
         server.expect(requestTo(org.hamcrest.Matchers.containsString("/v1/directions")))
                 .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
@@ -160,17 +166,18 @@ class KakaoDrivingRouteProviderTest {
         assertThatThrownBy(() -> provider.findRoute(ORIGIN, DESTINATION))
                 .isInstanceOf(ItineraryException.class)
                 .satisfies(exception -> assertThat(((ItineraryException) exception).code())
-                        .isEqualTo(ItineraryErrorCode.ROUTE_PROVIDER_UNAVAILABLE.code()));
+                        .isEqualTo(ItineraryErrorCode.ROUTE_QUOTA_EXCEEDED.code()));
         // quota는 실패한 시도에도 이미 소모됐다 — 재시도가 무제한으로 한도를 넘기지 않는다는 것을 보인다.
-        verify(usageRepository, times(1)).reserveCall(any(), any(), any(), anyInt());
+        verify(quotaService, times(1)).reserve(any(), any(), any(), anyInt());
     }
 
     @Test
     void missingApiKeyBecomesServiceUnavailableWithoutTouchingCacheOrQuota() {
         RouteLegSnapshotRepository snapshotRepository = mock(RouteLegSnapshotRepository.class);
-        RouteProviderDailyUsageRepository usageRepository = mock(RouteProviderDailyUsageRepository.class);
+        RouteProviderQuotaService quotaService = mock(RouteProviderQuotaService.class);
         KakaoDrivingRouteProvider provider = new KakaoDrivingRouteProvider(
-                RestClient.builder(), " ", 10000, snapshotRepository, usageRepository, FIXED_CLOCK
+                RestClient.builder().baseUrl(KakaoDirectionsClientConfig.BASE_URL).build(), " ", 10000,
+                Duration.ofHours(24), snapshotRepository, quotaService, FIXED_CLOCK
         );
 
         assertThatThrownBy(() -> provider.findRoute(ORIGIN, DESTINATION))
@@ -178,6 +185,6 @@ class KakaoDrivingRouteProviderTest {
                 .satisfies(exception -> assertThat(((ItineraryException) exception).code())
                         .isEqualTo(ItineraryErrorCode.ROUTE_PROVIDER_UNAVAILABLE.code()));
         verify(snapshotRepository, never()).findByTravelModeAndCacheKey(any(), any());
-        verify(usageRepository, never()).reserveCall(any(), any(), any(), anyInt());
+        verify(quotaService, never()).reserve(any(), any(), any(), anyInt());
     }
 }

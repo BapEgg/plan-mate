@@ -3,6 +3,7 @@ package com.planmate.realtime;
 import com.planmate.auth.security.AuthenticatedUser;
 import com.planmate.auth.security.PlanMateJwtAuthenticationConverter;
 import com.planmate.trip.api.TripMembershipChecker;
+import com.planmate.realtime.presence.PresenceService;
 import java.security.Principal;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -33,18 +34,18 @@ public class RealtimeStompChannelInterceptor implements ChannelInterceptor {
     private final JwtDecoder jwtDecoder;
     private final PlanMateJwtAuthenticationConverter jwtAuthenticationConverter;
     private final TripMembershipChecker tripMembershipChecker;
-    private final RealtimeSessionRegistry sessionRegistry;
+    private final PresenceService presenceService;
 
     public RealtimeStompChannelInterceptor(
             JwtDecoder jwtDecoder,
             PlanMateJwtAuthenticationConverter jwtAuthenticationConverter,
             TripMembershipChecker tripMembershipChecker,
-            RealtimeSessionRegistry sessionRegistry
+            PresenceService presenceService
     ) {
         this.jwtDecoder = jwtDecoder;
         this.jwtAuthenticationConverter = jwtAuthenticationConverter;
         this.tripMembershipChecker = tripMembershipChecker;
-        this.sessionRegistry = sessionRegistry;
+        this.presenceService = presenceService;
     }
 
     @Override
@@ -68,7 +69,7 @@ public class RealtimeStompChannelInterceptor implements ChannelInterceptor {
             rejectBrokerTopicSend(accessor);
         }
         if (StompCommand.DISCONNECT.equals(command)) {
-            sessionRegistry.removeSession(accessor.getSessionId());
+            presenceService.disconnectImmediately(accessor.getSessionId());
         }
         return message;
     }
@@ -109,7 +110,7 @@ public class RealtimeStompChannelInterceptor implements ChannelInterceptor {
         if (!tripMembershipChecker.isMember(user.userId(), tripId)) {
             throw new AccessDeniedException("Trip membership is required to subscribe");
         }
-        sessionRegistry.registerSubscription(accessor.getSessionId(), user.userId(), tripId);
+        presenceService.register(accessor.getSessionId(), user.userId(), tripId);
     }
 
     private void rejectBrokerTopicSend(StompHeaderAccessor accessor) {
@@ -125,7 +126,7 @@ public class RealtimeStompChannelInterceptor implements ChannelInterceptor {
      */
     @EventListener
     public void onSessionDisconnect(SessionDisconnectEvent event) {
-        sessionRegistry.removeSession(event.getSessionId());
+        presenceService.disconnectWithGrace(event.getSessionId());
     }
 
     private AuthenticatedUser authenticatedUser(Principal principal) {

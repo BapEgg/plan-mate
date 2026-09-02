@@ -59,6 +59,9 @@ class ErrorEventRegistryContractTest {
             "AI_RESPONSE_VALIDATION_FAILED",
             "PLANNING_PROFILE_NOT_FOUND",
             "DESTINATION_NOT_RESOLVED",
+            "ITINERARY_DAY_NOT_FOUND",
+            "ROUTE_QUOTA_EXCEEDED",
+            "ROUTE_PROVIDER_TIMEOUT",
             "ROUTE_PROVIDER_UNAVAILABLE",
             "ROUTE_PROVIDER_REQUEST_FAILED",
             "ROUTE_TRANSPORT_MODE_UNSUPPORTED",
@@ -87,7 +90,13 @@ class ErrorEventRegistryContractTest {
             "FRIEND_REQUEST_ALREADY_RESOLVED",
             // ChatErrorCode
             "INVALID_MESSAGE_BODY",
-            "MESSAGE_NOT_FOUND"
+            "MESSAGE_NOT_FOUND",
+            "INVALID_REPLY_TARGET",
+            "MESSAGE_DELETE_FORBIDDEN",
+            "MESSAGE_DELETE_WINDOW_EXPIRED",
+            "MESSAGE_ALREADY_DELETED",
+            "INVALID_REACTION",
+            "INVALID_SEARCH_QUERY"
     );
 
     private static final Set<String> DOCUMENTED_REALTIME_EVENT_TYPES = Set.of(
@@ -95,7 +104,11 @@ class ErrorEventRegistryContractTest {
             "MEMBERSHIP_CHANGED",
             "INVITATION_RECEIVED",
             "CHAT_MESSAGE_SENT",
+            "CHAT_MESSAGE_DELETED",
+            "CHAT_REACTION_CHANGED",
             "CHAT_UNREAD_CHANGED",
+            "CHAT_TYPING_UPDATED",
+            "MEMBER_PRESENCE_CHANGED",
             "VOTE_OPENED",
             "VOTE_CLOSED",
             "ITINERARY_REVISION_APPLIED"

@@ -3,6 +3,9 @@ package com.planmate.realtime;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Component;
 
@@ -15,22 +18,62 @@ import org.springframework.stereotype.Component;
 public class RealtimeSessionRegistry {
 
     private final ConcurrentHashMap<String, SessionState> sessionsById = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, AtomicLong> versionsByTrip = new ConcurrentHashMap<>();
 
-    public void registerSubscription(String sessionId, Long userId, Long tripId) {
+    public synchronized PresenceTransition registerSubscription(String sessionId, Long userId, Long tripId) {
         if (sessionId == null) {
-            return;
+            return null;
         }
+        boolean wasOnline = isOnline(tripId, userId);
         sessionsById.compute(sessionId, (id, existing) -> {
             SessionState state = existing != null ? existing : new SessionState(userId);
             state.tripIds.add(tripId);
             return state;
         });
+        if (!wasOnline) {
+            return new PresenceTransition(tripId, userId, true, incrementVersion(tripId));
+        }
+        return null;
     }
 
-    public void removeSession(String sessionId) {
-        if (sessionId != null) {
-            sessionsById.remove(sessionId);
+    public synchronized List<PresenceTransition> removeSession(String sessionId) {
+        if (sessionId == null) {
+            return List.of();
         }
+        SessionState removed = sessionsById.remove(sessionId);
+        if (removed == null) {
+            return List.of();
+        }
+        List<PresenceTransition> transitions = new ArrayList<>();
+        for (Long tripId : removed.tripIds) {
+            if (!isOnline(tripId, removed.userId)) {
+                transitions.add(new PresenceTransition(
+                        tripId, removed.userId, false, incrementVersion(tripId)
+                ));
+            }
+        }
+        return List.copyOf(transitions);
+    }
+
+    public boolean hasSession(String sessionId) {
+        return sessionId != null && sessionsById.containsKey(sessionId);
+    }
+
+    public boolean isOnline(Long tripId, Long userId) {
+        return sessionsById.values().stream()
+                .anyMatch(state -> state.userId.equals(userId) && state.tripIds.contains(tripId));
+    }
+
+    public long version(Long tripId) {
+        AtomicLong version = versionsByTrip.get(tripId);
+        return version == null ? 0 : version.get();
+    }
+
+    private long incrementVersion(Long tripId) {
+        return versionsByTrip.computeIfAbsent(tripId, ignored -> new AtomicLong()).incrementAndGet();
+    }
+
+    public record PresenceTransition(Long tripId, Long userId, boolean online, long version) {
     }
 
     /**

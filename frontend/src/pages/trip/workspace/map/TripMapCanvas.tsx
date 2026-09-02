@@ -1,22 +1,26 @@
 import { useMemo, useState } from 'react'
+import type { DayRoute } from '../../../../api/routes'
 import { TripMapView } from './TripMapView'
 import type { MapMarkerPlace } from './TripMapView'
 import { PlacePanel } from './PlacePanel'
 import type { ItineraryPlace } from '../workspaceTypes'
+import type { AsyncStatus } from '../workspaceTypes'
 import { formatFullDate } from '../workspaceFormatters'
 
-export function TripMapCanvas({ activeDay, activeDate, destination, destinationCenter, places, selectedPlace, selectedPlaceId, onSelectPlace }: {
+export function TripMapCanvas({ activeDay, activeDate, destination, destinationCenter, places, route, routeError, routeStatus, selectedPlace, selectedPlaceId, onSelectPlace }: {
   activeDay: number
   activeDate: string | null
   destination: string
   destinationCenter: { lat: number; lng: number } | null
   places: ItineraryPlace[]
+  route: DayRoute | null
+  routeError: string
+  routeStatus: AsyncStatus
   selectedPlace: ItineraryPlace | null
   selectedPlaceId: string
   onSelectPlace: (placeId: string) => void
 }) {
   const [manualFitCount, setManualFitCount] = useState(0)
-  const [markerColor, setMarkerColor] = useState('#e0483e')
   const fitSignal = `${activeDay}:${manualFitCount}`
 
   const markerPlaces = useMemo<MapMarkerPlace[]>(() => places
@@ -25,6 +29,9 @@ export function TripMapCanvas({ activeDay, activeDate, destination, destinationC
     .map((place) => ({ id: place.id, order: place.order, title: place.title, startTime: place.startTime, duration: place.duration, placeId: place.placeId, latitude: place.latitude, longitude: place.longitude })),
   [places])
   const unresolvedCount = places.length - markerPlaces.length
+  const routePoints = useMemo(() => route?.legs
+    .filter((leg) => leg.status === 'READY')
+    .flatMap((leg) => leg.geometry) ?? [], [route])
 
   return (
     <section className="trip-map-panel" aria-label={`${activeDay}일차 장소 지도`}>
@@ -32,10 +39,6 @@ export function TripMapCanvas({ activeDay, activeDate, destination, destinationC
         <div><span className="section-kicker">{destination}</span><h2>{activeDay}일차 지도</h2></div>
         <div className="map-heading-meta">
           <span>{activeDate ? formatFullDate(activeDate) : ''}</span>
-          <label className="map-marker-color-picker">
-            마커 색상
-            <input type="color" value={markerColor} onChange={(event) => setMarkerColor(event.target.value)} aria-label="마커 색상 선택" />
-          </label>
           <button className="map-refit-button" type="button" onClick={() => setManualFitCount((value) => value + 1)}>일정 전체 보기</button>
         </div>
       </div>
@@ -48,10 +51,14 @@ export function TripMapCanvas({ activeDay, activeDate, destination, destinationC
             selectedPlaceId={selectedPlaceId}
             fitSignal={fitSignal}
             fallbackCenter={destinationCenter}
-            markerColor={markerColor}
+            routePoints={routePoints}
             onSelectPlace={onSelectPlace}
           />
         )}
+        <div className={`map-route-status ${routeStatus}`} aria-live="polite">
+          <span className="map-route-status-mark" aria-hidden="true" />
+          <span>{routeStatusText(routeStatus, route, routeError)}</span>
+        </div>
         {unresolvedCount > 0 && (
           <div className="map-preview-notice" role="status">
             <i aria-hidden="true" />
@@ -62,4 +69,12 @@ export function TripMapCanvas({ activeDay, activeDate, destination, destinationC
       </div>
     </section>
   )
+}
+
+function routeStatusText(status: AsyncStatus, route: DayRoute | null, error: string) {
+  if (status === 'loading') return '차로 이동할 길을 확인하고 있어요…'
+  if (status === 'error') return error || '경로를 잠시 확인하지 못했어요.'
+  if (!route || route.legs.length === 0) return '장소를 고르면 이동 경로를 함께 볼 수 있어요.'
+  if (route.status === 'PARTIAL') return '확인된 구간만 지도에 표시했어요. · Kakao Mobility'
+  return '차로 이동할 길 · Kakao Mobility'
 }

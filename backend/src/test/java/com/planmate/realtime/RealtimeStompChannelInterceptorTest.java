@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import com.planmate.auth.security.AuthenticatedUser;
 import com.planmate.auth.security.PlanMateJwtAuthenticationConverter;
 import com.planmate.trip.api.TripMembershipChecker;
+import com.planmate.realtime.presence.PresenceService;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,17 +42,17 @@ class RealtimeStompChannelInterceptorTest {
     @Mock
     private TripMembershipChecker tripMembershipChecker;
 
-    private RealtimeSessionRegistry sessionRegistry;
+    @Mock
+    private PresenceService presenceService;
     private RealtimeStompChannelInterceptor interceptor;
 
     @BeforeEach
     void setUp() {
-        sessionRegistry = new RealtimeSessionRegistry();
         interceptor = new RealtimeStompChannelInterceptor(
                 jwtDecoder,
                 new PlanMateJwtAuthenticationConverter(),
                 tripMembershipChecker,
-                sessionRegistry
+                presenceService
         );
     }
 
@@ -153,7 +154,7 @@ class RealtimeStompChannelInterceptorTest {
 
         interceptor.preSend(message(accessor), mock(MessageChannel.class));
 
-        assertThat(sessionRegistry.findSessionIds(45L, 7L)).containsExactly("session-1");
+        verify(presenceService).register("session-1", 7L, 45L);
     }
 
     @Test
@@ -169,7 +170,7 @@ class RealtimeStompChannelInterceptorTest {
         disconnect.setSessionId("session-1");
         interceptor.preSend(message(disconnect), mock(MessageChannel.class));
 
-        assertThat(sessionRegistry.findSessionIds(45L, 7L)).isEmpty();
+        verify(presenceService).disconnectImmediately("session-1");
     }
 
     private Jwt jwt(Long userId) {

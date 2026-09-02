@@ -2750,7 +2750,8 @@
 
 .membership-drawer:focus,
 .membership-drawer:focus-visible {
-  outline: none;
+  outline: 3px solid rgba(89, 127, 207, 0.28);
+  outline-offset: -3px;
 }
 
 .membership-drawer-heading {
@@ -2966,4 +2967,690 @@
   color: #9d5f08;
   font-size: 0.75rem;
   background: #fff0cc;
+}
+
+/* WP-D chat phase 4: replies, reactions and author deletion. Keep the message
+   itself primary; secondary controls surface on hover/focus and stay available
+   on touch devices without turning every message into a control card. */
+.trip-chat-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.trip-chat-preview {
+  flex: 1 1 auto;
+}
+
+.chat-message-bubble {
+  display: grid;
+  width: fit-content;
+  max-width: min(245px, 100%);
+  overflow: hidden;
+  border-radius: 4px 12px 12px 12px;
+  color: #203f50;
+  background: #f0f4f5;
+}
+
+.chat-message-row.mine .chat-message-bubble {
+  border-radius: 12px 4px 12px 12px;
+  color: #fff;
+  background: #5879c7;
+}
+
+.chat-message-body {
+  padding: 9px 11px;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.chat-reply-preview {
+  display: grid;
+  gap: 2px;
+  margin: 7px 7px 0;
+  padding: 6px 8px;
+  border-left: 2px solid #7f9bd6;
+  color: #526b78;
+  background: rgba(255, 255, 255, 0.68);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.chat-message-row.mine .chat-reply-preview {
+  border-left-color: #d9e4fb;
+  color: #eef3ff;
+  background: rgba(19, 49, 79, 0.2);
+}
+
+.chat-reply-preview strong,
+.chat-reply-preview span {
+  max-width: 205px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-reply-preview.deleted {
+  font-style: italic;
+  opacity: 0.78;
+}
+
+.chat-message-row.deleted .chat-message-bubble {
+  border: 1px dashed #cad5da;
+  color: #7a8b93;
+  background: transparent;
+  font-style: italic;
+}
+
+.chat-message-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  min-height: 24px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 140ms ease;
+}
+
+.chat-message-row:hover .chat-message-actions,
+.chat-message-row:focus-within .chat-message-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.chat-message-actions button,
+.chat-delete-confirm button {
+  min-height: 24px;
+  border: 0;
+  padding: 2px 0;
+  color: #627985;
+  background: transparent;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.chat-message-actions button:hover,
+.chat-message-actions button:focus-visible,
+.chat-delete-confirm button:hover,
+.chat-delete-confirm button:focus-visible {
+  color: #315fea;
+  outline: 2px solid #a9bfea;
+  outline-offset: 2px;
+}
+
+.chat-message-actions button.danger,
+.chat-delete-confirm button:first-of-type {
+  color: #ad4e44;
+}
+
+.chat-message-actions button:disabled,
+.chat-delete-confirm button:disabled,
+.chat-reaction-summary button:disabled {
+  cursor: wait;
+  opacity: 0.48;
+}
+
+.chat-reaction-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.chat-reaction-summary button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 26px;
+  border: 1px solid #d4e0e5;
+  border-radius: 8px;
+  padding: 2px 7px;
+  color: #536c79;
+  background: #fffdf8;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.chat-reaction-summary button.selected {
+  border-color: #8ca9de;
+  color: #315aab;
+  background: #edf3ff;
+}
+
+.chat-reaction-summary button:focus-visible {
+  outline: 2px solid #9fd1e8;
+  outline-offset: 2px;
+}
+
+.chat-reaction-names {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 5px);
+  z-index: 3;
+  display: none;
+  width: max-content;
+  max-width: 190px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  color: #fff;
+  background: #203f50;
+  box-shadow: 0 5px 14px rgba(19, 40, 53, 0.18);
+  font-size: 9px;
+  white-space: normal;
+}
+
+.chat-reaction-summary button:hover .chat-reaction-names,
+.chat-reaction-summary button:focus-visible .chat-reaction-names {
+  display: block;
+}
+
+.chat-delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid #ecd2cd;
+  border-radius: 8px;
+  color: #7e514b;
+  background: #fff5f2;
+  font-size: 9px;
+}
+
+.trip-chat-action-error {
+  margin: 0;
+  padding: 8px 14px;
+  border-top: 1px solid #efd3cf;
+  color: #944940;
+  background: #fff5f2;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.trip-chat-replying {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  padding: 9px 42px 9px 14px;
+  border-top: 1px solid #dce6ea;
+  color: #536c79;
+  background: #f4f8fa;
+  font-size: 10px;
+}
+
+.trip-chat-replying > span:last-of-type {
+  overflow: hidden;
+  color: #788b94;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trip-chat-replying > button {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  color: #536c79;
+  background: transparent;
+  font-size: 17px;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.trip-chat-replying > button:hover,
+.trip-chat-replying > button:focus-visible {
+  background: #e4edf1;
+  outline: 2px solid #9fd1e8;
+}
+
+@media (hover: none) {
+  .chat-message-actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-message-actions {
+    transition: none;
+  }
+}
+
+/* WP-D chat phase 5: presence, typing, member mentions and room-scoped search. */
+.member-avatar-presence {
+  position: relative;
+  display: inline-grid;
+  flex: 0 0 auto;
+  margin-left: -9px;
+  place-items: center;
+}
+
+.member-avatar-presence:first-child {
+  margin-left: 0;
+}
+
+.member-avatar-presence > .member-avatar {
+  margin-left: 0;
+}
+
+.member-online-dot {
+  position: absolute;
+  right: 0;
+  bottom: 1px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid #fafdfe;
+  border-radius: 50%;
+  background: #39a66d;
+  box-shadow: 0 0 0 1px #276f4c;
+}
+
+.member-roster-popover .member-online-dot {
+  border-color: #fffdf8;
+}
+
+.trip-chat-tools {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 3px 14px;
+  border-bottom: 1px solid #e4ebee;
+  background: #fbfdfd;
+}
+
+.trip-chat-tools button,
+.trip-chat-search-refresh {
+  min-height: 28px;
+  border: 0;
+  padding: 3px 5px;
+  color: #526b78;
+  background: transparent;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.trip-chat-tools button:hover,
+.trip-chat-tools button:focus-visible,
+.trip-chat-search-refresh:hover,
+.trip-chat-search-refresh:focus-visible {
+  color: #315aab;
+  outline: 2px solid #9fd1e8;
+  outline-offset: 1px;
+}
+
+.trip-chat-search {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  padding: 12px 14px;
+  background: #fbfdfd;
+}
+
+.trip-chat-search > label {
+  margin-bottom: 6px;
+  color: #203f50;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.trip-chat-search-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px;
+  border: 1px solid #cbd9df;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.trip-chat-search-field:focus-within {
+  border-color: #6e8fd3;
+  box-shadow: 0 0 0 3px rgba(88, 121, 199, 0.14);
+}
+
+.trip-chat-search-field input {
+  min-width: 0;
+  min-height: 38px;
+  border: 0;
+  padding: 8px 10px;
+  color: #203f50;
+  background: transparent;
+  font: inherit;
+  font-size: 11px;
+  outline: 0;
+}
+
+.trip-chat-search-field button {
+  border: 0;
+  color: #6c808a;
+  background: transparent;
+  font-size: 17px;
+  cursor: pointer;
+}
+
+.trip-chat-search-field button:hover,
+.trip-chat-search-field button:focus-visible {
+  color: #315aab;
+  outline: 2px solid #6e8fd3;
+  outline-offset: -3px;
+}
+
+.trip-chat-search-help,
+.trip-chat-search-results > p {
+  margin: 9px 0;
+  color: #73858f;
+  font-size: 10px;
+}
+
+.trip-chat-search-refresh {
+  align-self: flex-start;
+  margin-top: 5px;
+  color: #315aab;
+}
+
+.trip-chat-search-results {
+  min-height: 0;
+  overflow-y: auto;
+  margin-top: 5px;
+}
+
+.trip-chat-search-results > button:not(.trip-chat-search-more) {
+  display: grid;
+  width: 100%;
+  gap: 5px;
+  border: 0;
+  border-bottom: 1px solid #e3eaed;
+  padding: 10px 2px;
+  color: #203f50;
+  text-align: left;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.trip-chat-search-results > button:not(.trip-chat-search-more):hover,
+.trip-chat-search-results > button:not(.trip-chat-search-more):focus-visible {
+  background: #f0f5f8;
+  outline: 2px solid #9fd1e8;
+  outline-offset: -2px;
+}
+
+.trip-chat-search-results button > span:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 9px;
+}
+
+.trip-chat-search-results button > span:last-child {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 10px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.trip-chat-search-results mark {
+  color: #213f85;
+  background: #dfe8fb;
+  font-weight: 900;
+}
+
+.trip-chat-search-more {
+  min-height: 34px;
+  border: 0;
+  color: #315aab;
+  background: transparent;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.chat-message-row.search-highlight {
+  border-radius: 10px;
+  outline: 3px solid rgba(88, 121, 199, 0.3);
+  outline-offset: 3px;
+}
+
+.chat-mention {
+  color: #315aab;
+  font-weight: 900;
+}
+
+.chat-message-row.mine .chat-mention {
+  color: #eff4ff;
+}
+
+.chat-mention.mine {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.chat-mentioned-me {
+  color: #536c79;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.trip-chat-typing {
+  display: flex;
+  min-height: 25px;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 4px 14px;
+  overflow: hidden;
+  color: #647a85;
+  background: #fbfdfd;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trip-chat-typing i {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #6e8fd3;
+}
+
+.trip-chat-mentions {
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 5px 10px;
+  border-top: 1px solid #dce6ea;
+  background: #fffdf8;
+}
+
+.trip-chat-mentions > p {
+  margin: 0;
+  padding: 10px 4px;
+  color: #73858f;
+  font-size: 10px;
+}
+
+.trip-chat-mentions > button {
+  display: grid;
+  width: 100%;
+  min-height: 42px;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  border: 0;
+  padding: 5px 7px;
+  color: #203f50;
+  text-align: left;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.trip-chat-mentions > button.active,
+.trip-chat-mentions > button:hover,
+.trip-chat-mentions > button:focus-visible {
+  background: #edf3f7;
+  outline: 2px solid #9fd1e8;
+  outline-offset: -2px;
+}
+
+.trip-chat-mentions > button > span {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 50%;
+  color: #315aab;
+  background: #e2eafa;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.trip-chat-mentions strong,
+.trip-chat-mentions small {
+  overflow: hidden;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 620px) {
+  .member-avatar-stack .member-avatar-presence:nth-child(n + 2) {
+    display: none;
+  }
+
+  .trip-chat-search-field input,
+  .trip-chat-search-results button > span:last-child,
+  .trip-chat-typing,
+  .trip-chat-mentions strong {
+    font-size: 0.75rem;
+  }
+}
+
+@media (forced-colors: active) {
+  .member-online-dot {
+    border: 2px solid CanvasText;
+    background: Highlight;
+    box-shadow: none;
+  }
+}
+
+/* WP-C verified route: movement rows live between place cards and are only
+   populated from Kakao's saved response. They intentionally avoid pill UI. */
+.place-timeline .route-movement-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  margin: -2px 0 -2px 17px;
+  padding: 3px 8px 3px 22px;
+  color: #73858f;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  list-style: none;
+}
+
+.place-timeline .route-movement-row::before,
+.place-timeline .route-movement-row::after {
+  display: none;
+}
+
+.route-movement-line {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  left: 0;
+  width: 2px;
+  background: repeating-linear-gradient(to bottom, #91a7d9 0 5px, transparent 5px 9px);
+}
+
+.route-movement-icon {
+  color: #5879c7;
+  font-size: 0.85rem;
+  font-weight: 900;
+  transform: rotate(45deg);
+}
+
+.route-movement-row.ready > span:last-child {
+  color: #405f73;
+  font-weight: 750;
+}
+
+.map-route-status {
+  position: absolute;
+  z-index: 5;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(430px, calc(100% - 32px));
+  padding: 9px 12px;
+  border: 1px solid rgba(68, 94, 119, 0.14);
+  border-radius: 10px;
+  color: #355064;
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.35;
+  background: rgba(251, 253, 255, 0.94);
+  box-shadow: 0 8px 24px rgba(27, 57, 77, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.map-route-status-mark {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+  background: #5879c7;
+}
+
+.map-route-status.loading .map-route-status-mark {
+  animation: route-status-pulse 1.4s ease-in-out infinite;
+}
+
+.map-route-status.error .map-route-status-mark {
+  background: #9aa8b1;
+}
+
+/* Keep the selected-place summary as a shallow map dock. Explicit min-content
+   rows prevent a spanning link from stretching three implicit rows to the
+   full map height. */
+.trip-map-canvas > .place-detail-panel {
+  top: auto;
+  grid-auto-rows: min-content;
+  align-content: start;
+  height: auto;
+  max-height: 190px;
+}
+
+.trip-map-canvas > .place-detail-panel > a,
+.trip-map-canvas > .place-detail-panel > .place-fallback-message {
+  grid-row: 1 / span 8;
+  align-self: center;
+}
+
+@keyframes route-status-pulse {
+  0%, 100% { opacity: 0.35; transform: scaleX(0.7); }
+  50% { opacity: 1; transform: scaleX(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-route-status.loading .map-route-status-mark {
+    animation: none;
+  }
 }

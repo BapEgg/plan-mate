@@ -1,6 +1,7 @@
 import type { MouseEvent } from 'react'
 import type { AuthUser } from '../../../../api/auth'
 import type { TripDetail, TripPlanningProfile } from '../../../../api/trips'
+import type { PresenceStatus } from '../../../../api/presence'
 import { MembershipSummary } from '../membership/MembershipSummary'
 import {
   accommodationAreaLabel,
@@ -24,6 +25,7 @@ export function WorkspaceHeader({
   onRefresh,
   onMembershipChanged,
   onLeftTrip,
+  presenceByMember = null,
 }: {
   trip: TripDetail
   dayCount: number
@@ -35,6 +37,7 @@ export function WorkspaceHeader({
   onRefresh: () => void
   onMembershipChanged: () => void
   onLeftTrip: () => void
+  presenceByMember?: Record<number, PresenceStatus> | null
 }) {
   return (
     <header className="planning-header">
@@ -58,6 +61,7 @@ export function WorkspaceHeader({
           accessToken={accessToken}
           currentUserId={currentUser?.id ?? null}
           members={trip.members}
+          presenceByMember={presenceByMember}
           onLeftTrip={onLeftTrip}
           onMembershipChanged={onMembershipChanged}
           tripId={trip.id}

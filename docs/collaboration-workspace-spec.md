@@ -1,10 +1,10 @@
 # PlanMate 협업형 여행 상세 워크스페이스 실행 명세
 
-> 상태: 요구사항 검증 완료 / 대형 work package 실행 계획 포함 / API 계약 작성 전
+> 상태: 요구사항·API 계약 확정 / WP-C 경로와 WP-D 채팅 협업 기반 구현 완료
 > 문서 버전: 1.1
 > 대상 화면: `/trips/{tripId}`  
 > 기준 데이터: `tripId=1530`, `generationId=1415`, `itineraryId=505`  
-> 최종 검토일: 2026-08-31  
+> 최종 검토일: 2026-09-02
 > 과거 인터랙티브 결정 원문: [결정 기록 archive](archive/collaboration-workspace-spec-decision-log-2026-08-31.md)
 
 ## 1. 문서 역할과 사용 규칙
@@ -69,6 +69,7 @@ archive는 결정 배경을 확인할 때만 사용한다. archive의 반복 문
 - 여행 생성·목록·상세·OWNER 삭제
 - 여행 조건과 Google Places 후보 수집
 - 일정 생성 요청, 수동 AI handoff/fixture, validation과 저장
+- 여행방 채팅 저장·history/send, 재연결 gap 복구, unread, 5분 내 작성자 삭제·한 단계 답장·`좋아요 | 확인했어요` 반응, typing·presence·개인 mention·본문 검색
 - local `itinerary-fixture` profile은 실제 GPT 호출 지점만 fixture로 대체하며 validation·저장·COMPLETED 처리는 기존 흐름을 통과한다. production 기본값은 비활성이다.
 - portfolio/local 시연용 일정 fixture와 route 통합 시나리오는 국내 여행지만 사용한다. 해외 route·timezone 동작은 production 지원 범위를 별도로 확정하기 전까지 시연 완료 조건에 포함하지 않는다.
 - 최신 generation 조회와 최신 itinerary read model
@@ -92,8 +93,8 @@ archive는 결정 배경을 확인할 때만 사용한다. archive의 반복 문
 ### 3.2 일부만 구현됨
 
 - 중앙 지도는 Google Maps JavaScript SDK와 실제 place 좌표 marker를 사용하고 DAY·timeline 선택을 동기화한다. 다만 Places library loading, 좌표 지연 도착 뒤 bounds 갱신, 장소 상세 panel과 provider 오류 복구는 안정화 전이다.
-- route 선·이동 시간·거리는 아직 표시하지 않으며 화면용 provider geometry API도 없다. 기존 Google Routes adapter는 AI 일정 validation용 duration/distance 경계다.
-- 우측 채팅·투표는 고정 preview UI뿐이며 저장·전송 API가 없다. 기본 production 화면에서 실제 데이터로 오인되지 않도록 demo fixture 격리 또는 명확한 미연결 상태가 필요하다.
+- 국내 자동차 DAY 경로는 Kakao Mobility 표준 자동차 길찾기의 실제 geometry·시간·거리를 사용해 좌측 이동 구간과 중앙 지도에 함께 표시한다. 응답 itinerary version이 현재 화면과 다르거나 provider가 실패하면 기존 일정·marker를 유지하고 route만 표시하지 않는다.
+- 우측 채팅은 실제 저장·전송·재연결·읽음·삭제·답장·반응을 사용한다. 투표는 고정 preview이므로 production에서 실제 데이터로 오인되지 않게 demo fixture 격리 또는 명확한 미연결 상태가 필요하다.
 - WIDE 3열과 NARROW 단일 pane은 구현됐지만 MEDIUM의 `일정 | 지도 | 여행방` 전환 동작과 tab 접근성은 보완 전이다.
 - 실시간 권한은 `SUBSCRIBE` 시점만 검사하며 이미 연결된 session의 멤버십 상실을 무효화하지 못한다.
 - 최신 일정은 `createdAt desc`로 선택하며 명시적 current pointer·version guard가 없다.
@@ -101,10 +102,10 @@ archive는 결정 배경을 확인할 때만 사용한다. archive의 반복 문
 ### 3.3 구현되지 않음
 
 - 제품용 초대·친구·나가기·내보내기·방장 이전
-- 실제 route polyline·route snapshot/cache·후보 detour
+- 후보 detour·개인 길찾기 preview
 - itinerary proposal, immutable version history와 current pointer
 - 투표·ballot·마감 scheduler·자동 적용
-- 채팅·읽음·reply·reaction·typing·presence·검색·알림
+- 채팅 typing·presence·mention·검색·알림
 - CUSTOM_PIN과 TRANSIT 저장 모델
 - 장소별 timezone·UTC instant 기반 lifecycle
 
@@ -541,7 +542,7 @@ backend는 기존 package 규칙을 유지하되 `membership`, `route`, `chat`, 
 - 지도 표시·Places 검색은 Google 경계를 유지한다. browser map key와 backend server key를 분리하고 referrer/IP/API restriction을 적용한다.
 - 공유 일정의 국내 자동차 route provider는 **Kakao Mobility 자동차 길찾기** `GET /v1/directions`로 고정한다. 카카오의 별도 **다중 경유지 길찾기** `POST /v1/waypoints/directions`는 현재 범위에서 제외한다.
 - Kakao가 앱 단위로 기본 적용하는 자동차 길찾기 일일 무료 쿼터 **10,000건**을 provider 최종 차단선으로 사용한다. 추가 쿼터·유료 제휴는 신청하거나 활성화하지 않는다. 이 값은 PlanMate가 콘솔에서 임의로 지정하는 custom limit이 아니므로, 서버에도 프로젝트 전체 호출을 선점하는 원자적 일일 usage guard(`KAKAO_DIRECTIONS_DAILY_LIMIT=10000`)를 둔다. DB/공유 저장소의 `provider + operation + KST date` counter를 외부 호출 전에 증가시켜 재시작·동시 instance에서도 10,000건을 넘기지 않으며 실패 호출과 retry도 각각 사용량으로 센다. 한도 도달 시 외부 호출·Google/NAVER 자동 fallback을 하지 않고 `ROUTE_QUOTA_EXCEEDED`를 반환하며 기존 일정·marker·마지막 검증 route를 유지한다.
-- route는 itinerary version + DAY + mode + 좌표 hash로 cache하고, 일정이 바뀐 DAY만 다시 조회한다. timeout 재시도도 일일 usage에 포함해 무제한 재시도로 한도를 넘기지 않는다.
+- provider snapshot은 `mode + origin/destination 좌표 hash`로 공유 cache하고 24시간 뒤 다시 검증한다. DAY read 응답에는 current itinerary id/version을 함께 넣어 일정이 바뀐 DAY만 client가 다시 조회하고 stale route를 섞지 못하게 한다. timeout 재시도도 일일 usage에 포함해 무제한 재시도로 한도를 넘기지 않는다.
 - 지도 표시·Places 검색은 현재 Google 경계를 유지하므로 Kakao route geometry를 Google 지도에 표시하는 방식의 약관·출처 표기를 WP-C ADR에서 검증한다. 검증 전에는 provider 이름을 숨기거나 Google route로 오인시키지 않으며, 검증 실패 시 production route overlay를 차단한다.
 - portfolio/local route 시연과 자동화 fixture는 국내 여행지만 사용한다. 해외 일정은 route 없음 상태를 정직하게 표시하며 임의 직선·추정 시간을 만들지 않는다.
 - MEMBER 제거 transaction 뒤 기존 trip subscription/session을 서버가 무효화하고 client가 private cache를 지운 뒤 `MEMBERSHIP_LOST`로 전환해야 C1/C3가 완료된다.

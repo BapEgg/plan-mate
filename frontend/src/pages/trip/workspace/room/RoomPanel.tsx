@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { AuthUser } from '../../../../api/auth'
-import type { ChatMessageSentPayload } from '../../../../api/realtime'
+import type { ChatMessageChangedPayload, ChatMessageSentPayload, ChatTypingChangedPayload } from '../../../../api/realtime'
 import type { TripMember } from '../../../../api/trips'
 import type { CollaborationView, ItineraryPlace } from '../workspaceTypes'
 import { ChatPanel } from './chat/ChatPanel'
@@ -8,7 +8,7 @@ import { VotePanel } from './vote/VotePanel'
 
 const demoPreviewEnabled = import.meta.env.VITE_WORKSPACE_DEMO_PREVIEW === 'true'
 
-export function RoomPanel({ accessToken, chatConnected, chatReconnectedAt, chatUnreadCount, className, id, panelRole, ariaLabelledBy, latestChatMessage, members, currentUser, activeDay, selectedPlace, tripId, onChatRead }: {
+export function RoomPanel({ accessToken, chatConnected, chatReconnectedAt, chatUnreadCount, className, id, panelRole, ariaLabelledBy, latestChatMessage, latestChatChange, latestChatTyping, members, currentUser, activeDay, selectedPlace, tripId, onChatRead, sendChatTyping }: {
   accessToken: string
   chatConnected: boolean
   chatReconnectedAt: number
@@ -18,12 +18,15 @@ export function RoomPanel({ accessToken, chatConnected, chatReconnectedAt, chatU
   panelRole?: string
   ariaLabelledBy?: string
   latestChatMessage: ChatMessageSentPayload | null
+  latestChatChange: ChatMessageChangedPayload | null
+  latestChatTyping: ChatTypingChangedPayload | null
   members: TripMember[]
   currentUser: AuthUser | null
   activeDay: number
   selectedPlace: ItineraryPlace | null
   tripId: string
   onChatRead: () => void
+  sendChatTyping: (state: 'STARTED' | 'HEARTBEAT' | 'STOPPED', clientSessionId: string, clientEventId: string) => boolean
 }) {
   const [view, setView] = useState<CollaborationView>('CHAT')
 
@@ -51,10 +54,13 @@ export function RoomPanel({ accessToken, chatConnected, chatReconnectedAt, chatU
           chatConnected={chatConnected}
           chatReconnectedAt={chatReconnectedAt}
           currentUser={currentUser}
+          latestChatChange={latestChatChange}
           latestChatMessage={latestChatMessage}
+          latestChatTyping={latestChatTyping}
           members={members}
           onChatRead={onChatRead}
           tripId={tripId}
+          sendChatTyping={sendChatTyping}
         />
       ) : (
         <VotePanel

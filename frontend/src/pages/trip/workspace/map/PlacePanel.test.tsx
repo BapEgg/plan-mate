@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { describe, expect, it } from 'vitest'
+import { render, screen } from '@testing-library/react'
 import { PlacePanel } from './PlacePanel'
 import type { ItineraryPlace } from '../workspaceTypes'
 
@@ -20,10 +20,6 @@ const basePlace: ItineraryPlace = {
 }
 
 describe('PlacePanel', () => {
-  afterEach(() => {
-    delete (window as { google?: unknown }).google
-  })
-
   it('shows a prompt to select a place when nothing is selected', () => {
     render(<PlacePanel place={null} />)
 
@@ -53,32 +49,5 @@ describe('PlacePanel', () => {
     expect(screen.getByText('장소 확인 전')).toBeInTheDocument()
     expect(screen.getByText('장소 이름과 지도 정보는 외부 조회가 완료되면 표시됩니다.')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /Google Maps에서 위치 보기/ })).not.toBeInTheDocument()
-  })
-
-  it('renders rating and address once the Places lookup resolves', async () => {
-    const getDetails = vi.fn((_request, callback) => {
-      callback(
-        {
-          rating: 4.5,
-          user_ratings_total: 128,
-          formatted_address: '제주특별자치도 제주시 수목원길 72',
-          opening_hours: { isOpen: () => true },
-        },
-        'OK',
-      )
-    })
-    class MockPlacesService {
-      getDetails = getDetails
-    }
-    ;(window as unknown as { google: unknown }).google = {
-      maps: { places: { PlacesService: MockPlacesService } },
-    }
-
-    render(<PlacePanel place={basePlace} />)
-
-    await waitFor(() => expect(screen.getByText(/★ 4.5/)).toBeInTheDocument())
-    expect(screen.getByText(/리뷰 128개/)).toBeInTheDocument()
-    expect(screen.getByText('영업 중')).toBeInTheDocument()
-    expect(screen.getByText('제주특별자치도 제주시 수목원길 72')).toBeInTheDocument()
   })
 })

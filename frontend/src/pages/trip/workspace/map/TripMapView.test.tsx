@@ -43,11 +43,20 @@ class MockLatLngBounds {
   isEmpty = vi.fn(() => false)
 }
 
+class MockPolyline {
+  static instances: MockPolyline[] = []
+  setMap = vi.fn()
+  constructor() {
+    MockPolyline.instances.push(this)
+  }
+}
+
 describe('TripMapView', () => {
   afterEach(() => {
     vi.unstubAllEnvs()
     delete (window as { google?: unknown }).google
     MockMarker.instances = []
+    MockPolyline.instances = []
   })
 
   it('renders an honest unconfigured fallback when no map key is set, instead of a blank or broken map', () => {
@@ -59,7 +68,7 @@ describe('TripMapView', () => {
         selectedPlaceId=""
         fitSignal="1:0"
         fallbackCenter={null}
-        markerColor="#e0483e"
+        routePoints={[]}
         onSelectPlace={noop}
       />,
     )
@@ -76,7 +85,7 @@ describe('TripMapView', () => {
         selectedPlaceId=""
         fitSignal="1:0"
         fallbackCenter={null}
-        markerColor="#e0483e"
+        routePoints={[]}
         onSelectPlace={noop}
       />,
     )
@@ -90,6 +99,7 @@ describe('TripMapView', () => {
       maps: {
         Map: MockMap,
         Marker: MockMarker,
+        Polyline: MockPolyline,
         LatLngBounds: MockLatLngBounds,
         SymbolPath: { CIRCLE: 0 },
         event: { clearInstanceListeners: vi.fn() },
@@ -103,7 +113,7 @@ describe('TripMapView', () => {
         selectedPlaceId=""
         fitSignal="1:0"
         fallbackCenter={null}
-        markerColor="#e0483e"
+        routePoints={[]}
         onSelectPlace={onSelectPlace}
       />,
     )
@@ -112,5 +122,35 @@ describe('TripMapView', () => {
     MockMarker.instances[0].listeners.click()
 
     expect(onSelectPlace).toHaveBeenCalledWith('p1')
+  })
+
+  it('draws a polyline only when verified route coordinates are supplied', async () => {
+    vi.stubEnv('VITE_GOOGLE_MAPS_API_KEY', 'test-key')
+    ;(window as unknown as { google: unknown }).google = {
+      maps: {
+        Map: MockMap,
+        Marker: MockMarker,
+        Polyline: MockPolyline,
+        LatLngBounds: MockLatLngBounds,
+        SymbolPath: { CIRCLE: 0 },
+        event: { clearInstanceListeners: vi.fn() },
+      },
+    }
+
+    render(
+      <TripMapView
+        places={[place]}
+        selectedPlaceId=""
+        fitSignal="1:0"
+        fallbackCenter={null}
+        routePoints={[
+          { latitude: 33.5, longitude: 126.5 },
+          { latitude: 33.6, longitude: 126.6 },
+        ]}
+        onSelectPlace={noop}
+      />,
+    )
+
+    await waitFor(() => expect(MockPolyline.instances).toHaveLength(1))
   })
 })

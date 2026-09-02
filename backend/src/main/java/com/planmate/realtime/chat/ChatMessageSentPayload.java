@@ -1,7 +1,9 @@
 package com.planmate.realtime.chat;
 
 import com.planmate.chat.entity.ChatMessageType;
+import com.planmate.chat.dto.ChatMentionResponse;
 import java.time.Instant;
+import java.util.List;
 
 public record ChatMessageSentPayload(
         Long messageId,
@@ -9,6 +11,11 @@ public record ChatMessageSentPayload(
         Long authorUserId,
         ChatMessageType type,
         String body,
-        Instant sentAt
+        Instant sentAt,
+        Long replyToMessageId,
+        Long replyAuthorUserId,
+        String replyBody,
+        boolean replyDeleted,
+        List<ChatMentionResponse> mentions
 ) {
 }

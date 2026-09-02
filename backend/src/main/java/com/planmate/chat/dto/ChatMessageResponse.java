@@ -3,6 +3,7 @@ package com.planmate.chat.dto;
 import com.planmate.chat.entity.ChatMessageEntity;
 import com.planmate.chat.entity.ChatMessageType;
 import java.time.Instant;
+import java.util.List;
 
 public record ChatMessageResponse(
         Long id,
@@ -11,7 +12,13 @@ public record ChatMessageResponse(
         ChatMessageType type,
         String body,
         String clientMessageId,
-        Instant sentAt
+        Instant sentAt,
+        ChatReplyPreviewResponse replyTo,
+        boolean deleted,
+        Instant deletedAt,
+        Instant deletableUntil,
+        List<ChatReactionSummaryResponse> reactions,
+        List<ChatMentionResponse> mentions
 ) {
     public static ChatMessageResponse from(ChatMessageEntity entity) {
         return new ChatMessageResponse(
@@ -19,9 +26,15 @@ public record ChatMessageResponse(
                 entity.getTripId().toString(),
                 entity.getAuthorUserId(),
                 entity.getType(),
-                entity.getBody(),
+                entity.isDeleted() ? "삭제된 메시지입니다." : entity.getBody(),
                 entity.getClientMessageId(),
-                entity.getSentAt()
+                entity.getSentAt(),
+                null,
+                entity.isDeleted(),
+                entity.getDeletedAt(),
+                entity.getSentAt().plusSeconds(300),
+                List.of(),
+                List.of()
         );
     }
 }

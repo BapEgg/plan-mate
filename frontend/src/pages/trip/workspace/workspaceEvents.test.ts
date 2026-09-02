@@ -66,6 +66,10 @@ describe('isKnownWorkspaceEvent', () => {
         type: 'USER_TEXT',
         body: '안녕하세요',
         sentAt: '2026-08-31T00:00:00Z',
+        replyToMessageId: null,
+        replyAuthorUserId: null,
+        replyBody: null,
+        replyDeleted: false,
       },
     }
     expect(isKnownWorkspaceEvent(chatEvent)).toBe(true)

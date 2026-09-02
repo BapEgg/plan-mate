@@ -1,6 +1,8 @@
 package com.planmate.realtime.chat;
 
 import com.planmate.chat.api.event.ChatMessageSentEvent;
+import com.planmate.chat.api.event.ChatMessageDeletedEvent;
+import com.planmate.chat.api.event.ChatReactionChangedEvent;
 import com.planmate.common.realtime.RealtimeEventEnvelope;
 import com.planmate.common.realtime.RealtimeEventType;
 import java.time.Clock;
@@ -27,8 +29,31 @@ public class ChatRealtimeEventMapper {
                         event.authorUserId(),
                         event.type(),
                         event.body(),
-                        event.sentAt()
+                        event.sentAt(),
+                        event.replyToMessageId(),
+                        event.replyAuthorUserId(),
+                        event.replyBody(),
+                        event.replyDeleted(),
+                        event.mentions()
                 )
+        );
+    }
+
+    public RealtimeEventEnvelope<ChatMessageChangedPayload> toEnvelope(ChatMessageDeletedEvent event) {
+        return RealtimeEventEnvelope.create(
+                RealtimeEventType.CHAT_MESSAGE_DELETED,
+                event.tripId(),
+                Instant.now(clock),
+                new ChatMessageChangedPayload(event.messageId(), event.deletedAt())
+        );
+    }
+
+    public RealtimeEventEnvelope<ChatMessageChangedPayload> toEnvelope(ChatReactionChangedEvent event) {
+        return RealtimeEventEnvelope.create(
+                RealtimeEventType.CHAT_REACTION_CHANGED,
+                event.tripId(),
+                Instant.now(clock),
+                new ChatMessageChangedPayload(event.messageId(), null)
         );
     }
 }

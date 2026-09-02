@@ -155,6 +155,9 @@ app:
     directions:
       api-key: ${KAKAO_DIRECTIONS_API_KEY:}
       daily-limit: ${KAKAO_DIRECTIONS_DAILY_LIMIT:10000}
+      cache-ttl: ${KAKAO_DIRECTIONS_CACHE_TTL:24h}
+      connect-timeout: ${KAKAO_DIRECTIONS_CONNECT_TIMEOUT:2s}
+      read-timeout: ${KAKAO_DIRECTIONS_READ_TIMEOUT:5s}
   itinerary:
     manual-handoff-enabled: ${APP_ITINERARY_MANUAL_HANDOFF_ENABLED:false}
     fixture-response:
