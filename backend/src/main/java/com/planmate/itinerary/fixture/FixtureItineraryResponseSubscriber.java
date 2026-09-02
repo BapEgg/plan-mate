@@ -1,12 +1,17 @@
 package com.planmate.itinerary.fixture;
 
 import com.planmate.itinerary.api.ItineraryGenerationStatus;
+import com.planmate.itinerary.api.RegenerationConstraintProvider;
 import com.planmate.itinerary.api.event.ItineraryGenerationStatusChangedEvent;
+import com.planmate.itinerary.domain.GenerationCandidateSnapshot;
 import com.planmate.itinerary.domain.GenerationInputSnapshot;
 import com.planmate.itinerary.dto.AiItineraryDraft;
 import com.planmate.itinerary.exception.AiItineraryValidationException;
+import com.planmate.itinerary.service.GenerationCandidateSnapshotStore;
 import com.planmate.itinerary.service.GenerationInputSnapshotStore;
+import java.util.LinkedHashSet;
 import java.util.Optional;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -28,15 +33,21 @@ public class FixtureItineraryResponseSubscriber {
     private static final Logger log = LoggerFactory.getLogger(FixtureItineraryResponseSubscriber.class);
 
     private final GenerationInputSnapshotStore generationInputSnapshotStore;
+    private final GenerationCandidateSnapshotStore generationCandidateSnapshotStore;
+    private final RegenerationConstraintProvider regenerationConstraintProvider;
     private final FixtureItineraryDraftProvider fixtureProvider;
     private final FixtureItineraryResponseExecutor responseExecutor;
 
     public FixtureItineraryResponseSubscriber(
             GenerationInputSnapshotStore generationInputSnapshotStore,
+            GenerationCandidateSnapshotStore generationCandidateSnapshotStore,
+            RegenerationConstraintProvider regenerationConstraintProvider,
             FixtureItineraryDraftProvider fixtureProvider,
             FixtureItineraryResponseExecutor responseExecutor
     ) {
         this.generationInputSnapshotStore = generationInputSnapshotStore;
+        this.generationCandidateSnapshotStore = generationCandidateSnapshotStore;
+        this.regenerationConstraintProvider = regenerationConstraintProvider;
         this.fixtureProvider = fixtureProvider;
         this.responseExecutor = responseExecutor;
     }
@@ -50,9 +61,18 @@ public class FixtureItineraryResponseSubscriber {
 
         try {
             GenerationInputSnapshot snapshot = generationInputSnapshotStore.getRequired(event.generationId());
+            Set<String> allowedPlaceIds = new LinkedHashSet<>(generationCandidateSnapshotStore
+                    .findAllByGenerationId(event.generationId()).stream()
+                    .map(GenerationCandidateSnapshot::placeId)
+                    .toList());
+            regenerationConstraintProvider.findByGenerationId(event.generationId())
+                    .ifPresent(constraint -> constraint.currentItems().stream()
+                            .map(RegenerationConstraintProvider.Item::placeId)
+                            .forEach(allowedPlaceIds::add));
             Optional<AiItineraryDraft> fixture = fixtureProvider.load(
                     event.generationId(),
-                    snapshot.tripDayCount()
+                    snapshot.tripDayCount(),
+                    allowedPlaceIds
             );
             if (fixture.isEmpty()) {
                 log.info(

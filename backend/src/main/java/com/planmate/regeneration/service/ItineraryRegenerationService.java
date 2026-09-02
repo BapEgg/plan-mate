@@ -82,6 +82,7 @@ public class ItineraryRegenerationService implements RegenerationResponseHandler
     private final GenerationInputSnapshotStore inputSnapshotStore;
     private final GenerationCandidateSnapshotStore candidateSnapshotStore;
     private final AiItineraryDraftValidationService validationService;
+    private final RegenerationValidationCandidateResolver validationCandidateResolver;
     private final Clock clock;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -98,6 +99,7 @@ public class ItineraryRegenerationService implements RegenerationResponseHandler
             GenerationInputSnapshotStore inputSnapshotStore,
             GenerationCandidateSnapshotStore candidateSnapshotStore,
             AiItineraryDraftValidationService validationService,
+            RegenerationValidationCandidateResolver validationCandidateResolver,
             Clock clock,
             ApplicationEventPublisher eventPublisher
     ) {
@@ -113,6 +115,7 @@ public class ItineraryRegenerationService implements RegenerationResponseHandler
         this.inputSnapshotStore = inputSnapshotStore;
         this.candidateSnapshotStore = candidateSnapshotStore;
         this.validationService = validationService;
+        this.validationCandidateResolver = validationCandidateResolver;
         this.clock = clock;
         this.eventPublisher = eventPublisher;
     }
@@ -258,9 +261,10 @@ public class ItineraryRegenerationService implements RegenerationResponseHandler
         }
         GenerationInputSnapshot snapshot = inputSnapshotStore.getRequired(generationId);
         List<GenerationCandidateSnapshot> candidates = candidateSnapshotStore.findAllByGenerationId(generationId);
-        validateDraft(generation, snapshot, candidates, draft);
-
         ItineraryEntity base = loadBase(regeneration);
+        List<GenerationCandidateSnapshot> validationCandidates = validationCandidateResolver.resolve(base, candidates);
+        validateDraft(generation, snapshot, validationCandidates, draft);
+
         if (regeneration.getScope() == RegenerationScopeType.PARTIAL) {
             verifyFixedItems(base, regeneration, draft);
         }

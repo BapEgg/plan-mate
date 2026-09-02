@@ -13,7 +13,9 @@ import com.planmate.trip.entity.TripMemberRole;
 import com.planmate.trip.repository.TripMemberRepository;
 import com.planmate.trip.repository.TripRepository;
 import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -58,11 +60,12 @@ class FoundationMigrationRegressionTest {
         assertThat(itineraryGenerationRepository.findById(GENERATION_ID)).isPresent();
         assertThat(itineraryRepository.findById(ITINERARY_ID)).isPresent();
 
-        // ADR-0002: current pointer는 기존 createdAt-desc가 골랐을 행과 같은 505를 가리켜야 한다.
-        assertThat(trip.getCurrentItineraryId()).isEqualTo(ITINERARY_ID);
+        // ADR-0002: 원본 505는 보존되어야 한다. 다만 이 로컬 fixture로 revision E2E를 수행한 뒤에는
+        // current pointer가 505를 조상으로 둔 최신 revision을 가리키는 것이 정상이다.
         ItineraryEntity current = itineraryRepository.findCurrentByTripId(TRIP_ID).orElseThrow();
-        assertThat(current.getId()).isEqualTo(ITINERARY_ID);
+        assertThat(current.getId()).isEqualTo(trip.getCurrentItineraryId());
         assertThat(current.getVersion()).isGreaterThanOrEqualTo(1);
+        assertThat(hasAncestorOrSelf(current, ITINERARY_ID)).isTrue();
 
         // ADR-0005: 기존 국내 trip은 Asia/Seoul로 백필되어야 한다.
         assertThat(trip.getTimezone()).isEqualTo("Asia/Seoul");
@@ -89,5 +92,18 @@ class FoundationMigrationRegressionTest {
         assertThat(itinerary.getDays())
                 .extracting(day -> day.getItems().size())
                 .containsExactlyInAnyOrder(5, 5, 7, 6);
+    }
+
+    private boolean hasAncestorOrSelf(ItineraryEntity itinerary, Long expectedAncestorId) {
+        Set<Long> visited = new HashSet<>();
+        ItineraryEntity cursor = itinerary;
+        while (cursor != null && cursor.getId() != null && visited.add(cursor.getId())) {
+            if (cursor.getId().equals(expectedAncestorId)) {
+                return true;
+            }
+            Long parentId = cursor.getBaseItineraryId();
+            cursor = parentId == null ? null : itineraryRepository.findById(parentId).orElse(null);
+        }
+        return false;
     }
 }

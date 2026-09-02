@@ -3,6 +3,8 @@ package com.planmate.itinerary.fixture;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.planmate.itinerary.api.RegenerationConstraintProvider;
+import com.planmate.itinerary.service.GenerationCandidateSnapshotStore;
 import com.planmate.itinerary.service.GenerationInputSnapshotStore;
 import com.planmate.itinerary.service.ManualItineraryResponseService;
 import org.junit.jupiter.api.Test;
@@ -22,6 +24,14 @@ class FixtureItineraryResponseIsolationTest {
             .withBean(
                     GenerationInputSnapshotStore.class,
                     () -> Mockito.mock(GenerationInputSnapshotStore.class)
+            )
+            .withBean(
+                    GenerationCandidateSnapshotStore.class,
+                    () -> Mockito.mock(GenerationCandidateSnapshotStore.class)
+            )
+            .withBean(
+                    RegenerationConstraintProvider.class,
+                    () -> Mockito.mock(RegenerationConstraintProvider.class)
             )
             .withBean(
                     ManualItineraryResponseService.class,
