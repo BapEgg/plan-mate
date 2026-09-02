@@ -96,7 +96,31 @@ class ErrorEventRegistryContractTest {
             "MESSAGE_DELETE_WINDOW_EXPIRED",
             "MESSAGE_ALREADY_DELETED",
             "INVALID_REACTION",
-            "INVALID_SEARCH_QUERY"
+            "INVALID_SEARCH_QUERY",
+            // ProposalErrorCode
+            "PROPOSAL_NOT_FOUND",
+            "STALE_BASE_VERSION",
+            "PROPOSAL_NOT_READY",
+            "PROPOSAL_VOTE_BOUND",
+            "DUPLICATE_ACTIVE_PROPOSAL",
+            "INVALID_PROPOSAL",
+            "PROPOSAL_PLACE_UNRESOLVED",
+            "PROPOSAL_ROUTE_NOT_FOUND",
+            "ITINERARY_WINDOW_CLOSED",
+            // VoteErrorCode
+            "VOTE_NOT_FOUND",
+            "VOTE_ALREADY_CLOSED",
+            "NOT_ELIGIBLE_VOTER",
+            "VOTE_CANCEL_FORBIDDEN",
+            // RegenerationErrorCode
+            "REGENERATION_NOT_FOUND",
+            "REGENERATION_ALREADY_ACTIVE",
+            "REGENERATION_NOT_READY",
+            "REGENERATION_STALE_BASE",
+            "REGENERATION_INVALID_RANGE",
+            "REGENERATION_NO_REPLACEMENT",
+            "REGENERATION_FIXED_ITEM_CONFLICT",
+            "REGENERATION_WINDOW_CLOSED"
     );
 
     private static final Set<String> DOCUMENTED_REALTIME_EVENT_TYPES = Set.of(
@@ -111,7 +135,8 @@ class ErrorEventRegistryContractTest {
             "MEMBER_PRESENCE_CHANGED",
             "VOTE_OPENED",
             "VOTE_CLOSED",
-            "ITINERARY_REVISION_APPLIED"
+            "ITINERARY_REVISION_APPLIED",
+            "ITINERARY_REGENERATION_CHANGED"
     );
 
     @Test

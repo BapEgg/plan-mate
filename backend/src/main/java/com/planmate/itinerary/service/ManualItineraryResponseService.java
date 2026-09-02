@@ -6,6 +6,7 @@ import com.planmate.itinerary.api.validation.AiItineraryValidationReport;
 import com.planmate.itinerary.dto.AiItineraryDraft;
 import com.planmate.itinerary.entity.ItineraryGenerationEntity;
 import com.planmate.itinerary.api.ItineraryGenerationStatus;
+import com.planmate.itinerary.api.RegenerationResponseHandler;
 import com.planmate.itinerary.exception.AiItineraryValidationException;
 import com.planmate.itinerary.exception.ItineraryErrorCode;
 import com.planmate.itinerary.exception.ItineraryException;
@@ -14,6 +15,7 @@ import com.planmate.itinerary.repository.ItineraryGenerationRepository;
 import com.planmate.trip.api.TripAccessChecker;
 import java.util.List;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Service
 public class ManualItineraryResponseService {
@@ -26,6 +28,7 @@ public class ManualItineraryResponseService {
     private final ItineraryGenerationRepository generationRepository;
     private final ManualItineraryResponsePersistenceService persistenceService;
     private final AiItineraryValidationMetrics validationMetrics;
+    private final RegenerationResponseHandler regenerationResponseHandler;
 
     public ManualItineraryResponseService(
             TripAccessChecker tripAccessChecker,
@@ -37,6 +40,34 @@ public class ManualItineraryResponseService {
             ManualItineraryResponsePersistenceService persistenceService,
             AiItineraryValidationMetrics validationMetrics
     ) {
+        this(
+                tripAccessChecker,
+                generationInputSnapshotStore,
+                generationCandidateSnapshotStore,
+                aiItineraryDraftValidationService,
+                aiItineraryDraftNormalizer,
+                generationRepository,
+                persistenceService,
+                validationMetrics,
+                new RegenerationResponseHandler() {
+                    @Override public boolean handles(Long generationId) { return false; }
+                    @Override public void submit(Long tripId, Long generationId, AiItineraryDraft draft) { }
+                }
+        );
+    }
+
+    @Autowired
+    public ManualItineraryResponseService(
+            TripAccessChecker tripAccessChecker,
+            GenerationInputSnapshotStore generationInputSnapshotStore,
+            GenerationCandidateSnapshotStore generationCandidateSnapshotStore,
+            AiItineraryDraftValidationService aiItineraryDraftValidationService,
+            AiItineraryDraftNormalizer aiItineraryDraftNormalizer,
+            ItineraryGenerationRepository generationRepository,
+            ManualItineraryResponsePersistenceService persistenceService,
+            AiItineraryValidationMetrics validationMetrics,
+            RegenerationResponseHandler regenerationResponseHandler
+    ) {
         this.tripAccessChecker = tripAccessChecker;
         this.generationInputSnapshotStore = generationInputSnapshotStore;
         this.generationCandidateSnapshotStore = generationCandidateSnapshotStore;
@@ -45,10 +76,15 @@ public class ManualItineraryResponseService {
         this.generationRepository = generationRepository;
         this.persistenceService = persistenceService;
         this.validationMetrics = validationMetrics;
+        this.regenerationResponseHandler = regenerationResponseHandler;
     }
 
     public void submit(Long userId, Long tripId, Long generationId, AiItineraryDraft draft) {
         tripAccessChecker.checkAccessible(userId, tripId);
+        if (regenerationResponseHandler.handles(generationId)) {
+            regenerationResponseHandler.submit(tripId, generationId, draft);
+            return;
+        }
         submitValidatedResponse(tripId, generationId, draft);
     }
 
@@ -60,6 +96,10 @@ public class ManualItineraryResponseService {
      * manual response; only the end-user access check is not repeated here.</p>
      */
     public void submitProviderResponse(Long tripId, Long generationId, AiItineraryDraft draft) {
+        if (regenerationResponseHandler.handles(generationId)) {
+            regenerationResponseHandler.submit(tripId, generationId, draft);
+            return;
+        }
         submitValidatedResponse(tripId, generationId, draft);
     }
 

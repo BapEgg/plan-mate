@@ -175,7 +175,7 @@ export type TripPlanningProfile = {
 
 export type Itinerary = {
   id: number
-  generationId: number
+  generationId: number | null
   createdAt: string
   version: number
   days: ItineraryDay[]
@@ -194,7 +194,7 @@ export type ItineraryItem = {
   placeId: string
   startTime: string
   durationMinutes: number
-  createdSource: 'AI_DRAFT' | 'USER_SELECTED' | 'MANUAL_EDIT'
+  createdSource: 'AI_DRAFT' | 'AI_REPLACEMENT' | 'USER_SELECTED' | 'MANUAL_EDIT'
 }
 
 export type ItineraryGenerationCreateResponse = {
@@ -233,7 +233,7 @@ export type ItineraryPlaceView = {
   placeId: string
   startTime: string
   durationMinutes: number
-  createdSource: 'AI_DRAFT' | 'USER_SELECTED' | 'MANUAL_EDIT'
+  createdSource: 'AI_DRAFT' | 'AI_REPLACEMENT' | 'USER_SELECTED' | 'MANUAL_EDIT'
   display: {
     resolved: boolean
     displayName: string | null

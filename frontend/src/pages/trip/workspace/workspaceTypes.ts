@@ -11,6 +11,7 @@ export type ItineraryPlace = {
   title: string
   startTime: string
   duration: string
+  durationMinutes: number
   latitude: number | null
   longitude: number | null
   locationLabel: string | null
@@ -28,6 +29,7 @@ export function toItineraryPlace(item: ItineraryPlaceView): ItineraryPlace {
     title: item.display.displayName ?? item.display.fallbackMessage ?? '장소 정보를 불러오지 못했습니다',
     startTime: item.startTime.slice(0, 5),
     duration: formatDuration(item.durationMinutes),
+    durationMinutes: item.durationMinutes,
     latitude: item.display.location?.latitude ?? null,
     longitude: item.display.location?.longitude ?? null,
     locationLabel: item.display.location ? `${item.display.location.latitude.toFixed(5)}, ${item.display.location.longitude.toFixed(5)}` : null,

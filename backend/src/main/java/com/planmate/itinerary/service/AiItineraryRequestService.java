@@ -5,6 +5,7 @@ import com.planmate.itinerary.api.ItineraryGenerationStatus;
 import com.planmate.itinerary.exception.ItineraryErrorCode;
 import com.planmate.itinerary.exception.ItineraryException;
 import com.planmate.itinerary.service.ItineraryGenerationPersistenceService.AiRequestContext;
+import com.planmate.itinerary.api.RegenerationConstraintProvider;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -13,15 +14,18 @@ public class AiItineraryRequestService {
     private final ItineraryGenerationPersistenceService persistenceService;
     private final AiItineraryRequestFactory requestFactory;
     private final ItineraryPromptService promptService;
+    private final RegenerationConstraintProvider regenerationConstraintProvider;
 
     public AiItineraryRequestService(
             ItineraryGenerationPersistenceService persistenceService,
             AiItineraryRequestFactory requestFactory,
-            ItineraryPromptService promptService
+            ItineraryPromptService promptService,
+            RegenerationConstraintProvider regenerationConstraintProvider
     ) {
         this.persistenceService = persistenceService;
         this.requestFactory = requestFactory;
         this.promptService = promptService;
+        this.regenerationConstraintProvider = regenerationConstraintProvider;
     }
 
     public AiItineraryRequest getRequest(Long userId, Long tripId, Long generationId) {
@@ -47,7 +51,8 @@ public class AiItineraryRequestService {
                 context.promptVersion(),
                 context.generationId(),
                 context.inputSnapshot(),
-                context.candidates()
+                context.candidates(),
+                regenerationConstraintProvider.findByGenerationId(context.generationId()).orElse(null)
         );
     }
 }

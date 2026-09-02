@@ -33,7 +33,7 @@ public class ItineraryQueryService implements LatestItineraryReader {
     private ItineraryReadModel toReadModel(ItineraryEntity itinerary) {
         return new ItineraryReadModel(
                 itinerary.getId(),
-                itinerary.getGeneration().getId(),
+                itinerary.getGeneration() == null ? null : itinerary.getGeneration().getId(),
                 itinerary.getCreatedAt(),
                 itinerary.getVersion(),
                 itinerary.getDays().stream()

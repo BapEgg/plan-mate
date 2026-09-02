@@ -25,7 +25,9 @@ public record AiItineraryRequest(
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         List<Candidate> candidates,
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        List<String> rules
+        List<String> rules,
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        Regeneration regeneration
 ) {
 
     public AiItineraryRequest {
@@ -125,6 +127,32 @@ public record AiItineraryRequest(
             types = copyOrEmpty(types);
             openingPeriods = copyOrEmpty(openingPeriods);
         }
+    }
+
+    public record Regeneration(
+            String scope,
+            Integer dayNumber,
+            Long startItemId,
+            Long endItemId,
+            List<Long> fixedItemIds,
+            String additionalRequest,
+            List<CurrentItem> currentItems
+    ) {
+        public Regeneration {
+            fixedItemIds = copyOrEmpty(fixedItemIds);
+            currentItems = copyOrEmpty(currentItems);
+        }
+    }
+
+    public record CurrentItem(
+            Long itemId,
+            int day,
+            int sequence,
+            String placeId,
+            String startTime,
+            int durationMinutes,
+            String action
+    ) {
     }
 
     private static <T> List<T> copyOrEmpty(List<T> values) {

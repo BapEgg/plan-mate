@@ -11,19 +11,22 @@ import type {
   ItineraryPlaceView,
   TripDetail,
 } from '../../../api/trips'
-import { CHAT_MESSAGE_DELETED, CHAT_MESSAGE_SENT, CHAT_REACTION_CHANGED, CHAT_TYPING_UPDATED, connectTripRealtimeEvents, ITINERARY_GENERATION_STATUS_CHANGED, MEMBER_PRESENCE_CHANGED, MEMBERSHIP_CHANGED } from '../../../api/realtime'
+import { CHAT_MESSAGE_DELETED, CHAT_MESSAGE_SENT, CHAT_REACTION_CHANGED, CHAT_TYPING_UPDATED, connectTripRealtimeEvents, ITINERARY_GENERATION_STATUS_CHANGED, ITINERARY_REGENERATION_CHANGED, ITINERARY_REVISION_APPLIED, MEMBER_PRESENCE_CHANGED, MEMBERSHIP_CHANGED, VOTE_CLOSED, VOTE_OPENED } from '../../../api/realtime'
 import type { ChatMessageChangedPayload, ChatMessageSentPayload, ChatTypingChangedPayload, TripRealtimeConnection } from '../../../api/realtime'
 import { getChatUnreadCount } from '../../../api/chat'
 import { getTripPresence } from '../../../api/presence'
 import type { PresenceStatus } from '../../../api/presence'
 import { getDayRoute } from '../../../api/routes'
 import type { DayRoute } from '../../../api/routes'
+import { getLatestItineraryRegeneration } from '../../../api/regenerations'
+import type { ItineraryRegeneration } from '../../../api/regenerations'
 import { WorkspaceHeader } from './components/WorkspaceHeader'
 import { GenerationStatusPanel, WorkspaceSetupNotice } from './components/GenerationStatusPanel'
 import { WorkspacePaneSwitcher } from './components/WorkspacePaneSwitcher'
 import { ItinerarySchedule } from './schedule/ItinerarySchedule'
 import { TripMapCanvas } from './map/TripMapCanvas'
 import { RoomPanel } from './room/RoomPanel'
+import { ItineraryEditor } from './editor/ItineraryEditor'
 import { generationEventMessage, isKnownWorkspaceEvent } from './workspaceEvents'
 import { buildTripDayNumbers, dateForTripDay } from './workspaceFormatters'
 import type { AsyncStatus, MobileWorkspacePane } from './workspaceTypes'
@@ -64,6 +67,8 @@ export function TripWorkspacePage({
   const [chatConnected, setChatConnected] = useState(true)
   const [chatReconnectedAt, setChatReconnectedAt] = useState(0)
   const [chatUnreadCount, setChatUnreadCount] = useState(0)
+  const [voteRefreshSignal, setVoteRefreshSignal] = useState(0)
+  const [regenerationRefreshSignal, setRegenerationRefreshSignal] = useState(0)
   const hasConnectedBeforeRef = useRef(false)
   const disconnectTimerRef = useRef<number | null>(null)
   const realtimeConnectionRef = useRef<TripRealtimeConnection | null>(null)
@@ -235,6 +240,20 @@ export function TripWorkspacePage({
           setPresenceByMember((current) => ({ ...(current ?? {}), [event.payload.memberId]: event.payload.status }))
           return
         }
+        if (event.type === VOTE_OPENED || event.type === VOTE_CLOSED) {
+          setVoteRefreshSignal((current) => current + 1)
+          return
+        }
+        if (event.type === ITINERARY_REGENERATION_CHANGED) {
+          setRegenerationRefreshSignal((current) => current + 1)
+          if (event.payload.status === 'APPLIED') void loadTripData()
+          return
+        }
+        if (event.type === ITINERARY_REVISION_APPLIED) {
+          setVoteRefreshSignal((current) => current + 1)
+          void loadTripData()
+          return
+        }
         if (event.type !== ITINERARY_GENERATION_STATUS_CHANGED) {
           return
         }
@@ -323,6 +342,8 @@ export function TripWorkspacePage({
         placeViews={placeViews}
         placeViewsStatus={placeViewsStatus}
         trip={trip}
+        regenerationRefreshSignal={regenerationRefreshSignal}
+        voteRefreshSignal={voteRefreshSignal}
       />
     </main>
   )
@@ -349,6 +370,8 @@ function TripWorkspace({
   onBackToMain,
   onLogout,
   onRefresh,
+  regenerationRefreshSignal,
+  voteRefreshSignal,
 }: {
   trip: TripDetail
   placeViews: ItineraryPlaceView[]
@@ -370,6 +393,8 @@ function TripWorkspace({
   onBackToMain: () => void
   onLogout: () => void
   onRefresh: () => void
+  regenerationRefreshSignal: number
+  voteRefreshSignal: number
 }) {
   const itinerary = trip.itineraries[0] ?? null
   const days = itinerary?.days.map((day) => day.day) ?? buildTripDayNumbers(trip.startDate, trip.endDate)
@@ -381,6 +406,8 @@ function TripWorkspace({
   const [routeStatus, setRouteStatus] = useState<AsyncStatus>('idle')
   const [routeError, setRouteError] = useState('')
   const [routeRequestKey, setRouteRequestKey] = useState('')
+  const [latestRegeneration, setLatestRegeneration] = useState<ItineraryRegeneration | null>(null)
+  const [editorMode, setEditorMode] = useState<'FULL' | 'PARTIAL' | null>(null)
   const resolvedDay = days.includes(activeDay) ? activeDay : firstDay
   const storedPlaces = useMemo(() => itinerary?.days.flatMap((day) => day.items.map((item) => ({
     id: item.id.toString(),
@@ -389,6 +416,7 @@ function TripWorkspace({
     title: `저장된 장소 ${item.sequence}`,
     startTime: item.startTime.slice(0, 5),
     duration: formatDuration(item.durationMinutes),
+    durationMinutes: item.durationMinutes,
     latitude: null,
     longitude: null,
     locationLabel: null,
@@ -417,6 +445,23 @@ function TripWorkspace({
     ? (routeMatchesActiveDay ? routeStatus : 'loading')
     : 'success'
   const activeRouteError = routeMatchesActiveDay ? routeError : ''
+  const currentMembership = trip.members.find((member) => member.userId === currentUser?.id)
+  const canEditItinerary = currentMembership?.role === 'OWNER' && Boolean(itinerary)
+  const activeRegeneration = latestRegeneration && ['GENERATING', 'READY_FOR_REVIEW'].includes(latestRegeneration.status)
+    ? latestRegeneration
+    : null
+
+  useEffect(() => {
+    let cancelled = false
+    getLatestItineraryRegeneration(accessToken, trip.id)
+      .then((response) => {
+        if (!cancelled) setLatestRegeneration(response)
+      })
+      .catch(() => {
+        if (!cancelled) setLatestRegeneration(null)
+      })
+    return () => { cancelled = true }
+  }, [accessToken, regenerationRefreshSignal, trip.id, itinerary?.id])
 
   useEffect(() => {
     if (!dayRouteEnabled || !itinerary || activePlaces.length < 2) {
@@ -495,8 +540,10 @@ function TripWorkspace({
           activeDate={activeDate}
           activeDay={resolvedDay}
           ariaLabelledBy="workspace-pane-tab-SCHEDULE"
+          canEdit={canEditItinerary}
           className={mobilePane === 'SCHEDULE' ? 'mobile-active' : ''}
           days={days}
+          editInProgress={Boolean(activeRegeneration)}
           id={panelIds.SCHEDULE}
           panelRole="tabpanel"
           places={activePlaces}
@@ -506,6 +553,9 @@ function TripWorkspace({
           routeStatus={activeRouteStatus}
           selectedPlaceId={selectedPlace?.id ?? ''}
           onDayChange={handleDayChange}
+          onEditFull={() => setEditorMode('FULL')}
+          onEditPartial={() => setEditorMode('PARTIAL')}
+          onOpenActiveEdit={() => setEditorMode(activeRegeneration?.scope ?? 'FULL')}
           onSelectPlace={setSelectedPlaceId}
         />
         <div
@@ -533,24 +583,45 @@ function TripWorkspace({
         <RoomPanel
           accessToken={accessToken}
           activeDay={resolvedDay}
+          baseItineraryId={itinerary?.id ?? null}
+          baseItineraryVersion={itinerary?.version ?? null}
           ariaLabelledBy="workspace-pane-tab-ROOM"
           chatConnected={chatConnected}
           chatReconnectedAt={chatReconnectedAt}
           chatUnreadCount={chatUnreadCount}
           className={mobilePane === 'ROOM' ? 'mobile-active' : ''}
           currentUser={currentUser}
+          destinationPlaceId={trip.destinationPlaceId}
           id={panelIds.ROOM}
           latestChatMessage={latestChatMessage}
           latestChatChange={latestChatChange}
           latestChatTyping={latestChatTyping}
           members={trip.members}
           onChatRead={onChatRead}
+          onRevisionApplied={onRefresh}
           sendChatTyping={sendChatTyping}
           panelRole="tabpanel"
           selectedPlace={selectedPlace}
           tripId={trip.id}
+          voteRefreshSignal={voteRefreshSignal}
         />
       </div>
+      {editorMode && itinerary && canEditItinerary && (
+        <ItineraryEditor
+          accessToken={accessToken}
+          activeDay={activeRegeneration?.dayNumber ?? resolvedDay}
+          baseItineraryId={itinerary.id}
+          baseItineraryVersion={itinerary.version}
+          initialJob={activeRegeneration}
+          key={`${editorMode}-${activeRegeneration?.regenerationId ?? 'new'}`}
+          mode={activeRegeneration?.scope ?? editorMode}
+          onApplied={onRefresh}
+          onClose={() => setEditorMode(null)}
+          onJobChanged={setLatestRegeneration}
+          places={places}
+          tripId={trip.id}
+        />
+      )}
     </section>
   )
 }

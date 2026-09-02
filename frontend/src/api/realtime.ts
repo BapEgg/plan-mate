@@ -66,6 +66,25 @@ export type ChatMessageChangedPayload = {
   deletedAt: string | null
 }
 
+export type VoteChangedPayload = {
+  voteId: number
+  proposalId: number
+  status: string
+}
+
+export type ItineraryRevisionAppliedPayload = {
+  itineraryId: number
+  itineraryVersion: number
+  proposalId: number | null
+}
+
+export type ItineraryRegenerationChangedPayload = {
+  regenerationId: number
+  generationId: number
+  status: string
+  appliedItineraryId: number | null
+}
+
 export const ITINERARY_GENERATION_STATUS_CHANGED = 'ITINERARY_GENERATION_STATUS_CHANGED'
 export const MEMBERSHIP_CHANGED = 'MEMBERSHIP_CHANGED'
 export const CHAT_MESSAGE_SENT = 'CHAT_MESSAGE_SENT'
@@ -73,6 +92,10 @@ export const CHAT_MESSAGE_DELETED = 'CHAT_MESSAGE_DELETED'
 export const CHAT_REACTION_CHANGED = 'CHAT_REACTION_CHANGED'
 export const CHAT_TYPING_UPDATED = 'CHAT_TYPING_UPDATED'
 export const MEMBER_PRESENCE_CHANGED = 'MEMBER_PRESENCE_CHANGED'
+export const VOTE_OPENED = 'VOTE_OPENED'
+export const VOTE_CLOSED = 'VOTE_CLOSED'
+export const ITINERARY_REVISION_APPLIED = 'ITINERARY_REVISION_APPLIED'
+export const ITINERARY_REGENERATION_CHANGED = 'ITINERARY_REGENERATION_CHANGED'
 
 // `type` is a literal discriminant per variant so `event.type === X` narrows `event.payload`.
 export type TripRealtimeEvent =
@@ -83,6 +106,10 @@ export type TripRealtimeEvent =
   | RealtimeEventEnvelope<typeof CHAT_REACTION_CHANGED, ChatMessageChangedPayload>
   | RealtimeEventEnvelope<typeof CHAT_TYPING_UPDATED, ChatTypingChangedPayload>
   | RealtimeEventEnvelope<typeof MEMBER_PRESENCE_CHANGED, MemberPresenceChangedPayload>
+  | RealtimeEventEnvelope<typeof VOTE_OPENED, VoteChangedPayload>
+  | RealtimeEventEnvelope<typeof VOTE_CLOSED, VoteChangedPayload>
+  | RealtimeEventEnvelope<typeof ITINERARY_REVISION_APPLIED, ItineraryRevisionAppliedPayload>
+  | RealtimeEventEnvelope<typeof ITINERARY_REGENERATION_CHANGED, ItineraryRegenerationChangedPayload>
 
 type TripRealtimeConnectionOptions = {
   accessToken: string

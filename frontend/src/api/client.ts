@@ -72,12 +72,20 @@ async function fetchWithSessionRefresh(path: string, options: RequestInit, useJs
     const accessToken = await refreshSessionOnce()
     const retryHeaders = new Headers(headers)
     retryHeaders.set('Authorization', `Bearer ${accessToken}`)
-    return await fetch(`${API_BASE_URL}${path}`, {
+    const retriedResponse = await fetch(`${API_BASE_URL}${path}`, {
       credentials: 'include',
       ...options,
       headers: retryHeaders,
     })
-  } catch {
+    if (retriedResponse.status === 401) {
+      expireSession()
+      throw new ApiError(401, '로그인 세션이 만료되었습니다. 다시 로그인해 주세요.', 'SESSION_EXPIRED')
+    }
+    return retriedResponse
+  } catch (error) {
+    if (error instanceof ApiError && error.code === 'SESSION_EXPIRED') {
+      throw error
+    }
     expireSession()
     throw new ApiError(401, '로그인 세션이 만료되었습니다. 다시 로그인해 주세요.', 'SESSION_EXPIRED')
   }

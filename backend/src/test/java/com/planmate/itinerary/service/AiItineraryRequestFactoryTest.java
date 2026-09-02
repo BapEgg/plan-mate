@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.planmate.itinerary.domain.GenerationCandidateSnapshot;
 import com.planmate.itinerary.domain.GenerationInputSnapshot;
 import com.planmate.itinerary.dto.AiItineraryRequest;
+import com.planmate.itinerary.api.RegenerationConstraintProvider;
 import com.planmate.itinerary.exception.ItineraryException;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -177,6 +178,33 @@ class AiItineraryRequestFactoryTest {
         );
 
         assertThat(request.candidates()).isEmpty();
+    }
+
+    @Test
+    void includesRegenerationScopeAndKeepReplaceActions() {
+        RegenerationConstraintProvider.Constraint constraint = new RegenerationConstraintProvider.Constraint(
+                "PARTIAL", 1, 101L, 103L, List.of(102L), "점심은 그대로 두기",
+                List.of(
+                        new RegenerationConstraintProvider.Item(101L, 1, 1, "place-1", "10:00", 60, "REPLACE"),
+                        new RegenerationConstraintProvider.Item(102L, 1, 2, "place-2", "12:00", 60, "KEEP")
+                )
+        );
+
+        AiItineraryRequest request = factory.create(
+                ItineraryPromptService.VERSION_V2,
+                123L,
+                snapshot(),
+                List.of(candidate(1, "place-1", true)),
+                constraint
+        );
+
+        assertThat(request.regeneration().scope()).isEqualTo("PARTIAL");
+        assertThat(request.regeneration().fixedItemIds()).containsExactly(102L);
+        assertThat(request.regeneration().currentItems())
+                .extracting(AiItineraryRequest.CurrentItem::action)
+                .containsExactly("REPLACE", "KEEP");
+        assertThat(objectMapper.valueToTree(request).path("regeneration").path("additionalRequest").asText())
+                .isEqualTo("점심은 그대로 두기");
     }
 
     private GenerationInputSnapshot snapshot() {

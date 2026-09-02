@@ -1,26 +1,24 @@
-/**
- * Type-only stub for WP-E (Revision) / WP-F (Regeneration). No fetch calls
- * yet — see docs/api/collaboration-workspace-api.md §6/§7 and ADR-0002
- * (current itinerary pointer).
- */
-
-export type ProposalStatus = 'PROPOSED' | 'BLOCKED' | 'NEEDS_REVIEW' | 'APPLIED' | 'REJECTED'
-
-export type ItineraryProposal = {
-  proposalId: string
-  tripId: string
-  baseItineraryId: number
-  status: ProposalStatus
-  createdByUserId: number
-}
+import { bearerHeaders, request } from './client'
 
 export type ItineraryRevision = {
   itineraryId: number
   tripId: string
+  generationId: number | null
   version: number
+  baseItineraryId: number | null
+  proposalId: number | null
+  source: 'AI_GENERATION' | 'DIRECT' | 'VOTE' | 'AI_FULL_REGENERATION' | 'AI_PARTIAL_REGENERATION'
+  revisedByUserId: number | null
+  current: boolean
   createdAt: string
 }
 
 export type RegenerationScope =
   | { type: 'FULL' }
   | { type: 'PARTIAL'; dayNumber: number; fromItemId: number; toItemId: number }
+
+export function listItineraryRevisions(accessToken: string, tripId: string) {
+  return request<ItineraryRevision[]>(`/api/trips/${tripId}/itinerary-revisions`, {
+    headers: bearerHeaders(accessToken),
+  })
+}

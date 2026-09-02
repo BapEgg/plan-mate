@@ -1,11 +1,13 @@
-import { Fragment } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
 import type { DayRoute, DayRouteLeg } from '../../../../api/routes'
 import type { AsyncStatus, ItineraryPlace } from '../workspaceTypes'
 import { formatDayTabDate, formatFullDate, shiftDate } from '../workspaceFormatters'
 
-export function ItinerarySchedule({ activeDate, activeDay, className, days, id, places, placesStatus, route, routeError, routeStatus, panelRole, ariaLabelledBy, selectedPlaceId, onDayChange, onSelectPlace }: {
+export function ItinerarySchedule({ activeDate, activeDay, canEdit, className, days, editDisabledReason, editInProgress, id, places, placesStatus, route, routeError, routeStatus, panelRole, ariaLabelledBy, selectedPlaceId, onDayChange, onEditFull, onEditPartial, onOpenActiveEdit, onSelectPlace }: {
   activeDate: string | null
   activeDay: number
+  canEdit?: boolean
   className?: string
   days: number[]
   id?: string
@@ -14,12 +16,60 @@ export function ItinerarySchedule({ activeDate, activeDay, className, days, id, 
   route: DayRoute | null
   routeError: string
   routeStatus: AsyncStatus
+  editDisabledReason?: string
+  editInProgress?: boolean
   panelRole?: string
   ariaLabelledBy?: string
   selectedPlaceId: string
   onDayChange: (day: number) => void
+  onEditFull?: () => void
+  onEditPartial?: () => void
+  onOpenActiveEdit?: () => void
   onSelectPlace: (placeId: string) => void
 }) {
+  const [editMenuOpen, setEditMenuOpen] = useState(false)
+  const editMenuRef = useRef<HTMLDivElement>(null)
+  const editTriggerRef = useRef<HTMLButtonElement>(null)
+  const editMenuItemsRef = useRef<Array<HTMLButtonElement | null>>([])
+
+  useEffect(() => {
+    if (!editMenuOpen) return undefined
+    const closeOnOutside = (event: MouseEvent) => {
+      if (!editMenuRef.current?.contains(event.target as Node)) setEditMenuOpen(false)
+    }
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setEditMenuOpen(false)
+        editTriggerRef.current?.focus()
+      }
+    }
+    document.addEventListener('mousedown', closeOnOutside)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('mousedown', closeOnOutside)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [editMenuOpen])
+
+  function openEditMenu() {
+    setEditMenuOpen(true)
+    window.requestAnimationFrame(() => editMenuItemsRef.current[0]?.focus())
+  }
+
+  function handleMenuKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    const enabledItems = editMenuItemsRef.current.filter((item): item is HTMLButtonElement => Boolean(item && !item.disabled))
+    if (!enabledItems.length) return
+    const currentIndex = enabledItems.indexOf(document.activeElement as HTMLButtonElement)
+    let nextIndex: number | null = null
+    if (event.key === 'ArrowDown') nextIndex = (currentIndex + 1) % enabledItems.length
+    if (event.key === 'ArrowUp') nextIndex = (currentIndex - 1 + enabledItems.length) % enabledItems.length
+    if (event.key === 'Home') nextIndex = 0
+    if (event.key === 'End') nextIndex = enabledItems.length - 1
+    if (nextIndex === null) return
+    event.preventDefault()
+    enabledItems[nextIndex].focus()
+  }
+
   return (
     <section
       aria-label={ariaLabelledBy ? undefined : `${activeDay}일차 일정`}
@@ -30,11 +80,50 @@ export function ItinerarySchedule({ activeDate, activeDay, className, days, id, 
     >
       <div className="schedule-heading">
         <div><span className="section-kicker">여행 일정</span><h2>{activeDay}일차</h2>{activeDate && <p>{formatFullDate(activeDate)}</p>}</div>
-        <span className="schedule-place-count">{places.length}곳</span>
+        <div className="schedule-heading-actions">
+          <span className="schedule-place-count">{places.length}곳</span>
+          {canEdit && (
+            <div className="schedule-edit-menu" ref={editMenuRef}>
+              <button
+                ref={editTriggerRef}
+                className="schedule-edit-trigger"
+                type="button"
+                aria-haspopup={editInProgress ? undefined : 'menu'}
+                aria-expanded={editInProgress ? undefined : editMenuOpen}
+                aria-describedby={editDisabledReason ? 'schedule-edit-disabled-reason' : undefined}
+                disabled={Boolean(editDisabledReason)}
+                onClick={() => {
+                  if (editInProgress) onOpenActiveEdit?.()
+                  else if (editMenuOpen) setEditMenuOpen(false)
+                  else openEditMenu()
+                }}
+                onKeyDown={(event) => {
+                  if (!editInProgress && !editMenuOpen && ['ArrowDown', 'Enter', ' '].includes(event.key)) {
+                    event.preventDefault()
+                    openEditMenu()
+                  }
+                }}
+              >{editInProgress ? '새 일정 확인' : '일정 수정'} {!editInProgress && <span aria-hidden="true">⌄</span>}</button>
+              {editMenuOpen && !editInProgress && (
+                <div className="schedule-edit-popover" role="menu" onKeyDown={handleMenuKeyDown}>
+                  <button ref={(element) => { editMenuItemsRef.current[0] = element }} type="button" role="menuitem" disabled={!places.length} onClick={() => { setEditMenuOpen(false); onEditPartial?.() }}>
+                    <strong>선택 구간 다시 만들기</strong>
+                    <span>선택한 날짜의 일부 일정만 바꿔요.</span>
+                  </button>
+                  <button ref={(element) => { editMenuItemsRef.current[1] = element }} type="button" role="menuitem" onClick={() => { setEditMenuOpen(false); onEditFull?.() }}>
+                    <strong>전체 일정 다시 만들기</strong>
+                    <span>여행 조건을 확인하고 전체 일정을 새로 만들어요.</span>
+                  </button>
+                </div>
+              )}
+              {editDisabledReason && <span className="sr-only" id="schedule-edit-disabled-reason">{editDisabledReason}</span>}
+            </div>
+          )}
+        </div>
       </div>
-      <div className="day-tabs" role="tablist" aria-label="여행 일자 선택">
+      <div className="day-tabs" role="group" aria-label="여행 일자 선택">
           {days.map((day) => (
-            <button aria-selected={day === activeDay} className={day === activeDay ? 'active' : ''} key={day} role="tab" type="button" onClick={() => onDayChange(day)}>
+            <button aria-pressed={day === activeDay} className={day === activeDay ? 'active' : ''} key={day} type="button" onClick={() => onDayChange(day)}>
               <strong>DAY {day}</strong>
               <span>{activeDate ? formatDayTabDate(shiftDate(activeDate, day - activeDay)) : `${day}일차`}</span>
             </button>

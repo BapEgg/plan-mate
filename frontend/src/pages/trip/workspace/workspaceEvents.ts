@@ -7,6 +7,10 @@ import {
   MEMBER_PRESENCE_CHANGED,
   ITINERARY_GENERATION_STATUS_CHANGED,
   MEMBERSHIP_CHANGED,
+  VOTE_OPENED,
+  VOTE_CLOSED,
+  ITINERARY_REVISION_APPLIED,
+  ITINERARY_REGENERATION_CHANGED,
 } from '../../../api/realtime'
 import type { GenerationStatus } from '../../../api/trips'
 
@@ -26,6 +30,10 @@ const KNOWN_EVENT_TYPES = new Set([
   CHAT_REACTION_CHANGED,
   CHAT_TYPING_UPDATED,
   MEMBER_PRESENCE_CHANGED,
+  VOTE_OPENED,
+  VOTE_CLOSED,
+  ITINERARY_REVISION_APPLIED,
+  ITINERARY_REGENERATION_CHANGED,
 ])
 
 export function isKnownWorkspaceEvent(event: TripRealtimeEvent): boolean {

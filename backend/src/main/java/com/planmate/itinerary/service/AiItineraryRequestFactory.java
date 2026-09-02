@@ -6,6 +6,7 @@ import com.planmate.itinerary.dto.AiItineraryRequest;
 import com.planmate.itinerary.exception.ItineraryErrorCode;
 import com.planmate.itinerary.exception.ItineraryException;
 import java.util.List;
+import com.planmate.itinerary.api.RegenerationConstraintProvider;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -17,16 +18,27 @@ public class AiItineraryRequestFactory {
             GenerationInputSnapshot snapshot,
             List<GenerationCandidateSnapshot> candidates
     ) {
+        return create(promptVersion, generationId, snapshot, candidates, null);
+    }
+
+    public AiItineraryRequest create(
+            String promptVersion,
+            Long generationId,
+            GenerationInputSnapshot snapshot,
+            List<GenerationCandidateSnapshot> candidates,
+            RegenerationConstraintProvider.Constraint regeneration
+    ) {
         return switch (promptVersion) {
-            case ItineraryPromptService.VERSION_V1 -> createV1(generationId, snapshot);
-            case ItineraryPromptService.VERSION_V2 -> createV2(generationId, snapshot, candidates);
+            case ItineraryPromptService.VERSION_V1 -> createV1(generationId, snapshot, regeneration);
+            case ItineraryPromptService.VERSION_V2 -> createV2(generationId, snapshot, candidates, regeneration);
             default -> throw new ItineraryException(ItineraryErrorCode.UNSUPPORTED_PROMPT_VERSION);
         };
     }
 
     private AiItineraryRequest createV1(
             Long generationId,
-            GenerationInputSnapshot snapshot
+            GenerationInputSnapshot snapshot,
+            RegenerationConstraintProvider.Constraint regeneration
     ) {
         return new AiItineraryRequest(
                 generationId.toString(),
@@ -45,14 +57,16 @@ public class AiItineraryRequestFactory {
                 snapshot.avoidConditions(),
                 snapshot.freeRequest(),
                 List.of(),
-                planningRules()
+                planningRules(),
+                regeneration(regeneration)
         );
     }
 
     private AiItineraryRequest createV2(
             Long generationId,
             GenerationInputSnapshot snapshot,
-            List<GenerationCandidateSnapshot> candidates
+            List<GenerationCandidateSnapshot> candidates,
+            RegenerationConstraintProvider.Constraint regeneration
     ) {
         List<GenerationCandidateSnapshot> safeCandidates = candidates == null
                 ? List.of()
@@ -77,7 +91,8 @@ public class AiItineraryRequestFactory {
                 snapshot.avoidConditions(),
                 snapshot.freeRequest(),
                 candidateRequests(safeCandidates),
-                List.of()
+                List.of(),
+                regeneration(regeneration)
         );
     }
 
@@ -179,6 +194,24 @@ public class AiItineraryRequestFactory {
                 "여행 일수와 같은 개수의 day 항목을 만들고, day 번호는 1부터 시작한다.",
                 "여행 기간상 불가능한 경우가 아니라면 mustVisitPlaces를 모두 포함한다.",
                 "여행 날짜, 여행 속도, 동행자, 예산 수준, 이동수단, 회피 조건, freeRequest를 반영한다."
+        );
+    }
+
+    private AiItineraryRequest.Regeneration regeneration(RegenerationConstraintProvider.Constraint constraint) {
+        if (constraint == null) return null;
+        return new AiItineraryRequest.Regeneration(
+                constraint.scope(),
+                constraint.dayNumber(),
+                constraint.startItemId(),
+                constraint.endItemId(),
+                constraint.fixedItemIds(),
+                constraint.additionalRequest(),
+                constraint.currentItems().stream()
+                        .map(item -> new AiItineraryRequest.CurrentItem(
+                                item.itemId(), item.day(), item.sequence(), item.placeId(), item.startTime(),
+                                item.durationMinutes(), item.action()
+                        ))
+                        .toList()
         );
     }
 }

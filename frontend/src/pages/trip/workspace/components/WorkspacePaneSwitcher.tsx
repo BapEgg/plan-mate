@@ -22,11 +22,15 @@ export function WorkspacePaneSwitcher({ activePane, onChange, panelIds }: {
   const tabRefs = useRef<Partial<Record<MobileWorkspacePane, HTMLButtonElement | null>>>({})
 
   function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
-    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return
+    if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return
     event.preventDefault()
-    const nextIndex = event.key === 'ArrowRight'
-      ? (index + 1) % PANES.length
-      : (index - 1 + PANES.length) % PANES.length
+    const nextIndex = event.key === 'Home'
+      ? 0
+      : event.key === 'End'
+        ? PANES.length - 1
+        : event.key === 'ArrowRight'
+          ? (index + 1) % PANES.length
+          : (index - 1 + PANES.length) % PANES.length
     const [nextPane] = PANES[nextIndex]
     onChange(nextPane)
     tabRefs.current[nextPane]?.focus()

@@ -279,7 +279,7 @@ export function TripMapView({ places, selectedPlaceId, fitSignal, fallbackCenter
           <span>지도를 불러오고 있습니다.</span>
         </div>
       )}
-      <div className="trip-map-surface" ref={containerRef} role="application" aria-label="여행 장소 지도" />
+      <div className="trip-map-surface" ref={containerRef} role="region" aria-label="여행 장소 지도" />
     </>
   )
 }

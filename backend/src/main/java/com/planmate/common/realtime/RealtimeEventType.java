@@ -48,6 +48,9 @@ public final class RealtimeEventType {
     /** WP-E 예약. trip topic — current pointer가 바뀌었으니 REST로 다시 조회하라는 신호만 담는다. */
     public static final String ITINERARY_REVISION_APPLIED = "ITINERARY_REVISION_APPLIED";
 
+    /** WP-F. trip topic — 생성 상태/검토 가능 여부가 바뀌었으니 REST snapshot을 다시 조회한다. */
+    public static final String ITINERARY_REGENERATION_CHANGED = "ITINERARY_REGENERATION_CHANGED";
+
     private RealtimeEventType() {
     }
 }

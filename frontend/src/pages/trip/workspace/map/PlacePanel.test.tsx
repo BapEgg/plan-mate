@@ -10,6 +10,7 @@ const basePlace: ItineraryPlace = {
   title: '한라수목원',
   startTime: '09:00',
   duration: '1시간 30분',
+  durationMinutes: 90,
   latitude: 33.5,
   longitude: 126.5,
   locationLabel: '33.50000, 126.50000',
