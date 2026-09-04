@@ -27,6 +27,8 @@
 18. 여행방 관리 drawer를 닫은 뒤 키보드 포커스가 사라지던 문제를 열기 버튼으로 복귀하도록 수정하고 component test로 고정했다.
 19. 관리 drawer의 이메일·방장 이전 form에 `name`, `autocomplete`, 맞춤법 검사 설정을 보완하고, 내부 스크롤이 페이지로 전파되지 않도록 overscroll 경계를 추가했다.
 20. NARROW 화면에서 참여자 목록과 방 관리 진입점이 함께 숨겨지던 문제를 발견해, 첫 참여자 avatar를 쓰는 36px 요약 버튼으로 복원했다. 목록 popover는 trigger 아래에 열려 같은 버튼으로 닫을 수 있다.
+21. 채팅 메시지 목록 전체(`.trip-chat-preview`)에 걸려있던 `aria-live="polite"`를 제거했다. 이 상태로는 초기 history 로드, pagination, 반응 토글마다 스크린리더가 대화 전체를 다시 낭독할 위험이 있었다. 다른 사용자의 새 메시지가 도착했을 때만 갱신되는 숨김 announcer(`sr-only`)로 대체했다 — 본인이 보낸 메시지의 echo와 초기 로드는 announcer를 갱신하지 않는다.
+22. 모바일 가상 키보드로 뷰포트 높이가 줄어들면 채팅 입력창이 `.trip-chat-panel`의 `overflow: hidden`에 잘려 하단 pane switcher와 겹치거나 아예 보이지 않던 문제를 수정했다. 항상 렌더링되던 빈 타이핑 표시줄을 `:empty`일 때 접고, 입력창·검색 도구줄을 `flex-shrink: 0`으로 보호해 메시지 목록만 줄어들게 했으며, `max-height: 520px`에서 메시지 목록·입력창 padding을 추가로 줄였다.
 
 ## 자동 검증 결과
 
@@ -72,8 +74,11 @@ node node_modules\vite\bin\vite.js build
 | Dialog keyboard | PASS | 제목 autofocus 뒤 `Shift+Tab`이 마지막 dialog action으로 순환 |
 | Pane/tab keyboard | PASS | Arrow/Home/End 이동과 선택 tab focus 확인 |
 | Console | PARTIAL | runtime error 없음. Google legacy `Marker` deprecation warning은 후속 기술부채 |
+| 200% zoom 근사(1440→720 유효 폭) | PASS | CSS `zoom`은 `window.innerWidth`를 바꾸지 않아 실제 zoom과 다르다는 점을 확인한 뒤, 유효 폭 축소(720px)로 재검증. 기존 1180px/780px `flex-wrap` fallback이 정상 동작해 헤더 제목 squeeze 없음 |
+| 접근성 트리 감사(스크린리더 대체) | PASS→일부 FAIL 발견·수정 | 실계정 trip `1530`에서 heading 계층(H1→H2, 스킵 없음), `<details>/<summary>` 참여자 popover 정상 확인. 채팅 메시지 목록 전체가 `aria-live="polite"`인 결함(보완 21) 발견·수정 |
+| NARROW 375×450/400 가상 키보드 압력(심화) | 450: PASS(수정 후) / 400: PARTIAL | 기존 390×500보다 얕은 키보드를 모사. 450px에서는 채팅 입력창이 pane switcher·패널 clip 모두로부터 자유로워짐(보완 22). 400px는 남은 chrome(검색 도구줄+입력창)만으로도 여유 공간을 초과해 입력창이 몇 px 잘리는 residual 존재 — 실기기에서 흔치 않은 극단값으로 판단해 이번 범위에서는 남겨둠 |
 
-720px 검사는 1440px 화면의 200% 확대와 유사한 레이아웃 압력 확인이며 실제 브라우저 zoom 검사는 아니다. 390×500 검사는 viewport 높이 축소로 가상 키보드 압력을 모사한 것으로 실제 모바일 OS 키보드 검사는 아니다.
+720px 검사는 1440px 화면의 200% 확대와 유사한 레이아웃 압력 확인이며 실제 브라우저 zoom 검사는 아니다. 390×500 검사는 viewport 높이 축소로 가상 키보드 압력을 모사한 것으로 실제 모바일 OS 키보드 검사는 아니다. 접근성 트리 감사와 위 두 심화 검사는 모두 이 도구 환경에서 가능한 범위의 근사(CSS `zoom`/유효 폭 축소, 접근성 트리 판독, 뷰포트 높이 축소)이며 실제 브라우저 pinch/ctrl+zoom, 실제 NVDA 음성 출력, 실제 모바일 OS 키보드를 대체하지 않는다. 두 결함 수정 모두 기존 61개 frontend 테스트는 통과하지만, 회귀를 직접 고정하는 신규 자동 테스트는 아직 없다.
 
 ## 실제 로컬 인프라 E2E 결과
 
@@ -111,11 +116,13 @@ RabbitMQ backlog 판정은 이미 저장소에 보존된 [공식 실험 6](runs/
 
 ## 출시 전 남은 수동 gate
 
-실제 계정 협업, Redis·RabbitMQ 복구, Kakao·Google provider 장애 격리, 기존·빈·V21 복원 DB 마이그레이션은 통과했다. 다음 항목만 로컬 자동 검증으로 실제 운영 조건을 완전히 증명할 수 없어 아직 PASS가 아니다.
+실제 계정 협업, Redis·RabbitMQ 복구, Kakao·Google provider 장애 격리, 기존·빈·V21 복원 DB 마이그레이션은 통과했다. 접근성은 이 도구 환경에서 가능한 근사 검증(CSS zoom 대신 유효 폭 축소, 실제 NVDA 대신 접근성 트리 감사, 실제 모바일 키보드 대신 뷰포트 높이 축소)을 수행해 결함 2건(보완 21, 22)을 발견·수정했다. 다음 항목만 로컬 자동 검증으로 실제 운영 조건을 완전히 증명할 수 없어 아직 PASS가 아니다.
 
-1. 브라우저 실제 200% zoom, NVDA 등 실제 screen reader, 모바일 OS 가상 키보드 환경을 확인한다.
-2. 위 접근성 실기기 gate를 끝낸 뒤 WP-G를 최종 완료로 닫는다.
+1. 브라우저에서의 실제 200% zoom(pinch 또는 ctrl+zoom), 실제 NVDA 등 screen reader 음성 출력, 실제 모바일 OS 가상 키보드로 근사 검증 결과를 재확인한다.
+2. NARROW 375×400급 극단적으로 얕은 유효 높이(가상 키보드가 화면 절반 이상을 덮는 경우)에서 채팅 입력창이 여전히 몇 px 잘리는 residual을 해소한다 — 현재의 flex-shrink 기반 완화로는 한계가 있어, sticky 입력창처럼 채팅 스크롤 구조를 바꾸는 별도 작업이 필요할 수 있다.
+3. 채팅 announcer(보완 21)와 입력창 clip 방지(보완 22)를 지키는 회귀 테스트를 추가한다.
+4. 위 항목을 끝낸 뒤 WP-G를 최종 완료로 닫는다.
 
 ## 현재 판정
 
-코드 단위 회귀, production build, 핵심 반응형·keyboard, 실제 계정 REST/STOMP 협업과 강퇴 차단, Kakao·Google provider 장애 격리, Redis·RabbitMQ process 및 CDC backlog 복구는 통과했다. WP-G는 **핵심 협업 E2E와 주요 process·provider 장애 복원 완료, 접근성 실기기 확인 대기** 상태다. 남은 수동 gate를 수행하기 전에는 release 완료로 표기하지 않는다.
+코드 단위 회귀, production build, 핵심 반응형·keyboard, 실제 계정 REST/STOMP 협업과 강퇴 차단, Kakao·Google provider 장애 격리, Redis·RabbitMQ process 및 CDC backlog 복구는 통과했다. 접근성은 근사 검증으로 채팅 스크린리더 낭독 폭주와 짧은 뷰포트 입력창 clip 결함을 찾아 수정했지만, 실기기·실제 AT 확인과 375×400급 극단값 residual은 아직 남아 있다. WP-G는 **핵심 협업 E2E와 주요 process·provider 장애 복원 완료, 접근성 실기기 확인·잔여 극단값 대기** 상태다. 남은 수동 gate를 수행하기 전에는 release 완료로 표기하지 않는다.
