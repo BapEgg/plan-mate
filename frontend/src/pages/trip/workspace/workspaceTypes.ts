@@ -18,6 +18,7 @@ export type ItineraryPlace = {
   googleMapsUri: string | null
   placeId: string | null
   resolved: boolean
+  displaySource: ItineraryPlaceView['display']['source']
   source: ItineraryPlaceView['createdSource']
 }
 
@@ -36,6 +37,7 @@ export function toItineraryPlace(item: ItineraryPlaceView): ItineraryPlace {
     googleMapsUri: item.display.googleMapsUri,
     placeId: item.placeId,
     resolved: item.display.resolved,
+    displaySource: item.display.source,
     source: item.createdSource,
   }
 }

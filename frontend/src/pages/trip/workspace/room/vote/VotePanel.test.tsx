@@ -42,6 +42,7 @@ const selectedPlace = {
   googleMapsUri: null,
   placeId: 'old-place',
   resolved: true,
+  displaySource: 'PROVIDER' as const,
   source: 'AI_DRAFT' as const,
 }
 

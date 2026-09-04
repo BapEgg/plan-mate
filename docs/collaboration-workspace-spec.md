@@ -92,8 +92,8 @@ archive는 결정 배경을 확인할 때만 사용한다. archive의 반복 문
 
 ### 3.2 일부만 구현됨
 
-- 중앙 지도는 Google Maps JavaScript SDK와 실제 place 좌표 marker를 사용하고 DAY·timeline 선택을 동기화한다. 다만 Places library loading, 좌표 지연 도착 뒤 bounds 갱신, 장소 상세 panel과 provider 오류 복구는 안정화 전이다.
-- 국내 자동차 DAY 경로는 Kakao Mobility 표준 자동차 길찾기의 실제 geometry·시간·거리를 사용해 좌측 이동 구간과 중앙 지도에 함께 표시한다. 응답 itinerary version이 현재 화면과 다르거나 provider가 실패하면 기존 일정·marker를 유지하고 route만 표시하지 않는다.
+- 중앙 지도는 Google Maps JavaScript SDK와 실제 place 좌표 marker를 사용하고 DAY·timeline 선택을 동기화한다. Google Places가 일시적으로 실패하면 itinerary generation 때 검증·저장한 같은 trip의 최신 후보 이름·좌표로 일정·marker·DAY route를 유지하고 화면에서 `저장된 장소 정보`로 구분한다. provider가 반환하는 photo·평점·영업시간 등의 확장 상세와 좌표 지연 도착 뒤 bounds 갱신은 후속 안정화 범위다.
+- 국내 자동차 DAY 경로는 Kakao Mobility 표준 자동차 길찾기의 실제 geometry·시간·거리를 사용해 좌측 이동 구간과 중앙 지도에 함께 표시한다. 응답 itinerary version이 현재 화면과 다르면 route를 표시하지 않는다. provider 재조회가 실패하면 기존 일정·marker를 유지하고, 현재 itinerary id/version/DAY와 정확히 일치하는 마지막 검증 route만 `이전 확인`으로 구분해 유지한다.
 - 우측 채팅은 실제 저장·전송·재연결·읽음·삭제·답장·반응을 사용한다. 투표는 고정 preview이므로 production에서 실제 데이터로 오인되지 않게 demo fixture 격리 또는 명확한 미연결 상태가 필요하다.
 - WIDE 3열과 NARROW 단일 pane은 구현됐지만 MEDIUM의 `일정 | 지도 | 여행방` 전환 동작과 tab 접근성은 보완 전이다.
 - 실시간 권한은 `SUBSCRIBE` 시점만 검사하며 이미 연결된 session의 멤버십 상실을 무효화하지 못한다.
@@ -364,6 +364,7 @@ CUSTOM_PIN:
 5. panel별 loading·empty·error
 
 - P0는 token 재발급을 한 번 시도하고 실패하면 로그인으로 이동한다.
+- Redis refresh token store에 연결할 수 없을 때 인증 요청을 장시간 붙잡지 않는다. local/production 기본값은 연결 1초·명령 2초 안에 `REFRESH_TOKEN_STORE_UNAVAILABLE`로 종료하며, frontend는 다른 refresh 실패와 동일하게 private token/cache를 지우고 로그인으로 이동한다.
 - P1은 private 내용과 cache를 제거하고 메인으로 이동할 수 있게 한다.
 - 여러 panel 최신 상태가 2초 이상 보장되지 않을 때만 상단 아래 얇은 공통 상태 줄을 표시한다.
 - 마지막 검증 내용을 가리거나 흐리지 않는다.
@@ -540,6 +541,7 @@ backend는 기존 package 규칙을 유지하되 `membership`, `route`, `chat`, 
 ### 10.5 외부 공급자와 보안 차단점
 
 - 지도 표시·Places 검색은 Google 경계를 유지한다. browser map key와 backend server key를 분리하고 referrer/IP/API restriction을 적용한다.
+- backend Places 호출은 base URL과 connect/read timeout을 환경 설정으로 분리한다. provider timeout·5xx·설정 오류에는 같은 trip의 generation candidate snapshot을 fallback으로 사용하고 한 목록에서 첫 provider 장애 뒤 추가 호출을 중단한다. snapshot이 없는 항목만 `UNRESOLVED`이며, 저장 정보는 provider 최신 확인처럼 표시하거나 외부 링크를 만들지 않는다.
 - 공유 일정의 국내 자동차 route provider는 **Kakao Mobility 자동차 길찾기** `GET /v1/directions`로 고정한다. 카카오의 별도 **다중 경유지 길찾기** `POST /v1/waypoints/directions`는 현재 범위에서 제외한다.
 - Kakao가 앱 단위로 기본 적용하는 자동차 길찾기 일일 무료 쿼터 **10,000건**을 provider 최종 차단선으로 사용한다. 추가 쿼터·유료 제휴는 신청하거나 활성화하지 않는다. 이 값은 PlanMate가 콘솔에서 임의로 지정하는 custom limit이 아니므로, 서버에도 프로젝트 전체 호출을 선점하는 원자적 일일 usage guard(`KAKAO_DIRECTIONS_DAILY_LIMIT=10000`)를 둔다. DB/공유 저장소의 `provider + operation + KST date` counter를 외부 호출 전에 증가시켜 재시작·동시 instance에서도 10,000건을 넘기지 않으며 실패 호출과 retry도 각각 사용량으로 센다. 한도 도달 시 외부 호출·Google/NAVER 자동 fallback을 하지 않고 `ROUTE_QUOTA_EXCEEDED`를 반환하며 기존 일정·marker·마지막 검증 route를 유지한다.
 - provider snapshot은 `mode + origin/destination 좌표 hash`로 공유 cache하고 24시간 뒤 다시 검증한다. DAY read 응답에는 current itinerary id/version을 함께 넣어 일정이 바뀐 DAY만 client가 다시 조회하고 stale route를 섞지 못하게 한다. timeout 재시도도 일일 usage에 포함해 무제한 재시도로 한도를 넘기지 않는다.
@@ -548,6 +550,7 @@ backend는 기존 package 규칙을 유지하되 `membership`, `route`, `chat`, 
 - MEMBER 제거 transaction 뒤 기존 trip subscription/session을 서버가 무효화하고 client가 private cache를 지운 뒤 `MEMBERSHIP_LOST`로 전환해야 C1/C3가 완료된다.
 - invite inbox·chat ack·개인 unread는 인증된 사용자 private destination을 사용한다. trip topic에 email·token·개인 위치를 싣지 않는다.
 - local/단일 instance는 simple broker를 유지할 수 있지만 production 다중 instance를 목표로 하면 broker relay 또는 outbox dispatcher와 instance 간 event fan-out 방식을 ADR로 고정한다. durable state는 항상 REST/DB snapshot으로 복구 가능해야 한다.
+- local compose의 Redis와 RabbitMQ data directory는 named volume을 사용한다. broker process 복구와 broker 중단 중 새 outbox message의 재전달은 별도 gate이며, consumer가 다시 붙었다는 사실만으로 대기 message 전달을 보장했다고 판단하지 않는다.
 - presence는 DB member count와 분리한 TTL 기반 ephemeral state다.
 - exact CUSTOM_PIN, message body, AI draft, email, token과 API key는 log·metric·outbox payload에 원문으로 남기지 않는다.
 

@@ -35,6 +35,7 @@ public class ItineraryDayRouteService {
     public ItineraryDayRouteResponse getDayRoute(Long userId, Long tripId, int dayNumber) {
         DayRoutePlan plan = planReader.read(userId, tripId, dayNumber);
         Map<String, ItineraryPlaceDisplayView> displays = placeDisplayResolver.resolveListViews(
+                tripId,
                 plan.items().stream().map(DayRouteItem::placeId).toList()
         );
 

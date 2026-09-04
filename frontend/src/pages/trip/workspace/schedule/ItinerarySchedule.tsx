@@ -31,6 +31,7 @@ export function ItinerarySchedule({ activeDate, activeDay, canEdit, className, d
   const editMenuRef = useRef<HTMLDivElement>(null)
   const editTriggerRef = useRef<HTMLButtonElement>(null)
   const editMenuItemsRef = useRef<Array<HTMLButtonElement | null>>([])
+  const usesSavedSnapshots = places.some((place) => place.displaySource === 'SAVED_SNAPSHOT')
 
   useEffect(() => {
     if (!editMenuOpen) return undefined
@@ -130,6 +131,7 @@ export function ItinerarySchedule({ activeDate, activeDay, canEdit, className, d
           ))}
       </div>
       {placesStatus === 'loading' && <div className="place-load-notice" aria-live="polite"><span className="state-spinner" aria-hidden="true" /><span>저장된 일정을 먼저 표시했습니다. 장소 이름과 지도 정보를 불러오는 중입니다.</span></div>}
+      {placesStatus === 'success' && usesSavedSnapshots && <div className="place-load-notice saved" role="status">장소 정보 업데이트가 지연되어 저장해 둔 이름과 위치를 표시하고 있어요.</div>}
       {placesStatus === 'error' && <div className="place-load-notice error" role="status">일정 순서와 시간은 저장되어 있습니다. 장소 이름과 지도 정보만 다시 불러와 주세요.</div>}
       {places.length ? (
         <ol className="place-timeline">
@@ -175,6 +177,9 @@ export function ItinerarySchedule({ activeDate, activeDay, canEdit, className, d
 
 function movementLabel(leg: DayRouteLeg | undefined, status: AsyncStatus, error: string) {
   if (status === 'loading') return '자동차 경로 확인 중…'
+  if (status === 'error' && leg?.status === 'READY' && leg.durationSeconds !== null && leg.distanceMeters !== null) {
+    return `자동차 ${formatRouteDuration(leg.durationSeconds)} · ${formatDistance(leg.distanceMeters)} · 이전 확인`
+  }
   if (status === 'error') return error || '이동 경로를 확인하지 못했어요.'
   if (!leg || leg.status !== 'READY' || leg.durationSeconds === null || leg.distanceMeters === null) {
     return '이동 경로를 확인하지 못했어요.'

@@ -23,19 +23,25 @@ export function PlacePanel({ place }: { place: ItineraryPlace | null }) {
     )
   }
 
+  const usesSavedSnapshot = place.displaySource === 'SAVED_SNAPSHOT'
+
   return (
     <aside className="place-detail-panel" aria-live="polite">
       <div className="place-detail-heading">
         <span className="section-kicker">{place.day}일차 · {place.order}번째 장소</span>
-        <span className={`place-resolution ${place.resolved ? 'resolved' : 'unresolved'}`}><i aria-hidden="true" />{place.resolved ? '장소 확인됨' : '장소 확인 전'}</span>
+        <span className={`place-resolution ${usesSavedSnapshot ? 'saved' : place.resolved ? 'resolved' : 'unresolved'}`}>
+          <i aria-hidden="true" />{usesSavedSnapshot ? '저장된 장소 정보' : place.resolved ? '장소 확인됨' : '장소 확인 전'}
+        </span>
       </div>
       <h2>{place.title}</h2>
       <dl>
         <DetailItem label="방문 시간" value={place.startTime} />
         <DetailItem label="체류 시간" value={place.duration} />
       </dl>
-      {place.googleMapsUri
-        ? <a href={place.googleMapsUri} target="_blank" rel="noopener noreferrer">Google Maps에서 위치 보기 <span aria-hidden="true">↗</span></a>
+      {usesSavedSnapshot
+        ? <p className="place-fallback-message">저장해 둔 이름과 위치를 지도에 표시하고 있어요.</p>
+        : place.googleMapsUri
+        ? <a href={place.googleMapsUri} target="_blank" rel="noopener noreferrer">Google 지도에서 보기 <span aria-hidden="true">↗</span></a>
         : <p className="place-fallback-message">장소 이름과 지도 정보는 외부 조회가 완료되면 표시됩니다.</p>}
     </aside>
   )

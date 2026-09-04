@@ -29,6 +29,7 @@ import { RoomPanel } from './room/RoomPanel'
 import { ItineraryEditor } from './editor/ItineraryEditor'
 import { generationEventMessage, isKnownWorkspaceEvent } from './workspaceEvents'
 import { buildTripDayNumbers, dateForTripDay } from './workspaceFormatters'
+import { retainMatchingVerifiedRoute } from './routeState'
 import type { AsyncStatus, MobileWorkspacePane } from './workspaceTypes'
 import { formatDuration, toItineraryPlace } from './workspaceTypes'
 import '../TripDetailPage.css'
@@ -423,6 +424,7 @@ function TripWorkspace({
     googleMapsUri: null,
     placeId: item.placeId,
     resolved: false,
+    displaySource: 'UNRESOLVED' as const,
     source: item.createdSource,
   }))) ?? [], [itinerary])
   const places = useMemo(() => {
@@ -485,7 +487,12 @@ function TripWorkspace({
       .catch((error: unknown) => {
         if (cancelled) return
         setRouteRequestKey(routeKey)
-        setDayRoute(null)
+        setDayRoute((current) => retainMatchingVerifiedRoute(
+          current,
+          itinerary.id,
+          itinerary.version,
+          resolvedDay,
+        ))
         setRouteStatus('error')
         setRouteError(routeErrorMessage(error))
       })
@@ -631,8 +638,8 @@ function errorMessageFrom(error: unknown) {
 }
 
 function routeErrorMessage(error: unknown) {
-  if (!(error instanceof ApiError)) return '경로를 잠시 확인하지 못했어요. 일정과 장소는 그대로 볼 수 있습니다.'
-  if (error.code === 'ROUTE_QUOTA_EXCEEDED') return '오늘의 경로 조회 한도에 도달했어요. 일정과 장소는 그대로 볼 수 있습니다.'
-  if (error.code === 'ROUTE_PROVIDER_TIMEOUT') return '경로 확인이 지연되고 있어요. 잠시 후 다시 확인해 주세요.'
-  return '경로를 잠시 확인하지 못했어요. 일정과 장소는 그대로 볼 수 있습니다.'
+  if (!(error instanceof ApiError)) return '새 경로를 잠시 확인하지 못했어요. 잠시 후 다시 확인해 주세요.'
+  if (error.code === 'ROUTE_QUOTA_EXCEEDED') return '오늘은 새 경로를 더 확인할 수 없어요. 내일 다시 확인해 주세요.'
+  if (error.code === 'ROUTE_PROVIDER_TIMEOUT') return '새 경로 확인이 지연되고 있어요. 잠시 후 다시 확인해 주세요.'
+  return '새 경로를 잠시 확인하지 못했어요. 잠시 후 다시 확인해 주세요.'
 }

@@ -49,7 +49,7 @@ describe('ItineraryEditor', () => {
     renderEditor({ mode: 'FULL', initialJob: null })
 
     await user.type(screen.getByRole('textbox', { name: /추가 요청/ }), '바다를 오래 보고 싶어요')
-    await user.click(screen.getByRole('button', { name: '닫기', exact: true }))
+    await user.click(screen.getByRole('button', { name: '닫기' }))
 
     const keepEditing = screen.getByRole('button', { name: '계속 수정' })
     const discard = screen.getByRole('button', { name: '변경 내용 버리고 나가기' })
@@ -106,6 +106,7 @@ function place(id: string, order: number, title: string, startTime: string): Iti
     googleMapsUri: null,
     placeId: `place-${id}`,
     resolved: true,
+    displaySource: 'PROVIDER',
     source: 'AI_DRAFT',
   }
 }

@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   ACCESS_TOKEN_STORAGE_KEY,
-  ApiError,
   SESSION_EXPIRED_EVENT,
   bearerHeaders,
   request,
@@ -18,17 +17,17 @@ describe('API session refresh', () => {
     vi.restoreAllMocks()
   })
 
-  it('expires the session immediately when refresh fails', async () => {
+  it('expires the session immediately when the refresh token store is unavailable', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse(401, { code: 'UNAUTHORIZED' }))
-      .mockResolvedValueOnce(jsonResponse(400, { code: 'INVALID_TOKEN' }))
+      .mockResolvedValueOnce(jsonResponse(503, { code: 'REFRESH_TOKEN_STORE_UNAVAILABLE' }))
     vi.stubGlobal('fetch', fetchMock)
     const onExpired = vi.fn()
     window.addEventListener(SESSION_EXPIRED_EVENT, onExpired, { once: true })
 
     await expect(request('/api/trips/1', {
       headers: bearerHeaders('expired-access-token'),
-    })).rejects.toMatchObject<Partial<ApiError>>({
+    })).rejects.toMatchObject({
       status: 401,
       code: 'SESSION_EXPIRED',
     })
@@ -49,7 +48,7 @@ describe('API session refresh', () => {
 
     await expect(request('/api/trips/1', {
       headers: bearerHeaders('expired-access-token'),
-    })).rejects.toMatchObject<Partial<ApiError>>({
+    })).rejects.toMatchObject({
       status: 401,
       code: 'SESSION_EXPIRED',
     })

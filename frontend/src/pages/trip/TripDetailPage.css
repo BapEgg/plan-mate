@@ -453,6 +453,12 @@
   background: #fff8f8;
 }
 
+.place-load-notice.saved {
+  border-color: #c8d9f6;
+  color: #31527e;
+  background: #f4f8ff;
+}
+
 .place-timeline {
   display: grid;
   gap: 12px;
@@ -583,6 +589,11 @@
 .place-resolution.unresolved {
   color: #9d5f08;
   background: #fff0cc;
+}
+
+.place-resolution.saved {
+  color: #31527e;
+  background: #e9f1ff;
 }
 
 .place-detail-panel h2 {
@@ -2740,6 +2751,7 @@
   width: min(420px, 100vw);
   height: 100%;
   overflow-y: auto;
+  overscroll-behavior: contain;
   background: #fffdf8;
   box-shadow: -18px 0 36px rgba(15, 26, 33, 0.22);
   padding: 20px;

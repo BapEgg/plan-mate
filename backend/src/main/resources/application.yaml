@@ -76,6 +76,8 @@ spring:
     redis:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT}
+      connect-timeout: ${REDIS_CONNECT_TIMEOUT:1s}
+      timeout: ${REDIS_COMMAND_TIMEOUT:2s}
 
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
@@ -148,12 +150,16 @@ app:
   google:
     places:
       api-key: ${GOOGLE_PLACES_API_KEY:}
+      base-url: ${GOOGLE_PLACES_BASE_URL:https://places.googleapis.com/v1}
+      connect-timeout: ${GOOGLE_PLACES_CONNECT_TIMEOUT:2s}
+      read-timeout: ${GOOGLE_PLACES_READ_TIMEOUT:5s}
       text-search-radius-meters: ${GOOGLE_PLACES_TEXT_SEARCH_RADIUS_METERS:30000}
     routes:
       api-key: ${GOOGLE_ROUTES_API_KEY:}
   kakao:
     directions:
       api-key: ${KAKAO_DIRECTIONS_API_KEY:}
+      base-url: ${KAKAO_DIRECTIONS_BASE_URL:https://apis-navi.kakaomobility.com}
       daily-limit: ${KAKAO_DIRECTIONS_DAILY_LIMIT:10000}
       cache-ttl: ${KAKAO_DIRECTIONS_CACHE_TTL:24h}
       connect-timeout: ${KAKAO_DIRECTIONS_CONNECT_TIMEOUT:2s}

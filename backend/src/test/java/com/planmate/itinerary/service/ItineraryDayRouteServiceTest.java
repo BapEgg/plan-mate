@@ -33,7 +33,7 @@ class ItineraryDayRouteServiceTest {
                 new DayRouteItem(102L, 2, "b")
         ));
         when(planReader.read(7L, 9L, 2)).thenReturn(plan);
-        when(displayResolver.resolveListViews(List.of("a", "b"))).thenReturn(Map.of(
+        when(displayResolver.resolveListViews(9L, List.of("a", "b"))).thenReturn(Map.of(
                 "a", ItineraryPlaceDisplayView.resolved("A", new GeoPoint(34.8, 128.6), null),
                 "b", ItineraryPlaceDisplayView.resolved("B", new GeoPoint(34.9, 128.7), null)
         ));
@@ -65,7 +65,7 @@ class ItineraryDayRouteServiceTest {
         when(planReader.read(7L, 9L, 1)).thenReturn(new DayRoutePlan(50L, 3, 1, List.of(
                 new DayRouteItem(101L, 1, "a"), new DayRouteItem(102L, 2, "b")
         )));
-        when(displayResolver.resolveListViews(List.of("a", "b"))).thenReturn(Map.of(
+        when(displayResolver.resolveListViews(9L, List.of("a", "b"))).thenReturn(Map.of(
                 "a", ItineraryPlaceDisplayView.resolved("A", new GeoPoint(34.8, 128.6), null),
                 "b", ItineraryPlaceDisplayView.unresolved()
         ));

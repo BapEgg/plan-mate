@@ -17,6 +17,7 @@ const basePlace: ItineraryPlace = {
   googleMapsUri: 'https://maps.google.com/?cid=123',
   placeId: 'place-1',
   resolved: true,
+  displaySource: 'PROVIDER',
   source: 'AI_DRAFT',
 }
 
@@ -40,15 +41,23 @@ describe('PlacePanel', () => {
   it('links out to Google Maps when a googleMapsUri is available', () => {
     render(<PlacePanel place={basePlace} />)
 
-    const link = screen.getByRole('link', { name: /Google Maps에서 위치 보기/ })
+    const link = screen.getByRole('link', { name: /Google 지도에서 보기/ })
     expect(link).toHaveAttribute('href', basePlace.googleMapsUri)
   })
 
   it('shows the unresolved badge and a fallback message when location lookup has not resolved yet', () => {
-    render(<PlacePanel place={{ ...basePlace, resolved: false, googleMapsUri: null }} />)
+    render(<PlacePanel place={{ ...basePlace, resolved: false, displaySource: 'UNRESOLVED', googleMapsUri: null }} />)
 
     expect(screen.getByText('장소 확인 전')).toBeInTheDocument()
     expect(screen.getByText('장소 이름과 지도 정보는 외부 조회가 완료되면 표시됩니다.')).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /Google Maps에서 위치 보기/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Google 지도에서 보기/ })).not.toBeInTheDocument()
+  })
+
+  it('explains when saved candidate information is shown during a provider outage', () => {
+    render(<PlacePanel place={{ ...basePlace, displaySource: 'SAVED_SNAPSHOT', googleMapsUri: null }} />)
+
+    expect(screen.getByText('저장된 장소 정보')).toBeInTheDocument()
+    expect(screen.getByText('저장해 둔 이름과 위치를 지도에 표시하고 있어요.')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Google 지도에서 보기/ })).not.toBeInTheDocument()
   })
 })

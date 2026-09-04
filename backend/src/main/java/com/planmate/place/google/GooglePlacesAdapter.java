@@ -18,14 +18,17 @@ import com.planmate.place.api.exception.InvalidPlaceIdException;
 import com.planmate.place.api.exception.PlaceProviderConfigurationException;
 import com.planmate.place.api.exception.PlaceProviderRequestRejectedException;
 import com.planmate.place.api.exception.PlaceProviderUnavailableException;
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
@@ -39,7 +42,7 @@ public class GooglePlacesAdapter implements
         PlaceDisplayReader,
         PlaceTextSearcher {
 
-    private static final String BASE_URL = "https://places.googleapis.com/v1";
+    static final String BASE_URL = "https://places.googleapis.com/v1";
     private static final String API_KEY_HEADER = "X-Goog-Api-Key";
     private static final String FIELD_MASK_HEADER = "X-Goog-FieldMask";
     private static final String AUTOCOMPLETE_FIELD_MASK = String.join(",",
@@ -89,10 +92,30 @@ public class GooglePlacesAdapter implements
     private final String apiKey;
     private final double fallbackRadiusMeters;
 
+    @Autowired
     public GooglePlacesAdapter(
             RestClient.Builder restClientBuilder,
             @Value("${app.google.places.api-key:}") String apiKey,
-            @Value("${app.google.places.text-search-radius-meters:30000}") double fallbackRadiusMeters
+            @Value("${app.google.places.text-search-radius-meters:30000}") double fallbackRadiusMeters,
+            @Value("${app.google.places.base-url:" + BASE_URL + "}") String baseUrl,
+            @Value("${app.google.places.connect-timeout:2s}") Duration connectTimeout,
+            @Value("${app.google.places.read-timeout:5s}") Duration readTimeout
+    ) {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(connectTimeout);
+        requestFactory.setReadTimeout(readTimeout);
+        this.restClient = restClientBuilder
+                .baseUrl(baseUrl)
+                .requestFactory(requestFactory)
+                .build();
+        this.apiKey = apiKey;
+        this.fallbackRadiusMeters = fallbackRadiusMeters;
+    }
+
+    GooglePlacesAdapter(
+            RestClient.Builder restClientBuilder,
+            String apiKey,
+            double fallbackRadiusMeters
     ) {
         this.restClient = restClientBuilder
                 .baseUrl(BASE_URL)

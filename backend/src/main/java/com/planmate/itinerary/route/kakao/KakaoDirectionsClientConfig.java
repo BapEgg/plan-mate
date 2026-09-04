@@ -17,6 +17,7 @@ public class KakaoDirectionsClientConfig {
     @Qualifier("kakaoDirectionsRestClient")
     RestClient kakaoDirectionsRestClient(
             RestClient.Builder builder,
+            @Value("${app.kakao.directions.base-url:" + BASE_URL + "}") String baseUrl,
             @Value("${app.kakao.directions.connect-timeout:2s}") Duration connectTimeout,
             @Value("${app.kakao.directions.read-timeout:5s}") Duration readTimeout
     ) {
@@ -24,7 +25,7 @@ public class KakaoDirectionsClientConfig {
         requestFactory.setConnectTimeout(connectTimeout);
         requestFactory.setReadTimeout(readTimeout);
         return builder
-                .baseUrl(BASE_URL)
+                .baseUrl(baseUrl)
                 .requestFactory(requestFactory)
                 .build();
     }

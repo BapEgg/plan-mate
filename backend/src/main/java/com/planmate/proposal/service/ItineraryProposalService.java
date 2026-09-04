@@ -100,7 +100,12 @@ public class ItineraryProposalService {
 
         ItineraryItemEntity previous = targetIndex > 0 ? items.get(targetIndex - 1) : null;
         ItineraryItemEntity next = targetIndex + 1 < items.size() ? items.get(targetIndex + 1) : null;
-        Map<String, ItineraryPlaceDisplayView> displays = resolveDisplays(previous, replacementPlaceId, next);
+        Map<String, ItineraryPlaceDisplayView> displays = resolveDisplays(
+                tripId,
+                previous,
+                replacementPlaceId,
+                next
+        );
         ItineraryPlaceDisplayView replacement = displays.get(replacementPlaceId);
         if (!hasLocation(replacement)) {
             throw new ProposalException(ProposalErrorCode.PROPOSAL_PLACE_UNRESOLVED);
@@ -160,6 +165,7 @@ public class ItineraryProposalService {
     }
 
     private Map<String, ItineraryPlaceDisplayView> resolveDisplays(
+            Long tripId,
             ItineraryItemEntity previous,
             String replacementPlaceId,
             ItineraryItemEntity next
@@ -168,7 +174,7 @@ public class ItineraryProposalService {
         if (previous != null) placeIds.add(previous.getPlaceId());
         placeIds.add(replacementPlaceId);
         if (next != null) placeIds.add(next.getPlaceId());
-        return placeDisplayResolver.resolveListViews(placeIds);
+        return placeDisplayResolver.resolveListViews(tripId, placeIds);
     }
 
     private void verifyRoute(

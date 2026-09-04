@@ -46,6 +46,7 @@ public class ItineraryPlaceViewService {
                 .sorted(Comparator.comparingInt(item -> item.getDay().getDay() * 1000 + item.getSequence()))
                 .toList();
         Map<String, ItineraryPlaceDisplayView> displays = placeDisplayResolver.resolveListViews(
+                tripId,
                 items.stream().map(ItineraryItemEntity::getPlaceId).toList()
         );
 

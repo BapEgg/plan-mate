@@ -73,6 +73,7 @@ export function TripMapCanvas({ activeDay, activeDate, destination, destinationC
 
 function routeStatusText(status: AsyncStatus, route: DayRoute | null, error: string) {
   if (status === 'loading') return '차로 이동할 길을 확인하고 있어요…'
+  if (status === 'error' && route) return `${error || '새 경로를 확인하지 못했어요.'} 마지막으로 확인한 경로를 표시합니다.`
   if (status === 'error') return error || '경로를 잠시 확인하지 못했어요.'
   if (!route || route.legs.length === 0) return '장소를 고르면 이동 경로를 함께 볼 수 있어요.'
   if (route.status === 'PARTIAL') return '확인된 구간만 지도에 표시했어요. · Kakao Mobility'

@@ -617,6 +617,12 @@
   background: #fff6f2;
 }
 
+.place-load-notice.saved {
+  border-color: #c8d9f6;
+  color: #31527e;
+  background: #f4f8ff;
+}
+
 .place-timeline {
   min-height: 0;
   margin: 0;
@@ -2103,8 +2109,24 @@
   }
 
   .planning-brand,
-  .member-roster,
   .planning-title-meta span:nth-child(3) {
+    display: none;
+  }
+
+  .member-roster > summary {
+    width: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 2px;
+  }
+
+  .member-roster > summary .member-avatar-stack {
+    padding-left: 8px;
+  }
+
+  .member-roster > summary .member-avatar-presence:not(:first-child),
+  .member-roster > summary .member-avatar.extra,
+  .member-roster > summary .member-total {
     display: none;
   }
 

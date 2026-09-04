@@ -243,6 +243,7 @@ export type ItineraryPlaceView = {
     } | null
     googleMapsUri: string | null
     fallbackMessage: string | null
+    source: 'PROVIDER' | 'SAVED_SNAPSHOT' | 'UNRESOLVED'
   }
 }
 

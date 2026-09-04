@@ -21,6 +21,18 @@
 
 `TripDetailResponse.Itinerary.version`은 trip 내 단조 증가 정수다. `TripDetailResponse.timezone`은 향후 chat cutoff·vote deadline·edit lock 판정에 쓰일 IANA zone id이며, WP-A 시점에는 모든 trip이 `Asia/Seoul`이다.
 
+### 1.1 일정 장소 표시 조회와 provider 장애 경계
+
+`GET /api/trips/{tripId}/itinerary-place-views`의 `display.source`는 장소 표시 정보의 출처를 구분한다.
+
+| 값 | 의미 | 화면 처리 |
+| --- | --- | --- |
+| `PROVIDER` | Google Places에서 이번 요청에 확인한 이름·좌표 | 장소명·marker·Google Maps 링크 표시 |
+| `SAVED_SNAPSHOT` | 같은 trip의 itinerary generation 때 검증·저장한 후보 이름·좌표 | 일정·marker를 유지하고 `저장된 장소 정보`로 구분, 외부 링크는 표시하지 않음 |
+| `UNRESOLVED` | provider와 저장 후보 모두에서 확인하지 못함 | 일정 순서·시각은 유지하고 해당 장소 정보만 미확인으로 표시 |
+
+Google Places가 timeout, 5xx 또는 설정 오류로 사용할 수 없으면 같은 목록의 첫 실패 뒤 추가 provider 호출을 중단하고 나머지 placeId도 저장 후보 snapshot으로 해석한다. 따라서 한 화면 조회가 장소 수만큼 timeout을 누적하지 않는다. 저장 snapshot은 현재 trip 범위에서 최신 generation을 우선하며, 후보 validation·일정 revision·current pointer를 우회하거나 바꾸지 않는다. DAY 경로 좌표 해석도 같은 표시 조회를 사용하므로 snapshot 좌표가 있으면 Kakao route 조회를 계속할 수 있다.
+
 ## 2. 공통 command 규칙 (모든 신규 write endpoint, WP-B부터 적용)
 
 - 현재 membership·role을 서버가 다시 검사한다. UI가 action을 숨기는 것과 무관하게 서버는 항상 재검사한다.
@@ -42,7 +54,7 @@
 | `DATA_CONFLICT` | 409 | stale base version, 동시 apply, DB 제약 위반 |
 | `RATE_LIMITED` | 429 | 과도한 요청 |
 
-401은 인증 자체가 없거나 무효한 경우로, Spring Security 필터 체인이 `PlanMateException` 이전 단계에서 처리한다(도메인 `ErrorCode`가 아니다).
+401은 인증 자체가 없거나 무효한 경우로, Spring Security 필터 체인이 `PlanMateException` 이전 단계에서 처리한다(도메인 `ErrorCode`가 아니다). refresh token store가 일시적으로 사용할 수 없으면 `REFRESH_TOKEN_STORE_UNAVAILABLE`(503)이며 서버는 연결 1초·명령 2초 기본 timeout 안에 실패한다. frontend는 재시도 loop를 만들지 않고 세션을 만료 처리한다.
 
 ### 3.2 domain별(WP-A 시점 기존 값, 발췌)
 
@@ -131,7 +143,7 @@ spec §8 표를 그대로 계약 skeleton으로 고정한다. 최종 URL·DTO �
 - 인증된 ACTIVE 멤버만 조회한다. `trips.current_itinerary_id`가 가리키는 version의 해당 DAY를 읽는다.
 - DAY item의 인접한 두 장소마다 Kakao Mobility 표준 자동차 길찾기 `GET /v1/directions`를 호출한다. 다중 경유지 API는 사용하지 않는다.
 - 장소 좌표를 못 얻은 구간은 전체 조회를 실패시키지 않고 `LOCATION_UNRESOLVED`, provider가 경로를 반환하지 않은 구간은 `ROUTE_NOT_FOUND`로 반환한다.
-- provider timeout·장애·일일 한도는 각각 504·503·429로 응답한다. frontend는 이 경우 기존 일정과 marker를 유지하고 검증되지 않은 직선을 그리지 않는다.
+- provider timeout·장애·일일 한도는 각각 504·503·429로 응답한다. frontend는 이 경우 기존 일정과 marker를 유지하고 검증되지 않은 직선을 그리지 않는다. 같은 itinerary id/version/DAY에서 이미 받은 검증 route가 있으면 `이전 확인` 상태로만 유지하며, 다른 DAY나 이전 revision의 route는 재사용하지 않는다.
 
 응답:
 
