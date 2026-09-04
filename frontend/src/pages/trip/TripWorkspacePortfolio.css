@@ -1222,6 +1222,7 @@
 }
 
 .trip-chat-composer {
+  flex-shrink: 0;
   margin: 0;
   padding: 14px 16px 16px;
   border-top: 1px solid var(--pm-line);
@@ -1230,6 +1231,45 @@
   align-items: end;
   gap: 8px;
   background: rgba(255, 253, 248, 0.94);
+}
+
+/* At short viewport heights (e.g. a mobile keyboard open) the chat column's
+   fixed-size chrome (search tools, typing indicator, composer) can exceed
+   the space .collaboration-tab-panel has left after the header/tabs, and
+   .trip-chat-panel's overflow:hidden then clips whatever doesn't fit —
+   typically the composer. Keep the composer and typing indicator at their
+   full size and let only the message list (already flex:1; min-height:0)
+   absorb the shortfall. */
+.trip-chat-tools,
+.trip-chat-typing {
+  flex-shrink: 0;
+}
+
+.trip-chat-typing:empty {
+  min-height: 0;
+  padding: 0;
+}
+
+/* .trip-chat-preview's own padding (34px combined) is a border-box floor:
+   flex-shrink can't compress it below that even at min-height:0, since a
+   border-box element can't shrink past its own padding. On a short enough
+   viewport (keyboard covering most of a compact phone) that floor alone is
+   enough to push the composer past .trip-chat-panel's overflow:hidden edge.
+   Drop the padding at that point so the message list can shrink the rest
+   of the way and the composer stays fully visible. */
+@media (max-height: 520px) {
+  .trip-chat-preview {
+    padding: 0 14px;
+  }
+
+  .trip-chat-composer {
+    padding: 8px 16px 10px;
+  }
+
+  .trip-chat-tools {
+    min-height: 0;
+    padding: 2px 14px;
+  }
 }
 
 .trip-chat-composer textarea {

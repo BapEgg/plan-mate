@@ -215,6 +215,7 @@ export function ChatPanel({
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null)
   const [busyMessageId, setBusyMessageId] = useState<number | null>(null)
   const [actionError, setActionError] = useState('')
+  const [announcement, setAnnouncement] = useState('')
   const lastHandledEventId = useRef<number | null>(null)
   const messagesRef = useRef<DisplayMessage[]>([])
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
@@ -402,6 +403,10 @@ export function ChatPanel({
       if (current.some((message) => message.clientMessageId === latestChatMessage.clientMessageId)) return current
       return [...current, eventToMessage(latestChatMessage, tripId)]
     })
+    setAnnouncement((current) => {
+      if (latestChatMessage.authorUserId === null || latestChatMessage.authorUserId === currentUser?.id) return current
+      return `${nicknameFor(members, latestChatMessage.authorUserId)}: ${latestChatMessage.body}`
+    })
     const staleTimer = searchOpen && searchQuery.trim().length >= 2
       ? window.setTimeout(() => setSearchStale(true), 0)
       : null
@@ -409,7 +414,7 @@ export function ChatPanel({
     return () => {
       if (staleTimer !== null) window.clearTimeout(staleTimer)
     }
-  }, [latestChatMessage, tripId, markLatestRead, searchOpen, searchQuery])
+  }, [latestChatMessage, tripId, markLatestRead, searchOpen, searchQuery, currentUser?.id, members])
 
   useEffect(() => {
     if (!latestChatChange) return
@@ -674,6 +679,7 @@ export function ChatPanel({
           </button>
         )}
       </div>
+      <span className="sr-only" aria-live="polite">{announcement}</span>
       {searchOpen ? (
         <section className="trip-chat-search" aria-label="대화 검색">
           <label htmlFor="trip-chat-search-input">대화에서 찾기</label>
@@ -717,7 +723,7 @@ export function ChatPanel({
           </div>
         </section>
       ) : (
-      <div className="trip-chat-preview" aria-label="여행방 대화" aria-live="polite" ref={scrollContainerRef}>
+      <div className="trip-chat-preview" aria-label="여행방 대화" ref={scrollContainerRef}>
         {status === 'loading' && <p className="trip-chat-empty">대화를 불러오는 중입니다…</p>}
         {status === 'error' && <p className="trip-chat-empty" role="alert">대화를 불러오지 못했습니다.</p>}
         {status === 'success' && messages.length === 0 && (
