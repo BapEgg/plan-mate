@@ -165,11 +165,14 @@ export function MembershipManageDrawer({
         <section aria-label="초대 보내기">
           <h3>초대 보내기</h3>
           <form onSubmit={(event) => void handleInvite(event)}>
-            <label htmlFor="membership-invite-email">가입된 계정의 email</label>
+            <label htmlFor="membership-invite-email">가입된 계정의 이메일</label>
             <input
+              autoComplete="email"
               id="membership-invite-email"
+              name="inviteeEmail"
               onChange={(event) => setInviteEmail(event.target.value)}
               placeholder="friend@example.com"
+              spellCheck={false}
               type="email"
               value={inviteEmail}
             />
@@ -195,6 +198,7 @@ export function MembershipManageDrawer({
               <label htmlFor="membership-transfer-target">새 방장으로 지정할 참여자</label>
               <select
                 id="membership-transfer-target"
+                name="ownerTransferTarget"
                 onChange={(event) => setTransferTargetUserId(event.target.value)}
                 value={transferTargetUserId}
               >

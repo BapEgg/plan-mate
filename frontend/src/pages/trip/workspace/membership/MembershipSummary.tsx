@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { API_BASE_URL, ApiError } from '../../../../api/client'
 import { leaveTrip } from '../../../../api/membership'
 import type { TripMember } from '../../../../api/trips'
@@ -27,12 +27,18 @@ export function MembershipSummary({
   presenceByMember,
 }: MembershipSummaryProps) {
   const [manageOpen, setManageOpen] = useState(false)
+  const manageButtonRef = useRef<HTMLButtonElement | null>(null)
   const [leaveStatus, setLeaveStatus] = useState<'idle' | 'loading' | 'error'>('idle')
   const [leaveError, setLeaveError] = useState('')
   const visibleMembers = members.slice(0, 5)
   const hiddenMemberCount = Math.max(0, members.length - visibleMembers.length)
   const currentMember = members.find((member) => member.userId === currentUserId) ?? null
   const isOwner = currentMember?.role === 'OWNER'
+
+  function closeManage() {
+    setManageOpen(false)
+    window.requestAnimationFrame(() => manageButtonRef.current?.focus())
+  }
 
   async function handleLeave() {
     if (!window.confirm('이 여행방에서 나가시겠습니까?')) {
@@ -73,7 +79,7 @@ export function MembershipSummary({
             ))}
           </ul>
           {isOwner ? (
-            <button className="member-roster-action" onClick={() => setManageOpen(true)} type="button">
+            <button className="member-roster-action" onClick={() => setManageOpen(true)} ref={manageButtonRef} type="button">
               여행방 관리
             </button>
           ) : currentMember && (
@@ -94,9 +100,9 @@ export function MembershipSummary({
           accessToken={accessToken}
           currentUserId={currentUserId}
           members={members}
-          onClose={() => setManageOpen(false)}
+          onClose={closeManage}
           onMembershipChanged={() => {
-            setManageOpen(false)
+            closeManage()
             onMembershipChanged()
           }}
           tripId={tripId}
